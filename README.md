@@ -1,6 +1,6 @@
 # Ironside Dawn
 
-> *Working title — subject to change.*
+> _Working title — subject to change._
 
 **Ironside Dawn is a fantasy world simulation you watch rather than play.**
 

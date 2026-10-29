@@ -29,11 +29,11 @@ bad roads, and long winters. A sword wound can kill anyone, heroes included.
 There are two kinds of beings. The split matters for both design and
 performance.
 
-| | **Peoples** (sapient) | **Creatures** |
-|---|---|---|
-| Examples | Humans, elves, dwarves, centaurs, demons, liches, revenants | Wolves, wargs, giant spiders, skeletons, zombies, imps |
-| Model | Full **Character**: personality, memory, relationships, skills, language | Lighter **Creature**: species template, stats, behavior instincts |
-| Can be | Adventurer, merchant, bandit, lord, warlock, boss… | Prey, threat, beast of burden, a dungeon's population |
+|          | **Peoples** (sapient)                                                    | **Creatures**                                                     |
+| -------- | ------------------------------------------------------------------------ | ----------------------------------------------------------------- |
+| Examples | Humans, elves, dwarves, centaurs, demons, liches, revenants              | Wolves, wargs, giant spiders, skeletons, zombies, imps            |
+| Model    | Full **Character**: personality, memory, relationships, skills, language | Lighter **Creature**: species template, stats, behavior instincts |
+| Can be   | Adventurer, merchant, bandit, lord, warlock, boss…                       | Prey, threat, beast of burden, a dungeon's population             |
 
 Every sapient being uses the same Character model, whether it is a human
 adventurer, an elven archer, a bandit chief, or a demon warlord. Nobody is
@@ -43,17 +43,17 @@ choices make them dangerous.
 
 ### Initial peoples
 
-| People | Leaning | Homelands | Notes |
-|---|---|---|---|
-| **Humans** | Varied | Plains, river valleys, coasts | Most numerous and adaptable. Short-lived, quick to breed and to quarrel. |
-| **Elves** | Mostly benign, aloof | Old forests | Long-lived, slow to trust. Above-average magical aptitude. |
-| **Dwarves** | Mostly benign, insular | Mountains, deep halls | Hardy, long memories (grudges included). Master smiths. |
-| **Centaurs** | Varied, tribal | Steppes, open grassland | Fast travelers, natural caravan guards or raiders. |
-| **Demons** | Malevolent by nature | Blighted wastes, rifts | Strong, cruel, often magically gifted. Mostly appear as raiders, cult masters, and bosses. |
-| **Undead (sapient)** | Malevolent by nature | Barrows, ruined cities | Liches and revenants: ageless, patient, and they remember everything. |
+| People               | Leaning                | Homelands                     | Notes                                                                                      |
+| -------------------- | ---------------------- | ----------------------------- | ------------------------------------------------------------------------------------------ |
+| **Humans**           | Varied                 | Plains, river valleys, coasts | Most numerous and adaptable. Short-lived, quick to breed and to quarrel.                   |
+| **Elves**            | Mostly benign, aloof   | Old forests                   | Long-lived, slow to trust. Above-average magical aptitude.                                 |
+| **Dwarves**          | Mostly benign, insular | Mountains, deep halls         | Hardy, long memories (grudges included). Master smiths.                                    |
+| **Centaurs**         | Varied, tribal         | Steppes, open grassland       | Fast travelers, natural caravan guards or raiders.                                         |
+| **Demons**           | Malevolent by nature   | Blighted wastes, rifts        | Strong, cruel, often magically gifted. Mostly appear as raiders, cult masters, and bosses. |
+| **Undead (sapient)** | Malevolent by nature   | Barrows, ruined cities        | Liches and revenants: ageless, patient, and they remember everything.                      |
 
 The **lesser undead** (skeletons, zombies) and **lesser demons** (imps,
-hounds) are *creatures*, not characters. They are often under the command of a
+hounds) are _creatures_, not characters. They are often under the command of a
 sapient one.
 
 More peoples come later (candidates: orcs, goblins, halflings, giants,
@@ -79,7 +79,7 @@ Species shift the odds; individuals decide.
 
 - Each character has **morality traits** (e.g. compassion ↔ cruelty, honor ↔
   treachery) in addition to the rest of their personality. A species' disposition
-  shifts the *distribution* those traits are rolled from. It doesn't fix
+  shifts the _distribution_ those traits are rolled from. It doesn't fix
   them.
   - Most humans are decent. Some are not.
   - Demons and the sapient undead are malevolent by nature: their
@@ -119,15 +119,15 @@ Casting requires the **Arcana** skill, which comes from one of two sources:
 
 Every spell has a **cost profile**: one or more prices paid on casting.
 
-| Cost | Effect |
-|---|---|
-| **Stamina** | Drains the stamina pool (also used for fighting and travel). Running out means collapse. |
-| **Health** | Direct HP loss. Blood magic. |
+| Cost           | Effect                                                                                   |
+| -------------- | ---------------------------------------------------------------------------------------- |
+| **Stamina**    | Drains the stamina pool (also used for fighting and travel). Running out means collapse. |
+| **Health**     | Direct HP loss. Blood magic.                                                             |
 | **Stat drain** | Temporary loss of an attribute (e.g. −Dexterity for hours: shaking hands, clumsy blade). |
-| **Dizziness** | A status effect: penalties to accuracy, defense, and further casting. |
+| **Dizziness**  | A status effect: penalties to accuracy, defense, and further casting.                    |
 
-Possible later additions: *exhaustion* that lasts days, *madness* or
-*corruption* from forbidden arts, and *permanent scars* from catastrophic
+Possible later additions: _exhaustion_ that lasts days, _madness_ or
+_corruption_ from forbidden arts, and _permanent scars_ from catastrophic
 backlash.
 
 Cost scales up with the spell's power and down with the caster's mastery. A
@@ -149,12 +149,12 @@ where the gamble gets interesting.
 
 ### Example spells (first pass)
 
-| Spell | Effect | Cost |
-|---|---|---|
-| Ember Bolt | Fire damage to one foe | Stamina + Dizziness |
-| Mend Flesh | Heals a target | The caster's own Health |
-| Quickening | Big speed/agility boost for a fight | Dexterity drain afterward |
-| Ward of Ash | Absorbs incoming damage | Stamina, heavy |
+| Spell       | Effect                              | Cost                      |
+| ----------- | ----------------------------------- | ------------------------- |
+| Ember Bolt  | Fire damage to one foe              | Stamina + Dizziness       |
+| Mend Flesh  | Heals a target                      | The caster's own Health   |
+| Quickening  | Big speed/agility boost for a fight | Dexterity drain afterward |
+| Ward of Ash | Absorbs incoming damage             | Stamina, heavy            |
 
 ### Why this works for the simulation
 
@@ -220,19 +220,19 @@ Each region is defined by a **culture pack** (pure data):
 
 ### Sketches (illustrative, not final)
 
-| Inspiration | Arms | Creatures & peoples | Magic flavor |
-|---|---|---|---|
-| **Japonic** | Katana, naginata, yumi | Kitsune, kappa, oni, tengu, yūrei | Talismans and wards, onmyōdō-style divination |
-| **Norse** | Sword, axe, seax, spear | Draugr, trolls, jötnar, dvergar, álfar | Runes, seiðr |
-| **Hellenic** | Xiphos, dory, aspis | Centaurs, harpies, cyclopes, satyrs | Oracles, mystery cults |
-| **Slavic** | Axe, sabre, flail | Leshy, rusalka, domovoi, witches of the deep woods | Folk charms, hexes |
-| **Mesopotamian** | Sickle-sword, spear, composite bow | Lamassu, utukku, lilitu | Incantations, clay-tablet wards |
+| Inspiration      | Arms                               | Creatures & peoples                                | Magic flavor                                  |
+| ---------------- | ---------------------------------- | -------------------------------------------------- | --------------------------------------------- |
+| **Japonic**      | Katana, naginata, yumi             | Kitsune, kappa, oni, tengu, yūrei                  | Talismans and wards, onmyōdō-style divination |
+| **Norse**        | Sword, axe, seax, spear            | Draugr, trolls, jötnar, dvergar, álfar             | Runes, seiðr                                  |
+| **Hellenic**     | Xiphos, dory, aspis                | Centaurs, harpies, cyclopes, satyrs                | Oracles, mystery cults                        |
+| **Slavic**       | Axe, sabre, flail                  | Leshy, rusalka, domovoi, witches of the deep woods | Folk charms, hexes                            |
+| **Mesopotamian** | Sickle-sword, spear, composite bow | Lamassu, utukku, lilitu                            | Incantations, clay-tablet wards               |
 
 A species can appear in several cultures with local variation. Norse
-*dvergar* and *álfar* are local takes on dwarves and elves, and centaurs
+_dvergar_ and _álfar_ are local takes on dwarves and elves, and centaurs
 naturally belong to a Hellenic-inspired region.
 
-**Principles:** *inspired by*, not historical simulation. Draw on real myths
+**Principles:** _inspired by_, not historical simulation. Draw on real myths
 with respect and avoid caricature. Every region should feel like its own place,
 not a costume.
 

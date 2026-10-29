@@ -30,19 +30,19 @@ Every technical decision below follows from these five pillars.
 
 ## 2. Tech stack
 
-| Concern | Choice | Notes |
-|---|---|---|
-| Language | **TypeScript** (strict) | The data model will be large and deeply connected. Types make that manageable. |
-| Build/dev | **Vite** | Fast HMR, native Web Worker support, minimal configuration. |
-| UI | **React** | Panels, profiles, inspectors, and links between entities are ordinary UI work. |
-| UI state | **Zustand** | Small. Holds the UI's copy of world snapshots plus UI-only state. |
-| Long lists | **TanStack Virtual** (or react-virtuoso) | The event log will reach hundreds of thousands of lines. Only visible rows are rendered. |
-| Sim ↔ UI | **Web Worker** + **Comlink** | Keeps the simulation off the render thread (see §5). |
-| Map (later) | **PixiJS** on a `<canvas>` | Used only where a picture helps: the world map and route overlays. |
-| Tests | **Vitest** | Same config as Vite. Also used for determinism and statistical tests. |
-| Headless runner | **tsx** (Node) | Runs `npm run sim -- --seed 42 --years 50` for balancing and debugging. |
-| Persistence | **IndexedDB** (via `idb`) | Saves are larger than `localStorage` allows. |
-| Desktop (later) | **Tauri** | Wraps the same web build as a native app for Windows, macOS, and Linux. |
+| Concern         | Choice                                   | Notes                                                                                    |
+| --------------- | ---------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Language        | **TypeScript** (strict)                  | The data model will be large and deeply connected. Types make that manageable.           |
+| Build/dev       | **Vite**                                 | Fast HMR, native Web Worker support, minimal configuration.                              |
+| UI              | **React**                                | Panels, profiles, inspectors, and links between entities are ordinary UI work.           |
+| UI state        | **Zustand**                              | Small. Holds the UI's copy of world snapshots plus UI-only state.                        |
+| Long lists      | **TanStack Virtual** (or react-virtuoso) | The event log will reach hundreds of thousands of lines. Only visible rows are rendered. |
+| Sim ↔ UI        | **Web Worker** + **Comlink**             | Keeps the simulation off the render thread (see §5).                                     |
+| Map (later)     | **PixiJS** on a `<canvas>`               | Used only where a picture helps: the world map and route overlays.                       |
+| Tests           | **Vitest**                               | Same config as Vite. Also used for determinism and statistical tests.                    |
+| Headless runner | **tsx** (Node)                           | Runs `npm run sim -- --seed 42 --years 50` for balancing and debugging.                  |
+| Persistence     | **IndexedDB** (via `idb`)                | Saves are larger than `localStorage` allows.                                             |
+| Desktop (later) | **Tauri**                                | Wraps the same web build as a native app for Windows, macOS, and Linux.                  |
 
 ### Why HTML/React rather than a non-HTML GUI?
 
@@ -137,14 +137,14 @@ interface:
 
 ```ts
 interface Rng {
-  next(): number;                         // [0, 1)
-  int(min: number, max: number): number;  // inclusive
+  next(): number; // [0, 1)
+  int(min: number, max: number): number; // inclusive
   chance(p: number): boolean;
   pick<T>(xs: readonly T[]): T;
   weighted<T>(entries: readonly [T, number][]): T;
   gaussian(mean: number, sd: number): number;
-  roll(dice: string): number;             // "2d6+1"
-  fork(label: string): Rng;               // independent child stream
+  roll(dice: string): number; // "2d6+1"
+  fork(label: string): Rng; // independent child stream
 }
 ```
 
@@ -162,13 +162,13 @@ The RNG state is part of the world state and is saved with it.
 - **The base unit is the in-game second.** World time is a single integer
   (a JS number safely counts ~285 million years of seconds). The calendar
   (seconds → minutes → hours → days → seasons → years) is derived from it for
-  display, e.g. *"Y3 · Day 41 (Highsun) · 14:20:07"*.
+  display, e.g. _"Y3 · Day 41 (Highsun) · 14:20:07"_.
 - **Scheduler-driven, not tick-everyone.** Nobody gets updated every second.
-  Each actor is in a priority queue keyed by *when it next needs to decide
-  something*. A character walking for 6 hours is not touched for those 6
+  Each actor is in a priority queue keyed by _when it next needs to decide
+  something_. A character walking for 6 hours is not touched for those 6
   hours. Arriving is one event.
 - **Precision is free.** With a scheduler, cost grows with the number of
-  *decisions*, not with elapsed time or clock resolution. Measuring in
+  _decisions_, not with elapsed time or clock resolution. Measuring in
   seconds instead of minutes costs nothing, so sword blows can land
   seconds apart in real-time view.
 - **Global processes** (markets clearing, creature populations breeding,
@@ -176,14 +176,14 @@ The RNG state is part of the world state and is saved with it.
 
 #### Speed tiers
 
-| Tier | Sim time per real second | Log shows (default floor) | For watching… |
-|---|---|---|---|
-| **Real-time** | 1 second | Everything, including blow-by-blow for watched characters | a duel |
-| **Minute** | 1 minute | Normal and above | a dungeon delve |
-| **Hour** | 1 hour | Normal and above, rate-limited | a day in a town |
-| **Day** | 1 day | Notable and above | a season passing |
-| **Season** | ~1 season | Notable and above | years passing |
-| **Fast-forward** | As fast as possible ("skip 10 years") | A digest, plus legendary events | generations |
+| Tier             | Sim time per real second              | Log shows (default floor)                                 | For watching…    |
+| ---------------- | ------------------------------------- | --------------------------------------------------------- | ---------------- |
+| **Real-time**    | 1 second                              | Everything, including blow-by-blow for watched characters | a duel           |
+| **Minute**       | 1 minute                              | Normal and above                                          | a dungeon delve  |
+| **Hour**         | 1 hour                                | Normal and above, rate-limited                            | a day in a town  |
+| **Day**          | 1 day                                 | Notable and above                                         | a season passing |
+| **Season**       | ~1 season                             | Notable and above                                         | years passing    |
+| **Fast-forward** | As fast as possible ("skip 10 years") | A digest, plus legendary events                           | generations      |
 
 The user can lower or raise the log floor at any tier. The defaults keep the
 log readable.
@@ -193,7 +193,7 @@ log readable.
 **Simulation results never depend on the speed tier or on what the user is
 looking at.** The same seed produces the same history whether it was watched
 second by second or skipped in fast-forward. Speed and focus change only
-*how much is shown*, never *what happens*. This keeps the world deterministic
+_how much is shown_, never _what happens_. This keeps the world deterministic
 and avoids an observer effect where looking away changes the rules. It also
 means fast-forward can't use shortcuts that change outcomes.
 
@@ -206,7 +206,7 @@ decision takes a few microseconds, which means no allocation-heavy code and no
 full-world scans in hot paths. Techniques, from day one onward:
 
 1. **Scheduler** (above): sleeping actors cost nothing.
-2. **Named vs. statistical population.** Only *notable* beings are full agents:
+2. **Named vs. statistical population.** Only _notable_ beings are full agents:
    adventurers, merchants, lords, outlaws, bosses. Townsfolk, farmers, and
    common creatures are **numbers on a location** (e.g. "pop. 1,200";
    "wolves ≈ 40"), updated in daily aggregate steps. An individual is
@@ -214,7 +214,7 @@ full-world scans in hot paths. Techniques, from day one onward:
    up the sword, or a wolf becomes the pack alpha that killed a hero.
 3. **Silent detail.** Fights and delves are always resolved fully, so RNG use
    is identical either way. Fine-grained events (each blow, each room) are only
-   *emitted* when someone is watching that character or place. Emitting never
+   _emitted_ when someone is watching that character or place. Emitting never
    touches world RNG or state, so it can't change history.
 4. **Retention by importance.** Unwatched trivial events are never stored.
    Normal events expire after a while. Notable and legendary events are kept
@@ -226,7 +226,7 @@ full-world scans in hot paths. Techniques, from day one onward:
    the UI plays events back at their timestamps. Real-time mode reads
    smoothly (blows land a second apart) instead of arriving in bursts.
 7. **Per-location processes.** Markets, ecology, and statistical populations
-   cost per *place*, not per *being*.
+   cost per _place_, not per _being_.
 8. **Last resort: world-based level of detail.** If profiling still demands
    it, simplify by world state (e.g. coarser ecology in remote regions),
    applied the same way whether or not anyone is watching (golden rule).
@@ -259,9 +259,9 @@ on them":
 interface World {
   time: number;
   rng: RngState;
-  characters: Map<CharacterId, Character>;   // every sapient agent, any species
-  locations: Map<LocationId, Location>;      // incl. statistical populations
-  creatures: Map<CreatureId, Creature>;      // named/active beasts only
+  characters: Map<CharacterId, Character>; // every sapient agent, any species
+  locations: Map<LocationId, Location>; // incl. statistical populations
+  creatures: Map<CreatureId, Creature>; // named/active beasts only
   items: Map<ItemId, Item>;
   // …
   scheduler: SchedulerState;
@@ -301,8 +301,8 @@ they read world state. This prevents feedback loops that are hard to debug.
 ### 4.5 Decision-making: utility AI
 
 Each time a character is scheduled, it picks its next action using **utility
-scoring**. Every candidate action (*rest at inn*, *delve dungeon X*, *sell
-loot*, *seek companion*, *visit family*, *train*) gets a score:
+scoring**. Every candidate action (_rest at inn_, _delve dungeon X_, _sell
+loot_, _seek companion_, _visit family_, _train_) gets a score:
 
 ```
 score = Σ (need/drive weight × how well the action serves it)
@@ -320,16 +320,16 @@ multi-step plans such as "craft a sword", which needs ore, a forge, and skill.
 ### 4.6 Memory: three layers, all bounded
 
 1. **Episodic memory.** A short list of personal events, each with a
-   *salience* score that decays over time. Strong events (near-death, a
+   _salience_ score that decays over time. Strong events (near-death, a
    friend's death, a legendary kill) decay slowly and may be promoted to
-   permanent *life events*, which feed the character's biography.
+   permanent _life events_, which feed the character's biography.
 2. **Learned expectations.** Running statistics per (activity, place or kind),
-   e.g. *"delving Gorefang Caves: 7 trips, 2 near-deaths, avg +40 gold"*. This
+   e.g. _"delving Gorefang Caves: 7 trips, 2 near-deaths, avg +40 gold"_. This
    is effectively a **multi-armed bandit**: characters exploit what has worked
-   and explore with a probability set by their *curiosity* trait. This is what
+   and explore with a probability set by their _curiosity_ trait. This is what
    makes a character "learn what works for them".
 3. **Opinions of others.** A sparse map `otherId → { affinity, trust,
-   familiarity, lastSeen }`, updated by shared events (fought together,
+familiarity, lastSeen }`, updated by shared events (fought together,
    betrayed, traded fairly, rescued). It drives friendship, rivalry, parties,
    and marriage.
 
@@ -356,7 +356,7 @@ There are two kinds of beings ([`WORLD.md`](WORLD.md) §2):
   archer, dwarven smith, bandit, demon warlord, or lich. They share one model
   (personality, memory, relationships, skills, languages). `species` and
   `culture` are fields, and species-specific behavior comes from species
-  *data* (stat modifiers, lifespan, disposition, attitudes).
+  _data_ (stat modifiers, lifespan, disposition, attitudes).
 - **Creatures**: beasts and mindless things (wolves, skeletons, imps), using
   lighter templates with instincts instead of the full mind.
 
@@ -416,12 +416,12 @@ cases.
 
 ## 8. Performance budget (targets, not guarantees)
 
-| Scale | Target |
-|---|---|
-| 200 characters, 30 locations | 1 in-game year simulates in < 5 s headless |
-| 1,000 characters, 100 locations | Smooth at every tier up to Season in the browser |
-| 500 characters, fast-forward | 10 in-game years in ≤ 5 real minutes (§4.2) |
-| UI | 60 fps scroll/interaction regardless of sim speed |
+| Scale                           | Target                                            |
+| ------------------------------- | ------------------------------------------------- |
+| 200 characters, 30 locations    | 1 in-game year simulates in < 5 s headless        |
+| 1,000 characters, 100 locations | Smooth at every tier up to Season in the browser  |
+| 500 characters, fast-forward    | 10 in-game years in ≤ 5 real minutes (§4.2)       |
+| UI                              | 60 fps scroll/interaction regardless of sim speed |
 
 The strategies are listed in §4.2. Beyond those built in from day one
 (scheduler, named vs. statistical population, silent detail), only optimize
