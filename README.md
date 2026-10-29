@@ -28,8 +28,9 @@ town's market, or watch a dungeon's population change over time.
 
 ## Status
 
-Phase 0 (Foundations) is done: the toolchain, the seeded RNG and CI are in
-place. Phase 1 (The Heartbeat) is next. The plan is in:
+Phase 1 (The Heartbeat) is done: a small world of 20 adventurers who travel,
+linger and sleep, shown in a live log at five speeds. Phase 2 (Blood & Gold)
+is next. The plan is in:
 
 - [`docs/ROADMAP.md`](docs/ROADMAP.md): the phased development plan, with exit
   criteria for each milestone.
@@ -50,21 +51,22 @@ npm install
 npm run dev
 ```
 
-| Command                    | What it does                                           |
-| -------------------------- | ------------------------------------------------------ |
-| `npm run dev`              | Start the dev server                                   |
-| `npm run sim -- --seed 42` | Run the headless simulation (Phase 0: seeded RNG demo) |
-| `npm test`                 | Run the tests                                          |
-| `npm run check`            | Typecheck, lint, format check and tests, as CI does    |
-| `npm run build`            | Production build into `dist/`                          |
-| `npm run format`           | Format everything with Prettier                        |
+| Command                             | What it does                                                  |
+| ----------------------------------- | ------------------------------------------------------------- |
+| `npm run dev`                       | Start the dev server                                          |
+| `npm run sim -- --seed 42 --days 7` | Run a world headless and print its log (`--help` for options) |
+| `npm test`                          | Run the tests                                                 |
+| `npm run check`                     | Typecheck, lint, format check and tests, as CI does           |
+| `npm run build`                     | Production build into `dist/`                                 |
+| `npm run format`                    | Format everything with Prettier                               |
 
 ## Project layout
 
 ```
 src/sim/      Simulation core. No DOM, no React, no Math.random (lint-enforced).
 src/content/  Data tables: species, creatures, items, names…
-src/host/     Bridge between the simulation and the UI (Phase 1).
+src/text/     Turns events into prose. No DOM; shared by the UI and the CLI.
+src/host/     Runs the simulation for the UI: speed tiers, pause, log floor.
 src/ui/       React app.
 tools/        Headless tools, such as the sim CLI.
 docs/         Roadmap, world design and architecture.

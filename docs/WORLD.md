@@ -18,6 +18,8 @@ bad roads, and long winters. A sword wound can kill anyone, heroes included.
   undead and more each mostly keep to their own lands, kin, and tongues.
 - **No one is good by species.** Some peoples lean toward malice, but any
   individual can be a saint, a bandit, or a murderer (§3).
+- **The year has four seasons** of 90 days each: Thaw, Highsun, Harvest and
+  Deepwinter. Seasons will matter for travel, harvests and creatures (Phase 9).
 - **Mythology grows in later.** The world is divided into regions inspired by
   real-world civilizations, each with its own myths, creatures, weapons, and
   magic (§6). This comes after the core loop works.
