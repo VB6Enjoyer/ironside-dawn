@@ -1,0 +1,10 @@
+{
+  // Node-side code: build config, headless tools, and tests.
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
+    "lib": ["ES2023"],
+    "types": ["node"]
+  },
+  "include": ["vite.config.ts", "tools", "src/**/*.test.ts"]
+}
