@@ -1,0 +1,37 @@
+# Ironside Dawn
+
+> *Working title — subject to change.*
+
+**Ironside Dawn is a fantasy world simulation you watch rather than play.**
+
+You open it and a world is already running: adventurers set out from towns,
+delve into dungeons, fight monsters, loot, trade, level up, make friends and
+enemies, fall in love, retire, have children, and die. Nothing is scripted.
+Everything comes from simple probabilistic rules applied to many independent
+characters, and you get to see what grows out of them.
+
+```
+[Y1 · Day 12 · 09:00]  Rufus Ironclaw leaves Concordale, heading for the Dungeon of Misery.
+[Y1 · Day 12 · 15:00]  Rufus Ironclaw enters the Dungeon of Misery.
+[Y1 · Day 12 · 15:20]  Rufus Ironclaw engages an Infernal Imp in battle.
+[Y1 · Day 12 · 15:22]  Rufus Ironclaw slays the Infernal Imp and loots 14 gold and a Cracked Ember.
+[Y1 · Day 12 · 16:05]  Rufus Ironclaw is ambushed by a Gorefang Warg pack (3) and flees, badly wounded.
+```
+
+The goal is a god's-eye observatory. You get a live chronicle of the world, and
+you can follow a single character, open their profile and history, inspect a
+town's market, or watch a dungeon's population change over time.
+
+## Status
+
+Pre-production. Only a prototype `Character` class exists. The plan is in:
+
+- [`docs/ROADMAP.md`](docs/ROADMAP.md): the phased development plan, with exit
+  criteria for each milestone.
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md): tech stack, simulation design,
+  and the reasoning behind each choice.
+
+## Running it
+
+Not yet. Phase 0 of the roadmap sets up the toolchain (Vite + TypeScript +
+React). After that, this section will have the real commands.
