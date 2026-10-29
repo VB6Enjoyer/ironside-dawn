@@ -30,19 +30,19 @@ Every technical decision below follows from these five pillars.
 
 ## 2. Tech stack
 
-| Concern         | Choice                                   | Notes                                                                                    |
-| --------------- | ---------------------------------------- | ---------------------------------------------------------------------------------------- |
-| Language        | **TypeScript** (strict)                  | The data model will be large and deeply connected. Types make that manageable.           |
-| Build/dev       | **Vite**                                 | Fast HMR, native Web Worker support, minimal configuration.                              |
-| UI              | **React**                                | Panels, profiles, inspectors, and links between entities are ordinary UI work.           |
-| UI state        | **Zustand**                              | Small. Holds the UI's copy of world snapshots plus UI-only state.                        |
-| Long lists      | **TanStack Virtual** (or react-virtuoso) | The event log will reach hundreds of thousands of lines. Only visible rows are rendered. |
-| Sim ↔ UI        | **Web Worker** + **Comlink**             | Keeps the simulation off the render thread (see §5).                                     |
-| Map (later)     | **PixiJS** on a `<canvas>`               | Used only where a picture helps: the world map and route overlays.                       |
-| Tests           | **Vitest**                               | Same config as Vite. Also used for determinism and statistical tests.                    |
-| Headless runner | **tsx** (Node)                           | Runs `npm run sim -- --seed 42 --years 50` for balancing and debugging.                  |
-| Persistence     | **IndexedDB** (via `idb`)                | Saves are larger than `localStorage` allows.                                             |
-| Desktop (later) | **Tauri**                                | Wraps the same web build as a native app for Windows, macOS, and Linux.                  |
+| Concern         | Choice                                   | Notes                                                                                                                                |
+| --------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Language        | **TypeScript** (strict)                  | The data model will be large and deeply connected. Types make that manageable. Pinned to 6.0.x until typescript-eslint supports 7.x. |
+| Build/dev       | **Vite**                                 | Fast HMR, native Web Worker support, minimal configuration.                                                                          |
+| UI              | **React**                                | Panels, profiles, inspectors, and links between entities are ordinary UI work.                                                       |
+| UI state        | **Zustand**                              | Small. Holds the UI's copy of world snapshots plus UI-only state.                                                                    |
+| Long lists      | **TanStack Virtual** (or react-virtuoso) | The event log will reach hundreds of thousands of lines. Only visible rows are rendered.                                             |
+| Sim ↔ UI        | **Web Worker** + **Comlink**             | Keeps the simulation off the render thread (see §5).                                                                                 |
+| Map (later)     | **PixiJS** on a `<canvas>`               | Used only where a picture helps: the world map and route overlays.                                                                   |
+| Tests           | **Vitest**                               | Same config as Vite. Also used for determinism and statistical tests.                                                                |
+| Headless runner | **tsx** (Node)                           | Runs `npm run sim -- --seed 42 --years 50` for balancing and debugging.                                                              |
+| Persistence     | **IndexedDB** (via `idb`)                | Saves are larger than `localStorage` allows.                                                                                         |
+| Desktop (later) | **Tauri**                                | Wraps the same web build as a native app for Windows, macOS, and Linux.                                                              |
 
 ### Why HTML/React rather than a non-HTML GUI?
 
@@ -145,6 +145,7 @@ interface Rng {
   gaussian(mean: number, sd: number): number;
   roll(dice: string): number; // "2d6+1"
   fork(label: string): Rng; // independent child stream
+  getState(): RngState; // for saves; restoreRng(state) resumes it
 }
 ```
 
@@ -153,7 +154,14 @@ Each subsystem uses its own **forked stream**, such as `rng.fork("combat")` or
 system would shift every later roll in the world and change everything
 downstream. With forks, the change stays inside the loot stream.
 
-The RNG state is part of the world state and is saved with it.
+Forks are keyed by label and derived from the seed, not from the parent's
+current position: forking never consumes parent draws, and the same label
+always gives the same stream. `chance()` always consumes exactly one draw (and
+`gaussian()` two), so tuning a probability never shifts the rolls that follow.
+
+The RNG state is part of the world state and is saved with it. The
+implementation lives in `src/sim/core/rng.ts`. Its golden-value test pins the
+algorithm, because changing it would silently change every seed and save.
 
 ### 4.2 Time, speed, and scaling
 

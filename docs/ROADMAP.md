@@ -39,24 +39,27 @@ Sizes are relative (S < M < L), not time estimates.
 
 **Goal:** A clean, typed project where adding simulation code is easy and safe.
 
-- [ ] Delete the old prototype (`index.html`, `style.css`, `src/`, `.qodo/`)
+- [x] Delete the old prototype (`index.html`, `style.css`, `src/`, `.qodo/`)
       and start from a fresh scaffold.
-- [ ] Scaffold **Vite + React + TypeScript** (`strict: true`).
-- [ ] Add ESLint and Prettier, **Vitest**, and `tsx` for scripts.
-- [ ] Create the directory layout from `ARCHITECTURE.md` §3 (`src/sim`,
+- [x] Scaffold **Vite + React + TypeScript** (`strict: true`).
+- [x] Add ESLint and Prettier, **Vitest**, and `tsx` for scripts.
+- [x] Create the directory layout from `ARCHITECTURE.md` §3 (`src/sim`,
       `src/content`, `src/host`, `src/ui`, `tools/`).
-- [ ] Enforce **"no DOM in `src/sim`"**: a separate `tsconfig` without `DOM`
+- [x] Enforce **"no DOM in `src/sim`"**: a separate `tsconfig` without `DOM`
       lib, plus a lint rule.
-- [ ] Implement the **seeded `Rng`** (`next`, `int`, `chance`, `pick`,
+- [x] Implement the **seeded `Rng`** (`next`, `int`, `chance`, `pick`,
       `weighted`, `gaussian`, `roll("2d6+1")`, `fork`), with tests for
       reproducibility and distribution sanity.
-- [ ] Add a `.gitignore` (`node_modules`, `dist`, `.qodo/`).
-- [ ] Add a **GitHub Actions CI** workflow: typecheck → lint → test → build.
-- [ ] Add a `tools/sim-cli.ts` stub: `npm run sim -- --seed 42` prints a few
+- [x] Add a `.gitignore` (`node_modules`, `dist`, `.qodo/`).
+- [x] Add a **GitHub Actions CI** workflow: typecheck → lint → test → build.
+- [x] Add a `tools/sim-cli.ts` stub: `npm run sim -- --seed 42` prints a few
       RNG rolls.
 
 **Exit criteria:** `npm run dev` shows an empty shell, `npm test` passes, CI is
 green, and the same seed prints the same rolls every time.
+
+**Status: done.** TypeScript is pinned to 6.0.x until typescript-eslint
+supports 7.x.
 
 ---
 
