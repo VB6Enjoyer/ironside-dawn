@@ -1,0 +1,11 @@
+{
+  // The browser side: React UI and the worker host.
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": ["vite/client"],
+    "jsx": "react-jsx"
+  },
+  "include": ["src/ui", "src/host"]
+}

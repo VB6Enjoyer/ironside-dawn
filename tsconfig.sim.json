@@ -1,0 +1,13 @@
+{
+  // The simulation core and content tables. Deliberately has no DOM and no
+  // Node types: this code must run unchanged in a Web Worker, in Node, and in
+  // tests (ARCHITECTURE.md §3).
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.sim.tsbuildinfo",
+    "lib": ["ES2023"],
+    "types": []
+  },
+  "include": ["src/sim", "src/content"],
+  "exclude": ["**/*.test.ts"]
+}
