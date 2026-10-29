@@ -25,7 +25,7 @@ export default defineConfig([
 
   // The simulation must stay headless and deterministic (ARCHITECTURE.md §1, §4.1).
   {
-    files: ['src/sim/**/*.ts', 'src/content/**/*.ts'],
+    files: ['src/sim/**/*.ts', 'src/content/**/*.ts', 'src/text/**/*.ts'],
     ignores: ['**/*.test.ts'],
     rules: {
       'no-restricted-imports': [
