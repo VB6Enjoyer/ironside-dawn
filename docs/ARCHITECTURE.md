@@ -107,11 +107,11 @@ Alternatives considered:
 src/
   sim/                 # NO DOM, NO React. Runs in the worker, Node, and tests.
     core/              # rng, clock, scheduler, ids, event bus, world container
-    model/             # types: Character, Location, Item, Monster, Event …
+    model/             # types: Character, Location, Item, Creature, Event …
     systems/           # travel, combat, loot, progression, ai, social, economy …
-    gen/               # world, name, monster, and item generators
+    gen/               # world, name, creature, and item generators
     index.ts           # createWorld(seed, config), step(world, until)
-  content/             # data tables: species, monsters, items, affixes, names
+  content/             # data tables: species, cultures, creatures, items, spells, names
   host/                # worker entry + SimHost interface (Comlink)
   ui/                  # React app
     components/  panels/  store/  text/   # text/ = event → prose templates
@@ -155,21 +155,84 @@ downstream. With forks, the change stays inside the loot stream.
 
 The RNG state is part of the world state and is saved with it.
 
-### 4.2 Time: a calendar plus an event scheduler
+### 4.2 Time, speed, and scaling
 
-- **The base unit is the in-game minute.** World time is a single integer, and
-  the calendar (minutes → hours → days → seasons → years) is derived from it
-  for display, e.g. *"Y3 · Day 41 (Highsun) · 14:20"*.
-- **Scheduler-driven, not tick-everyone.** Nobody gets updated every minute.
+#### The clock
+
+- **The base unit is the in-game second.** World time is a single integer
+  (a JS number safely counts ~285 million years of seconds). The calendar
+  (seconds → minutes → hours → days → seasons → years) is derived from it for
+  display, e.g. *"Y3 · Day 41 (Highsun) · 14:20:07"*.
+- **Scheduler-driven, not tick-everyone.** Nobody gets updated every second.
   Each actor is in a priority queue keyed by *when it next needs to decide
   something*. A character walking for 6 hours is not touched for those 6
-  hours. Arriving is one event. This is the main reason hundreds or thousands
-  of agents stay cheap.
-- **Global processes** (markets clearing, monster populations breeding,
+  hours. Arriving is one event.
+- **Precision is free.** With a scheduler, cost grows with the number of
+  *decisions*, not with elapsed time or clock resolution. Measuring in
+  seconds instead of minutes costs nothing, so sword blows can land
+  seconds apart in real-time view.
+- **Global processes** (markets clearing, creature populations breeding,
   seasons) are scheduled entries on the same queue, e.g. "every day at 00:00".
-- **Speed control** maps real time to sim time, from paused through 1× (e.g.
-  1 in-game hour per real second) to "as fast as possible". The worker runs
-  the sim in time slices and yields between them so it can receive messages.
+
+#### Speed tiers
+
+| Tier | Sim time per real second | Log shows (default floor) | For watching… |
+|---|---|---|---|
+| **Real-time** | 1 second | Everything, including blow-by-blow for watched characters | a duel |
+| **Minute** | 1 minute | Normal and above | a dungeon delve |
+| **Hour** | 1 hour | Normal and above, rate-limited | a day in a town |
+| **Day** | 1 day | Notable and above | a season passing |
+| **Season** | ~1 season | Notable and above | years passing |
+| **Fast-forward** | As fast as possible ("skip 10 years") | A digest, plus legendary events | generations |
+
+The user can lower or raise the log floor at any tier. The defaults keep the
+log readable.
+
+#### The golden rule: the world doesn't care who's watching
+
+**Simulation results never depend on the speed tier or on what the user is
+looking at.** The same seed produces the same history whether it was watched
+second by second or skipped in fast-forward. Speed and focus change only
+*how much is shown*, never *what happens*. This keeps the world deterministic
+and avoids an observer effect where looking away changes the rules. It also
+means fast-forward can't use shortcuts that change outcomes.
+
+#### Surviving "decades in minutes"
+
+A rough budget: 500 named characters × ~30 decisions per in-game day ≈ 15k
+decisions per day. A decade is ~55M decisions; doing that in 5 real minutes
+needs ~180k decisions per second. That is achievable in a worker if each
+decision takes a few microseconds, which means no allocation-heavy code and no
+full-world scans in hot paths. Techniques, from day one onward:
+
+1. **Scheduler** (above): sleeping actors cost nothing.
+2. **Named vs. statistical population.** Only *notable* beings are full agents:
+   adventurers, merchants, lords, outlaws, bosses. Townsfolk, farmers, and
+   common creatures are **numbers on a location** (e.g. "pop. 1,200";
+   "wolves ≈ 40"), updated in daily aggregate steps. An individual is
+   **promoted** to a named agent when they matter: a farmer's daughter takes
+   up the sword, or a wolf becomes the pack alpha that killed a hero.
+3. **Silent detail.** Fights and delves are always resolved fully, so RNG use
+   is identical either way. Fine-grained events (each blow, each room) are only
+   *emitted* when someone is watching that character or place. Emitting never
+   touches world RNG or state, so it can't change history.
+4. **Retention by importance.** Unwatched trivial events are never stored.
+   Normal events expire after a while. Notable and legendary events are kept
+   forever.
+5. **Display throttling.** The UI gets at most N events per batch above the
+   current floor, and the rest becomes a digest line ("…and 3,412 minor
+   happenings across the realm").
+6. **Playback buffer.** At slow tiers the worker simulates slightly ahead and
+   the UI plays events back at their timestamps. Real-time mode reads
+   smoothly (blows land a second apart) instead of arriving in bursts.
+7. **Per-location processes.** Markets, ecology, and statistical populations
+   cost per *place*, not per *being*.
+8. **Last resort: world-based level of detail.** If profiling still demands
+   it, simplify by world state (e.g. coarser ecology in remote regions),
+   applied the same way whether or not anyone is watching (golden rule).
+
+The worker runs the sim in time slices and yields between them, so pause and
+speed changes take effect immediately even in fast-forward.
 
 ### 4.3 World state: plain data, ECS-lite
 
@@ -178,8 +241,7 @@ IDs. It has no classes with behavior, no getters/setters, and no object
 references between entities. Entities refer to each other by **ID**
 (`CharacterId`, `LocationId`, …).
 
-The prototype `Character` class (getters, setters, `Math.random`) is replaced
-by this approach because:
+Plain data instead of classes with getters and setters, because:
 
 - the state has to cross the worker boundary and be saved to IndexedDB, and
   plain data does both for free;
@@ -197,9 +259,9 @@ on them":
 interface World {
   time: number;
   rng: RngState;
-  characters: Map<CharacterId, Character>;
-  locations: Map<LocationId, Location>;
-  monsters: Map<MonsterId, Monster>;
+  characters: Map<CharacterId, Character>;   // every sapient agent, any species
+  locations: Map<LocationId, Location>;      // incl. statistical populations
+  creatures: Map<CreatureId, Creature>;      // named/active beasts only
   items: Map<ItemId, Item>;
   // …
   scheduler: SchedulerState;
@@ -276,10 +338,33 @@ character's memory stays the same size whether they are 20 or 80.
 
 ### 4.7 Content as data
 
-Species, monster templates, item bases, affixes, loot tables, recipes, name
-lists, and location archetypes are **data files** in `src/content/`, separate
-from the code. Adding a monster should not need a code change. Later this
-makes community content packs (mods) almost free.
+Species, creature templates, item bases, affixes, loot tables, recipes,
+spells, languages, name lists, and location archetypes are **data files** in
+`src/content/`, separate from the code. Adding a creature should not need a
+code change. Later this makes community content packs (mods) almost free.
+
+Every content entry carries a **culture tag**, and every generator takes a
+culture as input. Phase 1 ships a single generic culture, but the code path
+exists from the start, so the mythology-inspired regions
+([`WORLD.md`](WORLD.md) §6) arrive later as data packs rather than a rewrite.
+
+### 4.8 Beings: one character model for every people
+
+There are two kinds of beings ([`WORLD.md`](WORLD.md) §2):
+
+- **Characters**: every sapient being, whether human adventurer, elven
+  archer, dwarven smith, bandit, demon warlord, or lich. They share one model
+  (personality, memory, relationships, skills, languages). `species` and
+  `culture` are fields, and species-specific behavior comes from species
+  *data* (stat modifiers, lifespan, disposition, attitudes).
+- **Creatures**: beasts and mindless things (wolves, skeletons, imps), using
+  lighter templates with instincts instead of the full mind.
+
+**No being is hard-coded as an enemy.** Hostility between two beings is
+computed from species attitudes, personal morality, their relationship, and
+whether they share a language. That's what lets a human become a murderer,
+or a dwarf and an elf become friends against the odds, without special
+cases.
 
 ---
 
@@ -334,14 +419,13 @@ makes community content packs (mods) almost free.
 | Scale | Target |
 |---|---|
 | 200 characters, 30 locations | 1 in-game year simulates in < 5 s headless |
-| 1,000 characters, 100 locations | Smooth at 1×–10× speed in the browser |
+| 1,000 characters, 100 locations | Smooth at every tier up to Season in the browser |
+| 500 characters, fast-forward | 10 in-game years in ≤ 5 real minutes (§4.2) |
 | UI | 60 fps scroll/interaction regardless of sim speed |
 
-Strategies, in the order they'll be needed: scheduler-driven updates (built in
-from day one), spatial indexing by location, capped memories, event-log
-compaction, and finally **simulation level-of-detail**, where calm,
-uninteresting regions are resolved in coarser steps. Only optimize after the
-headless profiler shows a real bottleneck.
+The strategies are listed in §4.2. Beyond those built in from day one
+(scheduler, named vs. statistical population, silent detail), only optimize
+after the headless profiler shows a real bottleneck.
 
 ---
 

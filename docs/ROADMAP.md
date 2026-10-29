@@ -1,31 +1,35 @@
 # Roadmap
 
-The full vision is a world with hundreds of autonomous characters, dozens of
-towns, dungeons, and fortresses, a living economy, relationships, memory, and
-generations. Building all of that at once is how this project stalled the
-first time, so the plan is a sequence of **small, watchable milestones**.
+The full vision is a world with hundreds of autonomous characters from many
+peoples, dozens of towns, dungeons, and fortresses, costly magic, a living
+economy, relationships, memory, generations, and eventually regions shaped by
+real-world mythologies. Building all of that at once is how this project
+stalled the first time, so the plan is a sequence of **small, watchable
+milestones**.
 
 **Every phase ends with something you can open and watch.** No phase is pure
 plumbing with nothing to see. If a phase turns out too big, split it, and keep
 the "watchable at the end" rule.
 
-Technical decisions behind this plan are in [`ARCHITECTURE.md`](ARCHITECTURE.md).
+- Technical decisions: [`ARCHITECTURE.md`](ARCHITECTURE.md)
+- Setting, peoples, magic, languages, and cultures: [`WORLD.md`](WORLD.md)
 
 ### Phase overview
 
 | # | Phase | You can watch… | Size |
 |---|---|---|---|
 | 0 | Foundations | Tests passing and a seeded RNG (no world yet) | S |
-| 1 | The Heartbeat | Characters wandering between places in a live log | M |
-| 2 | Blood & Gold | Dungeon delves, battles, loot, and the first deaths | M |
-| 3 | Growth | Characters leveling, learning skills, upgrading gear | M |
-| 4 | Minds | Characters with personalities who learn what works for them | L |
-| 5 | Bonds | Friendships, rivalries, and adventuring parties | M |
-| 6 | The Observatory | Following a character; profiles, location views, stats, saves | L |
+| 1 | The Heartbeat | Characters traveling between places in a live log, at several speeds | M |
+| 2 | Blood & Gold | Dungeon delves, battles with creatures, loot, and the first deaths | M |
+| 3 | Growth & Sorcery | Leveling, skills, better gear, and costly first spells | L |
+| 4 | Minds | Characters with personalities and morals who learn what works for them | L |
+| 5 | Kin & Bad Blood | Friendships, parties, language barriers, outlaws, and bounties | L |
+| 6 | The Observatory | Following a character; profiles, stats, fast-forwarding decades, saves | L |
 | 7 | Markets | Merchants, caravans, crafting, and prices that move | L |
 | 8 | Generations | Marriage, children, retirement, inheritance, dynasties | L |
-| 9 | A Living World | A generated map, monster ecology, bosses, raids, fortresses | L |
-| 10 | Scale & Ship | 1,000+ characters, a desktop build, content packs | M |
+| 9 | A Living World | A generated map of peoples' homelands, demon and undead powers, bosses | L |
+| 10 | Cultures & Myths | Mythology-inspired regions with their own arms, creatures, and magic | L |
+| 11 | Scale & Ship | 1,000+ characters, a desktop build, content packs | M |
 
 Sizes are relative (S < M < L), not time estimates.
 
@@ -35,7 +39,9 @@ Sizes are relative (S < M < L), not time estimates.
 
 **Goal:** A clean, typed project where adding simulation code is easy and safe.
 
-- [ ] Scaffold **Vite + React + TypeScript** (`strict: true`) in this repo.
+- [ ] Delete the old prototype (`index.html`, `style.css`, `src/`, `.qodo/`)
+      and start from a fresh scaffold.
+- [ ] Scaffold **Vite + React + TypeScript** (`strict: true`).
 - [ ] Add ESLint and Prettier, **Vitest**, and `tsx` for scripts.
 - [ ] Create the directory layout from `ARCHITECTURE.md` §3 (`src/sim`,
       `src/content`, `src/host`, `src/ui`, `tools/`).
@@ -44,16 +50,10 @@ Sizes are relative (S < M < L), not time estimates.
 - [ ] Implement the **seeded `Rng`** (`next`, `int`, `chance`, `pick`,
       `weighted`, `gaussian`, `roll("2d6+1")`, `fork`), with tests for
       reproducibility and distribution sanity.
-- [ ] Port `character_names.js` into `src/content/names.ts`.
-- [ ] Retire the prototype `Character` class. Characters become plain data
-      (see `ARCHITECTURE.md` §4.3). *Note: the current `getInventory` getter
-      returns itself (`this.getInventory`) and would recurse infinitely, one
-      more reason not to keep the getter/setter style.*
-- [ ] Add a `.gitignore` (`node_modules`, `dist`, `.qodo/`) and untrack
-      `.qodo/history.sqlite`.
+- [ ] Add a `.gitignore` (`node_modules`, `dist`, `.qodo/`).
 - [ ] Add a **GitHub Actions CI** workflow: typecheck → lint → test → build.
-- [ ] Add a `tools/sim-cli.ts` stub: `npm run sim -- --seed 42` prints
-      "hello from seed 42" plus a few RNG rolls.
+- [ ] Add a `tools/sim-cli.ts` stub: `npm run sim -- --seed 42` prints a few
+      RNG rolls.
 
 **Exit criteria:** `npm run dev` shows an empty shell, `npm test` passes, CI is
 green, and the same seed prints the same rolls every time.
@@ -62,19 +62,24 @@ green, and the same seed prints the same rolls every time.
 
 ## Phase 1 — The Heartbeat
 
-**Goal:** The world exists and time moves. Characters go places, and you see it
-happen.
+**Goal:** The world exists and time moves at whatever speed you choose.
+Characters go places, and you see it happen.
 
 **Simulation**
-- [ ] World clock in minutes, plus a calendar formatter (`Y1 · Day 12 · 09:00`).
+- [ ] World clock in **seconds**, plus a calendar formatter
+      (`Y1 · Day 12 · 09:00:00`).
 - [ ] **Scheduler**: a priority queue of `(time, actorId, action)`. Actors
-      are only processed when they are due.
+      are only processed when they are due (`ARCHITECTURE.md` §4.2).
 - [ ] World container with entity tables and ID generation.
-- [ ] **Event system**: typed `SimEvent`s, an in-memory store, and subscribers.
+- [ ] **Event system**: typed `SimEvent`s with importance levels, an in-memory
+      store, and subscribers.
+- [ ] Content plumbing with **culture tags**. Ship one generic medieval
+      culture: its name generator, location names, and so on.
 - [ ] A small hand-made world: 3 towns, 2 dungeons, 1 wilderness area, and the
       **travel routes** between them as a graph with travel times.
-- [ ] Characters as plain data: name, home town, current location, and
-      state (`idle | traveling | resting`).
+- [ ] Characters as plain data: name, `species` (humans only for now),
+      `culture`, home town, current location, and state
+      (`idle | traveling | resting`).
 - [ ] The simplest possible behavior: idle characters pick a random
       destination, travel there (scheduled arrival), and wait a random time.
 - [ ] Spawn about 20 characters at world creation.
@@ -82,18 +87,20 @@ happen.
 **UI**
 - [ ] `SimHost` interface: `start / pause / setSpeed / step`. It may run on the
       main thread for now.
-- [ ] Speed controls: ⏸ / 1× / 5× / 20× / max.
+- [ ] **Speed tiers**: ⏸ · Real-time · Minute · Hour · Day · Max, with a
+      default log importance floor per tier (`ARCHITECTURE.md` §4.2).
 - [ ] **Live event log**: virtualized, auto-scrolling with a "pinned to
       bottom" toggle, timestamps in world time.
 - [ ] Event → text templates with 2–3 phrasings per event type.
 
 **Tooling**
 - [ ] Headless runner can run N days and dump the log.
-- [ ] **Determinism test** in CI (same seed → same event hash).
+- [ ] **Determinism test** in CI: same seed → same event hash, *including
+      across different speed tiers* (the golden rule).
 
-**Exit criteria:** Open the page, press play, and read *"Rufus Ironclaw sets
-out from Concordale toward the Dungeon of Misery…"*, with dozens of characters
-moving around and the clock ticking.
+**Exit criteria:** Open the page, press play, and read *"Rufus sets out from
+Concordale toward the Dungeon of Misery…"*. Switch from Real-time to Day and
+watch weeks go by without the page stuttering.
 
 ---
 
@@ -101,19 +108,31 @@ moving around and the clock ticking.
 
 **Goal:** Danger, death, and reward. Gives the world a reason to move.
 
-**Simulation**
+**Peoples and creatures**
+- [ ] Species as data (`WORLD.md` §2): stat modifiers, lifespan, and baseline
+      attitudes. Add **elves** and **dwarves** as characters alongside humans.
+- [ ] **Creature templates** in `src/content/creatures` (species, base stats,
+      level range, loot table, instincts), with RNG variance and an occasional
+      **affix** ("Enraged Infernal Imp", "Ancient Warg").
+- [ ] First hostile things: beasts, **lesser undead** (skeletons, zombies),
+      and **lesser demons** (imps, hounds), all as creatures.
+- [ ] **Statistical populations**: a dungeon holds *counts* ("skeletons ≈ 30"),
+      and encounters draw individuals from them. Killing creatures lowers the
+      count, and the count recovers slowly (`ARCHITECTURE.md` §4.2).
+
+**Combat and the body**
 - [ ] Character **stats**: a small, readable set (e.g. Might, Agility,
-      Toughness, Wits, Spirit, Presence) plus HP, rolled at creation.
-- [ ] **Monster templates** in `src/content/monsters` (species, base stats,
-      level range, loot table), with RNG variance and an occasional **affix**
-      ("Enraged Infernal Imp", "Ancient Warg").
+      Toughness, Wits, Spirit, Presence), plus **HP** and **Stamina**.
+- [ ] **Status effects** framework (timed modifiers): wounded, exhausted,
+      dizzy, drained. Combat uses it now; magic reuses it in Phase 3.
 - [ ] **Dungeons** with a danger level and an **encounter table**.
       Exploration happens in rooms or turns, each of which can be a fight,
       treasure, a trap, or nothing.
-- [ ] **Combat resolver**: opposed rolls, damage dice, crits, and a flee check
-      (based on HP% and a bravery value). It handles 1-vs-1 and small groups.
-      Fights resolve in a few rounds within one scheduled action and emit
-      per-round events (importance: trivial) plus a summary (normal).
+- [ ] **Combat resolver**: opposed rolls, damage dice, crits, stamina use, and a
+      flee check (based on HP%, stamina, and a bravery value). It handles
+      1-vs-1 and small groups. Fights resolve in full every time, but
+      blow-by-blow events are only **emitted when watched** (silent detail);
+      the summary event is always emitted.
 - [ ] **Death** (permanent, with an obituary event), **loot** (gold + simple
       items), and **wounds** that need rest in town to heal.
 - [ ] Simple rule-based behavior until Phase 4: healthy → go delve; hurt →
@@ -121,24 +140,25 @@ moving around and the clock ticking.
 - [ ] Gold exists. Selling loot happens at a fixed vendor price for now; the
       economy comes in Phase 7.
 
-**UI**
-- [ ] Log filter by importance (hide per-round combat spam by default).
-- [ ] Clicking a character name opens a **basic character card** (stats, HP,
-      gold, location, kill count).
-
-**Tooling**
+**UI and tooling**
+- [ ] Log filter by importance.
+- [ ] Clicking a character name opens a **basic character card** (species,
+      stats, HP and stamina, statuses, gold, location, kill count).
 - [ ] Headless report: deaths by cause, kills by species, gold earned.
 - [ ] Monte Carlo balance tests for the combat resolver.
 
 **Exit criteria:** Over a simulated month, some characters get rich, some limp
-home, and some die in the Dungeon of Misery, and the log tells each story.
+home, and some die to skeletons in the Dungeon of Misery. At Real-time speed,
+you can watch a single fight blow by blow.
 
 ---
 
-## Phase 3 — Growth
+## Phase 3 — Growth & Sorcery
 
-**Goal:** Characters change over time, and the survivors get stronger.
+**Goal:** Characters change over time, and a few of them touch magic and pay
+for it.
 
+**Growth**
 - [ ] **XP and levels** with a level curve that keeps progression slow.
 - [ ] **Skills that improve with use**: swordsmanship rises by fighting with
       swords, lockpicking by opening chests. Characters drift into roles
@@ -146,35 +166,53 @@ home, and some die in the Dungeon of Misery, and the log tells each story.
       class.
 - [ ] **Equipment slots** and item effects on combat.
 - [ ] **Item generation**: base type × material × rarity × affixes ("Duskblade
-      of the Ember", "Rusted Iron Axe"). Named unique items are rare and get
-      remembered.
+      of the Ember", "Rusted Iron Axe"), all culture-tagged. Named unique items
+      are rare and get remembered.
 - [ ] Characters equip upgrades they find. Better gear changes outcomes.
-- [ ] **Population replenishment**: new adventurers arrive in towns at a rate
-      tied to world conditions, so the world doesn't empty out.
-- [ ] Monsters scale with dungeon depth, and deeper levels unlock as
+- [ ] **Population replenishment**: new adventurers come out of towns'
+      statistical populations at a rate tied to world conditions.
+- [ ] Creatures scale with dungeon depth, and deeper levels unlock as
       characters grow.
-- [ ] UI: the character card shows level, skills, gear, and a short list of
-      notable deeds.
+
+**Sorcery, first pass** (`WORLD.md` §4)
+- [ ] **Arcana** skill: learned slowly by study (only in certain towns, from
+      mentors or tomes), or boosted by **the gift** (rare, rolled at creation,
+      rate by species).
+- [ ] **Spells as data**: effect, difficulty, and a **cost profile** (stamina,
+      health, stat drain, dizziness). Cost scales with power and goes down with
+      mastery.
+- [ ] **Casting roll** with four outcomes: success / partial / failure /
+      backlash. Casting while dizzy or drained raises backlash odds.
+- [ ] 4 starter spells: Ember Bolt, Mend Flesh, Quickening, Ward of Ash.
+- [ ] A simple "cast if the odds are good" rule until the utility AI arrives.
+- [ ] Headless metrics: casts, backlashes, and deaths by self-inflicted magic.
+
+**UI**
+- [ ] Character card shows level, skills, gear, known spells, and a short list
+      of notable deeds.
 
 **Exit criteria:** After a simulated year there is a visible spread: veterans
-at level 8+ with named gear, newcomers at level 1, and a graveyard that tells
-the rest.
+at level 8+ with named gear, newcomers at level 1, a handful of mages whose
+spells sometimes win a fight and sometimes leave them dizzy and bleeding, and a
+graveyard that tells the rest.
 
 ---
 
 ## Phase 4 — Minds
 
 **Goal:** Characters stop being dice with legs. They have personalities,
-drives, and memory, and they learn from experience.
+morals, drives, and memory, and they learn from experience.
 
 - [ ] **Personality traits** (rolled, slightly mutable): bravery, greed,
-      curiosity, sociability, honor, patience. These replace the hard-coded
-      rules from Phase 2.
+      curiosity, sociability, patience, plus **morality traits**
+      (compassion ↔ cruelty, honor ↔ treachery). Species shift the
+      distributions they are rolled from (`WORLD.md` §3).
 - [ ] **Drives/needs**: health, wealth, glory, rest, companionship, purpose.
       They decay or rise over time and push behavior.
 - [ ] **Utility AI** (`ARCHITECTURE.md` §4.5): score candidate actions,
       apply personality and noise, then do a weighted pick among the top
-      options.
+      options. It replaces the Phase 2 and 3 rules, including when to cast a
+      spell given its risk.
 - [ ] **Memory layers** (`ARCHITECTURE.md` §4.6):
   - [ ] Episodic memory with salience decay, plus permanent *life events*.
   - [ ] Learned expectations per (activity, place), bandit-style. Characters
@@ -191,57 +229,86 @@ did.
 
 ---
 
-## Phase 5 — Bonds
+## Phase 5 — Kin & Bad Blood
 
-**Goal:** Characters notice each other.
+**Goal:** Characters notice each other, prefer their own kind, struggle to
+talk to strangers, and sometimes turn to crime.
 
+**Bonds**
 - [ ] **Opinions** (affinity, trust, familiarity), updated by shared events:
       fought side by side, saved my life, stole the loot, met at the inn.
-- [ ] **Socializing** at inns and taverns: chance encounters between
-      characters in the same place, shaped by sociability.
+- [ ] **Socializing** at inns and taverns, shaped by sociability and a
+      **same-species preference** (`WORLD.md` §5).
 - [ ] **Parties**: characters with high mutual trust form adventuring groups,
       share loot (fairly, depending on honor), and split up over disputes or
       deaths.
-- [ ] **Rivalries and grudges**, including revenge-seeking (rare but memorable).
-- [ ] **Reputation** per town: what people in a place think of a character.
+- [ ] **Rivalries and grudges**, including revenge-seeking.
 - [ ] **Mourning**: losing a close friend affects mood and decisions.
-- [ ] UI: a **Relationships** tab (friends, rivals, party) and party events in
-      the log.
 
-**Exit criteria:** You can see a party form, survive a dungeon together, lose a
-member, and watch a survivor change afterward.
+**Languages** (`WORLD.md` §5)
+- [ ] One native language per people. **Language proficiency as a skill**,
+      learned through exposure and teaching.
+- [ ] Shared language gates **parley** (talking down a fight, surrender,
+      bribes), speeds up friendship, and carries rumors and warnings.
+- [ ] Computed **hostility** (`ARCHITECTURE.md` §4.8): species attitude +
+      morality + relationship + language.
+
+**Outlaws** (`WORLD.md` §3)
+- [ ] Circumstances + low honor/compassion → **banditry, theft, murder**.
+      Outlaws ambush travelers and can form gangs.
+- [ ] **Reputation** per town, **bounties** for crimes, and bounty hunters. Some
+      outlaws reform.
+
+**UI**
+- [ ] A **Relationships** tab (friends, rivals, party), languages known, a
+      crimes and bounties section, and party events in the log.
+
+**Exit criteria:** You can see a dwarven party form, survive a dungeon, lose
+a member, and fall apart. A broke human adventurer turns bandit, robs a
+caravan of elves who couldn't parley with him, and has a bounty on his head by
+season's end.
 
 ---
 
 ## Phase 6 — The Observatory
 
-**Goal:** Turn the log viewer into a real god-game observatory. Also the
-technical hardening phase.
+**Goal:** Turn the log viewer into a real god-game observatory, make time
+compression work fully, and harden the technical base.
 
 **Observation tools**
 - [ ] **Follow mode**: pin a character and the log filters to them, with
-      their card always visible.
+      their card always visible. Following also turns on silent-detail
+      emission for them.
 - [ ] **Character profile page**: biography generated from life events,
-      stats over time, gear, relationships, memories, and an "on this day" timeline.
-- [ ] **Location view**: who is here now, recent events here, dangers, and
-      (later) the market.
-- [ ] **Search and filters**: by character, location, event type, and
+      stats over time, gear, spells, relationships, memories, and a timeline.
+- [ ] **Location view**: who is here now, populations, recent events, and
+      dangers.
+- [ ] **Search and filters**: by character, location, species, event type, and
       importance.
 - [ ] **Chronicle**: a curated history of notable and legendary events, by year.
-- [ ] **World statistics dashboard**: population, deaths by cause, level
-      distribution, and total gold, charted over time.
-- [ ] **Hall of Heroes / Graveyard**: the greatest living, the honored dead.
+- [ ] **World statistics dashboard**: population by species, deaths by cause,
+      level distribution, total gold, and crime, charted over time.
+- [ ] **Hall of Heroes / Graveyard / Most Wanted**.
+
+**Time compression** (`ARCHITECTURE.md` §4.2)
+- [ ] **Season** tier and **Fast-forward** ("skip N years") with a progress
+      bar, pause and cancel, and a **digest** of what happened while skipping.
+- [ ] **Display throttling** with digest lines ("…and 3,412 minor happenings").
+- [ ] **Playback buffer** so Real-time and Minute tiers read smoothly.
 
 **Hardening**
 - [ ] Move the simulation into a **Web Worker** (Comlink), with throttled
       snapshots and on-demand `query()`.
 - [ ] **Save / load** to IndexedDB, plus export and import of save files.
 - [ ] "New world from seed" dialog. Seeds are shareable.
-- [ ] Event-log compaction (old trivial events expire; notable and higher are
-      kept).
+- [ ] Event retention by importance (old trivial events expire; notable and
+      higher are kept).
+- [ ] Hit the fast-forward performance target in `ARCHITECTURE.md` §8 with the
+      current population.
 
-**Exit criteria:** You can leave a world running, come back, save it, reload it
-tomorrow, pick an interesting character, and read their life story.
+**Exit criteria:** Watch one duel in real time, then skip ten years in a few
+minutes. Read the digest, save, reload tomorrow, pick an interesting survivor,
+and read their life story.
 
 ---
 
@@ -250,18 +317,23 @@ tomorrow, pick an interesting character, and read their life story.
 **Goal:** A real economy. Nobody sets prices: they come from supply, demand,
 and individual price beliefs.
 
-- [ ] **Goods**: raw materials (ore, hides, herbs, monster parts), crafted
-      items, and consumables (food, potions).
+- [ ] **Goods**: raw materials (ore, hides, herbs, creature parts), crafted
+      items, consumables (food, potions), and **reagents** for magic.
 - [ ] **Market per town** run as a bid/ask clearinghouse. Agents hold *private
       price beliefs* that adjust after each successful or failed trade
       (Doran & Parberry model).
+- [ ] **Town demand from statistical populations**: townsfolk eat, wear out
+      tools, and buy goods in aggregate.
 - [ ] **Producers and crafters**: smiths, alchemists, and tanners. Crafting
       recipes use materials and skill, and quality depends on skill rolls.
-      Adventurers become suppliers of monster parts and ore.
+      Adventurers become suppliers of creature parts and ore.
 - [ ] **Merchants and caravans**: trader characters who buy low in one town,
-      haul goods along routes (where bandits and monsters raid them), and sell
+      haul goods along routes (where bandits and creatures raid them), and sell
       high in another. **Arbitrage** is what ties town prices together.
-- [ ] **Random shocks**: a failed harvest, a collapsed mine, a monster
+- [ ] **Language in trade**: no shared tongue means fewer deals and worse
+      prices, which gives merchants a reason to learn languages (and
+      possibly leads to a trade pidgin).
+- [ ] **Random shocks**: a failed harvest, a collapsed mine, a creature
       blockade on a route, a rich new vein. Prices react.
 - [ ] **Money supply accounting**: every gold source (loot) and sink (food,
       repairs, lodging, lost on death) is tracked, so the headless report can
@@ -269,9 +341,9 @@ and individual price beliefs.
 - [ ] UI: market panel per location (prices, order book, history chart),
       price index over time, caravan tracker.
 
-**Exit criteria:** A monster blockade on the iron route makes swords more
-expensive in the town at the far end, and a merchant takes the risk and makes
-money from it.
+**Exit criteria:** A bandit gang on the iron route makes swords more expensive
+in the town at the far end, and a multilingual merchant takes the risk and
+makes money from it.
 
 ---
 
@@ -280,22 +352,26 @@ money from it.
 **Goal:** Lives have a beginning, middle, and end, and the world continues past
 any single character.
 
-- [ ] **Aging**: stats change with age, and characters die of old age.
+- [ ] **Aging** per species lifespan: stats change with age, and characters die
+      of old age. Undead don't age.
 - [ ] **Retirement**: older or wealthy or wounded or traumatized adventurers
       settle down and take a town job (innkeeper, smith, trainer, merchant).
       Their memories and relationships stay.
 - [ ] **Courtship and marriage** from high mutual affinity and compatible
-      traits.
-- [ ] **Children**: inherited traits (blend + mutation), family names, raised
-      in town, and coming of age as new adventurers who may take up a parent's
-      weapon or grudge.
+      traits, mostly within a species.
+- [ ] **Children**: inherited traits (blend + mutation), the gift sometimes
+      runs in families, and family names. Children grow up in town and come of
+      age as new adventurers who may take up a parent's weapon or grudge.
+- [ ] **Promotion** from statistical populations: notable commoners become named
+      characters when events single them out.
 - [ ] **Inheritance**: gold, items, and houses pass to heirs.
 - [ ] **Dynasties and legends**: family trees, famous lineages, and dead heroes
       who become legends that others mention.
 - [ ] UI: family tree view, and a lineage section in profiles.
 
 **Exit criteria:** A 100-year headless run produces three or more generations,
-with a stable population and family sagas visible in the chronicle.
+with a stable population for each people and family sagas visible in the
+chronicle.
 
 ---
 
@@ -304,37 +380,68 @@ with a stable population and family sagas visible in the chronicle.
 **Goal:** Replace the hand-made world with a generated one that changes over
 time.
 
-- [ ] **Procedural world generation** from seed: regions and biomes, dozens of
-      towns, dungeons, ruins, fortresses, and the route network, with
-      generated names that fit each region.
-- [ ] **Monster ecology**: dungeon populations breed, migrate, and spill over
+- [ ] **Procedural world generation** from seed: regions and biomes, **peoples'
+      homelands** (forests for elves, mountains for dwarves, steppes for
+      centaurs…), dozens of towns, dungeons, ruins, and fortresses, a few rare
+      mixed border towns, and the route network.
+- [ ] **Centaurs** join as a people. **Sapient demons and undead** (demon
+      warlords, liches, revenants) arrive as characters who command creature
+      hordes and cults.
+- [ ] **Creature ecology**: dungeon populations breed, migrate, and spill over
       when overpopulated. Clearing a dungeon has lasting but temporary effects.
-- [ ] **Bosses**: unique, named, persistent monsters with lairs. They can
-      *level up from the adventurers they kill* and become remembered threats.
-- [ ] **Raids**: monster incursions into weak towns, and town defense by the
-      characters present.
+- [ ] **Bosses**: unique, named, persistent beings with lairs. They can *level
+      up from the adventurers they kill* and become remembered threats.
+- [ ] **Raids and incursions**: creature and demon attacks on weak towns, and
+      town defense by the characters present.
 - [ ] **Fortresses and lords** (first pass): territory, taxes or protection,
       and garrisons that patrol routes.
-- [ ] **Seasons and weather** affecting travel, harvests, and monster activity.
+- [ ] **Seasons and weather** affecting travel, harvests, and creature activity.
 - [ ] **World map view** (PixiJS canvas): locations, routes, caravans, and the
       followed character, with click-through to the DOM panels.
 
 **Exit criteria:** A brand-new seed produces a different, coherent world. A
-boss grows infamous over decades until a party finally brings it down, and the
-chronicle records it.
+lich grows infamous over decades until a party finally brings it down, and
+the chronicle records it.
 
 ---
 
-## Phase 10 — Scale & Ship
+## Phase 10 — Cultures & Myths
+
+**Goal:** The world's regions take on identities drawn from real-world
+civilizations and their mythologies (`WORLD.md` §6). The culture-tag plumbing
+has been there since Phase 1, so this phase is mostly content work.
+
+- [ ] **Culture pack format**: name generators, arms and armor tables, bestiary
+      (region-native creatures and peoples), magic tradition (spells and cost
+      flavors), myths and deities, and settlement vocabulary.
+- [ ] World generation assigns cultures to regions. A species can have local
+      variants per culture (Norse *dvergar* and *álfar*).
+- [ ] **First culture pack**, likely **Japonic**: katana, naginata, yumi;
+      kitsune, kappa, oni, tengu, yūrei; talisman and ward magic.
+- [ ] Then more packs, one at a time (Norse, Hellenic, Slavic,
+      Mesopotamian…), each playtested with the headless runner for balance.
+- [ ] **Myths in the simulation**: characters hold beliefs from their culture.
+      Local legends grow out of real chronicle events ("the oni of the
+      northern pass" is a real boss that killed real people).
+- [ ] UI: region panel with its culture, myths, and notable figures.
+
+**Exit criteria:** Two regions feel distinct at a glance in the log: a ronin
+with a katana fighting a kappa at a river ford in one, and a Norse-flavored
+dwarf facing a draugr in a barrow in the other.
+
+---
+
+## Phase 11 — Scale & Ship
 
 - [ ] Profile with the headless runner and hit the targets in
       `ARCHITECTURE.md` §8 (1,000+ characters).
-- [ ] Simulation level-of-detail for quiet regions, if profiling shows it's
-      needed.
+- [ ] World-based level of detail for quiet regions, if profiling shows it's
+      needed (never observer-based).
 - [ ] **Tauri desktop build** (Windows, macOS, Linux) from the same codebase.
-- [ ] **Content packs**: load extra monsters, items, and names from JSON.
-- [ ] Settings: world size, danger, magic level, and population caps at world
-      creation.
+- [ ] **Content packs**: load extra creatures, items, cultures, and names from
+      JSON.
+- [ ] Settings: world size, danger, magic rarity, peoples included, and
+      population caps at world creation.
 - [ ] A final project name, an icon, and a hosted web build.
 
 ---
@@ -343,11 +450,13 @@ chronicle records it.
 
 Not planned or committed. Ideas stay here until they earn a phase.
 
-- Factions, guilds, and wars between fortresses.
-- Religion, cults, and divine events.
-- Magic research and artifacts that change the world.
-- Rumors and information spread: characters act on what they've *heard*, which
+- Factions, guilds, kingdoms, and wars between peoples.
+- Religion and cults, possibly with real divine intervention (see
+  `WORLD.md` §7).
+- Magic research, forbidden arts, and artifacts that change the world.
+- Rumors and misinformation: characters act on what they've *heard*, which
   may be wrong.
+- More peoples: orcs, goblins, halflings, giants, merfolk.
 - Optional narrated summaries ("The Saga of Rufus") generated from the
   chronicle, possibly with an LLM. Always optional; the sim stays fully
   offline and deterministic.
@@ -368,16 +477,8 @@ Not planned or committed. Ideas stay here until they earn a phase.
 
 ## Open questions
 
-These don't block Phase 0–1 but need decisions eventually:
+Project-level (world questions are in `WORLD.md` §7):
 
 1. **Name.** Keep *Ironside Dawn* or rename once the world has a personality?
 2. **Visual identity.** Clean modern dark UI, or a stylized "old manuscript /
    terminal" look?
-3. **Tone and setting.** High fantasy (common magic, many species) or
-   low/grim fantasy (rare magic, mostly humans and beasts)? This affects the
-   content tables a lot.
-4. **Time scale.** At 1×, is one real second one in-game hour? Do people want to
-   watch a single dungeon delve play out, or decades go by?
-5. **Species.** Are playable-type species (elves, dwarves, …) part of the
-   adventurer population, or are adventurers human with other species as
-   NPCs?

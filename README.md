@@ -4,6 +4,10 @@
 
 **Ironside Dawn is a fantasy world simulation you watch rather than play.**
 
+The setting is medieval low fantasy. Many peoples (humans, elves, dwarves,
+centaurs, demons, undead) mostly keep to their own lands, and magic is rare
+and always costs the caster something.
+
 You open it and a world is already running: adventurers set out from towns,
 delve into dungeons, fight monsters, loot, trade, level up, make friends and
 enemies, fall in love, retire, have children, and die. Nothing is scripted.
@@ -24,10 +28,12 @@ town's market, or watch a dungeon's population change over time.
 
 ## Status
 
-Pre-production. Only a prototype `Character` class exists. The plan is in:
+Pre-production: the plan is written and no code exists yet. The plan is in:
 
 - [`docs/ROADMAP.md`](docs/ROADMAP.md): the phased development plan, with exit
   criteria for each milestone.
+- [`docs/WORLD.md`](docs/WORLD.md): the setting bible (peoples, morality,
+  magic, languages, and mythology-inspired cultures).
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md): tech stack, simulation design,
   and the reasoning behind each choice.
 
