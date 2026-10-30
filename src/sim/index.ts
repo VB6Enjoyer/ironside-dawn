@@ -9,6 +9,7 @@ export * from './core/time';
 export { WORLD_START } from './gen/world';
 export * from './model';
 export { createSimulation } from './simulation';
-export { conditionsOf } from './systems/condition';
+export { conditionsOf, statValue } from './systems/condition';
+export { roleOf, xpForLevel } from './systems/progress';
 export type { Condition } from './systems/condition';
 export type { AdvanceOptions, AdvanceResult, Simulation, SimulationOptions } from './simulation';

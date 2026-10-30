@@ -12,8 +12,13 @@ export interface LocationDef {
   readonly article?: 'the';
   readonly kind: LocationKind;
   readonly culture: CultureId;
-  /** Towns: which peoples live here, by relative share. */
-  readonly peoples?: Partial<Record<SpeciesId, number>>;
+  /**
+   * Towns: the commoners who live here, by people. A statistical population
+   * (ARCHITECTURE.md §4.2) that new adventurers are drawn from.
+   */
+  readonly population?: Partial<Record<SpeciesId, number>>;
+  /** Towns with a library or mentors, where arcana can be studied. */
+  readonly academy?: boolean;
   /** Dungeons: what lives inside and what can be found. */
   readonly dungeon?: DungeonDef;
 }

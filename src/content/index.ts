@@ -21,5 +21,38 @@ export { STATS } from './stats';
 export type { StatId, Stats } from './stats';
 export { TRAPS } from './traps';
 export type { TrapDef, TrapId } from './traps';
-export { WEAPONS, weaponDef } from './weapons';
-export type { WeaponDef, WeaponId } from './weapons';
+export {
+  ARMORS,
+  ITEM_AFFIXES,
+  itemAffixDef,
+  itemBase,
+  MATERIALS,
+  materialDef,
+  RARITIES,
+  TRINKETS,
+  UNIQUE_NAME_ENDINGS,
+  UNIQUE_NAME_STARTS,
+  WEAPONS,
+  weaponBase,
+} from './items';
+export type {
+  ArmorBase,
+  ArmorId,
+  ItemAffixDef,
+  ItemAffixId,
+  ItemBase,
+  ItemBaseId,
+  ItemEffects,
+  MaterialDef,
+  MaterialId,
+  Rarity,
+  Slot,
+  TrinketBase,
+  TrinketId,
+  WeaponBase,
+  WeaponId,
+} from './items';
+export { SKILL_RANKS, SKILL_ROLE, SKILLS } from './skills';
+export type { Role, SkillId, WeaponSkill } from './skills';
+export { SPELLS, spellDef } from './spells';
+export type { SpellCosts, SpellDef, SpellEffect, SpellId } from './spells';

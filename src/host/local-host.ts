@@ -40,7 +40,9 @@ export interface HostSnapshot {
   readonly eventCount: number;
   /** Events not added to the log because they were below the floor. */
   readonly hiddenCount: number;
-  readonly characterCount: number;
+  /** Adventurers alive now, and those who have died. */
+  readonly livingCount: number;
+  readonly fallenCount: number;
   /** Measured in-game seconds per real second, smoothed. */
   readonly measuredRate: number;
 }
@@ -184,7 +186,7 @@ export function createLocalHost(options: LocalHostOptions): SimHost {
         // Events still waiting to be flushed into the log aren't counted yet.
         eventCount: eventCount - pending.length,
         hiddenCount,
-        characterCount: sim.world.characters.size,
+        ...countLiving(sim.world),
         measuredRate: running ? measuredRate : 0,
       };
       return snapshot;
@@ -236,4 +238,10 @@ export function createLocalHost(options: LocalHostOptions): SimHost {
       changed();
     },
   };
+}
+
+function countLiving(world: World): { livingCount: number; fallenCount: number } {
+  let livingCount = 0;
+  for (const character of world.characters.values()) if (character.death === null) livingCount++;
+  return { livingCount, fallenCount: world.characters.size - livingCount };
 }

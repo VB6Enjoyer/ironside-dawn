@@ -15,6 +15,7 @@ const fighter = (overrides: Partial<FighterState> = {}): FighterState => ({
   hp: 28,
   maxHp: 28,
   stamina: 16,
+  ward: 0,
   out: null,
   ...overrides,
 });

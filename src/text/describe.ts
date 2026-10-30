@@ -1,6 +1,13 @@
-import { creatureDef, type CreatureId, type PastimeId, type WeaponId } from '../content';
+import {
+  creatureDef,
+  type CreatureId,
+  type ItemBaseId,
+  type PastimeId,
+  type WeaponId,
+} from '../content';
 import type { CharacterId, Combatant, EventOfType, EventType, LocationId, SimEvent } from '../sim';
 import { describeDuration, seasonName } from './calendar';
+import { anItem, itemName, legendTitle, SKILL_PHRASES, spellName } from './items';
 import { SPECIES_NAMES, type NameResolver } from './names';
 import {
   aCreature,
@@ -46,7 +53,7 @@ interface Helpers {
   kindOf(id: LocationId): 'town' | 'dungeon' | 'wilderness' | undefined;
   /** "a human", "an elf". */
   aSpecies(id: CharacterId): string;
-  weaponOf(id: CharacterId): WeaponId | undefined;
+  weaponOf(id: CharacterId): ItemBaseId | undefined;
   /** Picks a variant by event ID. */
   pick<T>(options: readonly T[]): T;
 }
@@ -71,6 +78,10 @@ const PASTIME_PHRASES: Record<PastimeId, readonly ((c: Segment, l: Segment) => P
     (c, l) => [c, ' lights a candle at the shrine in ', l, '.'],
     (c, l) => [c, ' prays quietly at a wayside shrine in ', l, '.'],
   ],
+  study: [
+    (c, l) => [c, ' pores over old tomes in ', l, '.'],
+    (c, l) => [c, ' studies with a hedge-mage in ', l, '.'],
+  ],
   scout: [
     (c, l) => [c, ' watches the entrance of ', l, ' from a safe distance.'],
     (c, l) => [c, ' circles the outskirts of ', l, ', looking for signs of life.'],
@@ -90,6 +101,8 @@ const WEAPON_VERBS: Record<WeaponId, readonly string[]> = {
   axe: ['hacks into', 'cleaves'],
   warhammer: ['smashes', 'hammers'],
   leafblade: ['slices', 'carves into'],
+  greatsword: ['cleaves', 'hews'],
+  battleaxe: ['hacks into', 'splits'],
 };
 
 const CREATURE_VERBS: Record<CreatureId, readonly string[]> = {
@@ -107,7 +120,8 @@ const CREATURE_VERBS: Record<CreatureId, readonly string[]> = {
 function attackVerb(h: Helpers, attacker: Combatant): string {
   if (attacker.kind === 'creature') return h.pick(CREATURE_VERBS[attacker.ref.species]);
   const weapon = h.weaponOf(attacker.id);
-  return weapon ? h.pick(WEAPON_VERBS[weapon]) : 'strikes';
+  const verbs = weapon ? WEAPON_VERBS[weapon as WeaponId] : undefined;
+  return verbs ? h.pick(verbs) : 'strikes';
 }
 
 const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
@@ -195,6 +209,9 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
           l,
           `${legacy}.`,
         ];
+      }
+      if (cause.kind === 'magic') {
+        return [c, ` is consumed by a backfiring ${spellName(cause.spell)} in `, l, `${legacy}.`];
       }
       return h.pick<Part[]>([
         [c, ` is slain by ${aCreature(cause.creature)} in `, l, `${legacy}.`],
@@ -300,14 +317,21 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
     (e, h) => [h.c(e.data.characterId), ' presses deeper into ', h.l(e.data.locationId), '.'],
   ],
   'delve.treasure': [
-    (e, h) => [
-      h.c(e.data.characterId),
-      ` finds ${spoils(e.data.gold, e.data.items)} in a hidden alcove.`,
-    ],
-    (e, h) => [
-      h.c(e.data.characterId),
-      ` pries open an old chest: ${spoils(e.data.gold, e.data.items)}.`,
-    ],
+    (e, h) => {
+      const c = h.c(e.data.characterId);
+      const found = spoils(e.data.gold, e.data.items);
+      switch (e.data.lock) {
+        case 'picked':
+          return [c, ` picks the lock of an old chest and finds ${found}.`];
+        case 'forced':
+          return [c, ` smashes open a locked chest, spoiling much of what was inside: ${found}.`];
+        case 'none':
+          return h.pick<Part[]>([
+            [c, ` finds ${found} in a hidden alcove.`],
+            [c, ` pries open an old chest: ${found}.`],
+          ]);
+      }
+    },
   ],
   'delve.trap': [
     (e, h) => {
@@ -360,7 +384,8 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
           [h.who(target), ' evades ', h.who(attacker), '.'],
         ]);
       }
-      const damage = `${e.data.damage} damage`;
+      const absorbed = e.data.absorbed > 0 ? `, ${e.data.absorbed} soaked up by a ward` : '';
+      const damage = `${e.data.damage} damage${absorbed}`;
       const status =
         target.kind === 'character' && e.data.targetHp > 0
           ? ` (${Math.ceil(e.data.targetHp)}/${e.data.targetMaxHp})`
@@ -416,6 +441,85 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
     (e, h) => [h.c(e.data.characterId), ` gets away, ${condition(e.data.hp, e.data.maxHp)}.`],
   ],
 
+  'character.levelup': [
+    (e, h) => [h.c(e.data.characterId), ` reaches level ${e.data.level}.`],
+    (e, h) => [h.c(e.data.characterId), ` grows stronger, reaching level ${e.data.level}.`],
+  ],
+  'character.skill': [
+    (e, h) => [
+      h.c(e.data.characterId),
+      ` is now ${article(e.data.rank)} ${e.data.rank} ${SKILL_PHRASES[e.data.skill]}.`,
+    ],
+  ],
+  'item.equip': [
+    (e, h) => {
+      const c = h.c(e.data.characterId);
+      const item = anItem(e.data.item);
+      const old = e.data.replaced ? `, setting aside ${anItem(e.data.replaced)}` : '';
+      switch (e.data.item.base) {
+        case 'padded':
+        case 'leather':
+        case 'scale':
+        case 'chain':
+        case 'plate':
+          return [c, ` dons ${item}${old}.`];
+        case 'ring':
+        case 'amulet':
+        case 'charm':
+          return [c, ` puts on ${item}${old}.`];
+        default:
+          return [c, ` takes up ${item}${old}.`];
+      }
+    },
+  ],
+  'item.legend': [
+    (e, h) => {
+      const c = h.c(e.data.characterId);
+      const l = h.l(e.data.locationId);
+      if (e.data.previousOwner) {
+        return [
+          c,
+          ` finds ${itemName(e.data.item)} in `,
+          l,
+          ', where ',
+          h.c(e.data.previousOwner),
+          ' fell.',
+        ];
+      }
+      return [c, ` finds ${legendTitle(e.data.item)}, in `, l, '.'];
+    },
+  ],
+  'magic.learn': [
+    (e, h) => [h.c(e.data.characterId), ` learns to cast ${spellName(e.data.spell)}.`],
+    (e, h) => [h.c(e.data.characterId), ` masters the ${spellName(e.data.spell)}.`],
+  ],
+  'magic.cast': [
+    (e, h) => {
+      const c = h.c(e.data.characterId);
+      const spell = spellName(e.data.spell);
+      const target = e.data.target ? theCreature(e.data.target) : 'the foe';
+      const { outcome, amount, paid } = e.data;
+      if (outcome === 'failure') return [c, `'s ${spell} fizzles out.`];
+      if (outcome === 'backlash') {
+        return [`The ${spell} backlashes on `, c, `, who loses ${paid.health} health and reels.`];
+      }
+      const weak = outcome === 'partial';
+      switch (e.data.spell) {
+        case 'ember-bolt':
+          return weak
+            ? [c, `'s Ember Bolt sputters, singeing ${target} for ${amount} damage.`]
+            : [c, ` hurls an Ember Bolt at ${target} for ${amount} damage.`];
+        case 'mend-flesh':
+          return [c, ` casts Mend Flesh, paying in blood, and heals ${amount}.`];
+        case 'quickening':
+          return weak
+            ? [c, ' casts Quickening, and moves a little faster.']
+            : [c, ' casts Quickening and moves like the wind.'];
+        case 'ward-of-ash':
+          return [c, ` raises a Ward of Ash${weak ? ', thin and flickering' : ''} (${amount}).`];
+      }
+    },
+  ],
   'trade.sell': [
     (e, h) => [
       h.c(e.data.characterId),

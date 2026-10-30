@@ -1,5 +1,6 @@
 import { affixDef, creatureDef, lootDef, type LootId, type TrapId } from '../content';
 import type { CreatureRef, LootItem } from '../sim';
+import { anItem } from './items';
 
 const NUMBER_WORDS = [
   'no',
@@ -71,16 +72,21 @@ export function creatureGroup(refs: readonly CreatureRef[]): string {
   );
 }
 
-/** "a silver ring and two bone charms". */
+/** "a silver ring, two bone charms and a keen axe". */
 export function lootList(items: readonly LootItem[]): string {
   const counts = new Map<LootId, number>();
-  for (const item of items) counts.set(item.loot, (counts.get(item.loot) ?? 0) + 1);
-  return listOf(
-    [...counts].map(([loot, count]) => {
+  const gear: string[] = [];
+  for (const item of items) {
+    if ('gear' in item) gear.push(anItem(item.gear));
+    else counts.set(item.loot, (counts.get(item.loot) ?? 0) + 1);
+  }
+  return listOf([
+    ...[...counts].map(([loot, count]) => {
       const def = lootDef(loot);
       return count === 1 ? `${article(def.name)} ${def.name}` : `${countWord(count)} ${def.plural}`;
     }),
-  );
+    ...gear,
+  ]);
 }
 
 /** "14 gold and a silver ring", or just one of the two. */

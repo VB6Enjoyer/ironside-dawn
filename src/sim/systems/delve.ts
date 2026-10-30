@@ -2,11 +2,13 @@ import { creatureDef, TRAPS, type CreatureId, type RoomOutcome } from '../../con
 import { schedule } from '../core/scheduler';
 import { MINUTE } from '../core/time';
 import type { SimContext } from '../context';
-import type { Character, DelveProgress, Dungeon, Location } from '../model';
+import type { Character, DelveProgress, Dungeon, Item, Location, LootItem } from '../model';
 import { startFight } from './combat';
 import { isDizzy, modifier, retreatThreshold } from './condition';
 import { die } from './death';
+import { claimLegend, generateItem, takeGear } from './items';
 import { rollLootItem } from './loot';
+import { gainXp, practice, skillBonus } from './progress';
 
 /**
  * Delves: a dungeon explored one chamber at a time. Each chamber may hold a
@@ -19,8 +21,24 @@ const STAMINA_PER_CHAMBER = 0.5;
 /** Chance of calling it a day after any chamber, even when all is well. */
 const BASE_LEAVE_CHANCE = 0.08;
 /** Deeper chambers favor stronger creatures by this much per chamber per creature level above 1. */
-const DEPTH_BIAS = 0.12;
+const DEPTH_BIAS = 0.2;
+/** Groups grow by one for every this many chambers deep. */
+const GROUP_GROWTH_CHAMBERS = 4;
 const ITEM_IN_TREASURE_CHANCE = 0.3;
+const GEAR_IN_TREASURE_CHANCE = 0.3;
+/** Chance that a treasure chamber holds a legendary item lost here by a fallen adventurer. */
+const LOST_LEGEND_CHANCE = 0.3;
+const LOCKED_CHANCE = 0.5;
+const LOCK_DIFFICULTY = 8;
+const LOCKPICK_PRACTICE = 1.5;
+const AWARENESS_PRACTICE = 1;
+/** Each chamber deeper adds this fraction to treasure gold. */
+const GOLD_DEPTH_BONUS = 0.15;
+/** Chambers a level-1 character goes before getting nervous; one more per level. */
+const COMFORT_DEPTH = 3;
+const XP_PER_TREASURE = 5;
+const XP_PER_AVOIDED_TRAP = 3;
+const XP_PER_CHAMBER = 2;
 /** Encounters with this much total creature level are frightening enough to try avoiding. */
 const AVOID_THREAT = 4;
 /** Slipping away succeeds on d20 + agility >= this + the strongest creature's level. */
@@ -78,9 +96,10 @@ export function delveStep(ctx: SimContext, character: Character): void {
       if (species) {
         const def = creatureDef(species);
         const available = dungeon.population[species] ?? 0;
+        const extra = Math.floor((room - 1) / GROUP_GROWTH_CHAMBERS);
         const count = rng.int(
           def.group[0],
-          Math.max(def.group[0], Math.min(def.group[1], available)),
+          Math.max(def.group[0], Math.min(def.group[1] + extra, available)),
         );
         if (avoidFight(ctx, character, location, progress, species, count)) return;
         startFight(ctx, character, location, progress, species, count);
@@ -110,6 +129,8 @@ export function exitDelve(
 ): void {
   character.activity = { kind: 'idle' };
   character.locationId = progress.locationId;
+  if (progress.room > 0)
+    gainXp(ctx, character, XP_PER_CHAMBER * progress.room, progress.locationId);
   ctx.emit(
     {
       type: 'delve.exit',
@@ -141,6 +162,8 @@ function shouldLeave(
   if (character.hp < character.maxHp * retreatThreshold(character)) return true;
   if (character.stamina < character.maxStamina * 0.25) return true;
   if (isDizzy(character, ctx.world.time)) return true;
+  // Deeper than their experience allows, the inexperienced turn back sooner.
+  if (progress.room >= COMFORT_DEPTH + character.level && ctx.rng.delve.chance(0.35)) return true;
   return ctx.rng.delve.chance(BASE_LEAVE_CHANCE);
 }
 
@@ -162,7 +185,10 @@ function avoidFight(
   const rng = ctx.rng.delve;
   if (!rng.chance(1 - 0.7 * character.bravery)) return false;
 
-  const success = rng.int(1, 20) + modifier(character, 'agility') >= STEALTH_DIFFICULTY + level;
+  const success =
+    rng.int(1, 20) + modifier(character, 'agility') + skillBonus(character, 'stealth') >=
+    STEALTH_DIFFICULTY + level;
+  practice(ctx, character, 'stealth', success ? 1.5 : 0.8, location.id);
   const foes = Array.from({ length: count }, (_, i) => ({
     species,
     affix: null,
@@ -215,12 +241,40 @@ function treasureChamber(
   progress: DelveProgress,
 ) {
   const rng = ctx.rng.loot;
-  const def = location.dungeon!.def;
+  const dungeon = location.dungeon!;
+  const def = dungeon.def;
+
+  // Half of chests are locked: pick the lock, or force it and spoil some of what's inside.
+  let lock: 'none' | 'picked' | 'forced' = 'none';
+  if (rng.chance(LOCKED_CHANCE)) {
+    const roll =
+      rng.int(1, 20) + skillBonus(character, 'lockpicking') + modifier(character, 'agility');
+    lock = roll >= LOCK_DIFFICULTY + def.danger ? 'picked' : 'forced';
+    practice(ctx, character, 'lockpicking', LOCKPICK_PRACTICE, location.id);
+  }
+
   let gold = 0;
   for (let i = 0; i < def.danger; i++) gold += rng.roll(def.treasureGold);
-  const items = rng.chance(ITEM_IN_TREASURE_CHANCE)
-    ? [rollLootItem(rng, rng.weighted(def.treasure.map((t) => [t.loot, t.weight] as const)))]
-    : [];
+  gold = Math.round(gold * (1 + GOLD_DEPTH_BONUS * (progress.room - 1)));
+  const items: LootItem[] = [];
+  const gear: Item[] = [];
+  if (lock === 'forced') {
+    gold = Math.ceil(gold / 2);
+  } else {
+    if (rng.chance(ITEM_IN_TREASURE_CHANCE)) {
+      items.push(
+        rollLootItem(rng, rng.weighted(def.treasure.map((t) => [t.loot, t.weight] as const))),
+      );
+    }
+    const lost = dungeon.lostItems[0];
+    if (lost && rng.chance(LOST_LEGEND_CHANCE)) {
+      gear.push(dungeon.lostItems.shift()!);
+    } else if (rng.chance(GEAR_IN_TREASURE_CHANCE * (1 + 0.05 * progress.room))) {
+      gear.push(
+        generateItem(ctx, ctx.rng.items, { culture: location.culture, depth: progress.room }),
+      );
+    }
+  }
 
   character.gold += gold;
   character.goldEarned += gold;
@@ -233,16 +287,22 @@ function treasureChamber(
         locationId: location.id,
         room: progress.room,
         gold,
-        items,
+        items: [...items, ...gear.map((g) => ({ gear: g, value: g.value }))],
+        lock,
       },
     },
     [character.id],
     location.id,
   );
+  for (const item of gear) {
+    if (item.rarity === 'legendary') claimLegend(ctx, character, item, location.id);
+    takeGear(ctx, character, item, location.id);
+  }
+  gainXp(ctx, character, XP_PER_TREASURE + (lock === 'picked' ? 3 : 0), location.id);
   continueDelve(ctx, character, {
     ...progress,
     goldFound: progress.goldFound + gold,
-    itemsFound: progress.itemsFound + items.length,
+    itemsFound: progress.itemsFound + items.length + gear.length,
   });
 }
 
@@ -255,7 +315,11 @@ function trapChamber(
   const rng = ctx.rng.delve;
   const trap = rng.weighted(TRAPS.map((t) => [t, t.weight] as const));
   const difficulty = 10 + location.dungeon!.def.danger + trap.difficulty;
-  const avoided = rng.int(1, 20) + modifier(character, 'agility') >= difficulty;
+  const avoided =
+    rng.int(1, 20) + modifier(character, 'agility') + skillBonus(character, 'awareness') >=
+    difficulty;
+  practice(ctx, character, 'awareness', AWARENESS_PRACTICE, location.id);
+  if (avoided) gainXp(ctx, character, XP_PER_AVOIDED_TRAP, location.id);
   const damage = avoided ? 0 : rng.roll(trap.damage);
   const dizzy = !avoided && trap.dizzyMinutes > 0;
 

@@ -6,6 +6,9 @@ import { DAY, HOUR, MINUTE, SEASON, timeOfDay, toCalendar } from './core/time';
 import { WORLD_START } from './gen/world';
 import type { CharacterId, LocationId, SimEvent } from './model';
 import { createSimulation, type Simulation } from './simulation';
+import { carriedGear } from './systems/items';
+import { xpForLevel } from './systems/progress';
+import { itemBase } from '../content';
 
 interface Run {
   readonly sim: Simulation;
@@ -248,6 +251,45 @@ describe('a year of danger', () => {
         const count = location.dungeon!.population[creature] ?? 0;
         expect(count).toBeGreaterThanOrEqual(0);
         expect(count).toBeLessThanOrEqual(max);
+      }
+    }
+  });
+
+  it('keeps levels in step with experience', () => {
+    for (const c of characters) {
+      expect(c.xp).toBeGreaterThanOrEqual(xpForLevel(c.level));
+      expect(c.xp).toBeLessThan(xpForLevel(c.level + 1));
+    }
+    expect(Math.max(...characters.map((c) => c.level))).toBeGreaterThanOrEqual(5);
+  });
+
+  it('wears gear in the right slots', () => {
+    for (const c of characters) {
+      const { weapon, armor, trinket } = c.equipment;
+      expect(itemBase(weapon.base).slot).toBe('weapon');
+      if (armor) expect(itemBase(armor.base).slot).toBe('armor');
+      if (trinket) expect(itemBase(trinket.base).slot).toBe('trinket');
+    }
+  });
+
+  it('only casts spells the caster knows', () => {
+    const casts = events.filter((e) => e.type === 'magic.cast');
+    expect(casts.length).toBeGreaterThan(0);
+    for (const e of casts) {
+      expect(sim.world.characters.get(e.data.characterId)!.spells).toContain(e.data.spell);
+    }
+  });
+
+  it('knows where every legendary item is: with a living owner, or lost in a dungeon', () => {
+    for (const legend of sim.world.legends.values()) {
+      if (legend.holder) {
+        const holder = sim.world.characters.get(legend.holder)!;
+        expect(holder.death).toBeNull();
+        expect(carriedGear(holder).map((i) => i.id)).toContain(legend.item.id);
+        expect(legend.lostAt).toBeNull();
+      } else {
+        const dungeon = sim.world.locations.get(legend.lostAt!)!.dungeon!;
+        expect(dungeon.lostItems.map((i) => i.id)).toContain(legend.item.id);
       }
     }
   });

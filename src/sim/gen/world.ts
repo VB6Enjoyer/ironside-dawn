@@ -3,7 +3,7 @@ import { createScheduler } from '../core/scheduler';
 import { HOUR } from '../core/time';
 import type { SimContext } from '../context';
 import type { Location, LocationId, Route, RouteId, World } from '../model';
-import { createCharacter, towns } from './people';
+import { createCharacter, townPopulation, towns } from './people';
 
 /** Worlds begin at dawn on the first day of the first year. */
 export const WORLD_START = 6 * HOUR;
@@ -25,8 +25,9 @@ export function createWorldState(seed: string, map: MapDef): World {
       article: def.article ?? null,
       kind: def.kind,
       culture: def.culture,
-      peoples: def.peoples ?? {},
-      dungeon: def.dungeon ? { def: def.dungeon, population } : null,
+      population: { ...def.population },
+      academy: def.academy ?? false,
+      dungeon: def.dungeon ? { def: def.dungeon, population, lostItems: [] } : null,
     });
   }
 
@@ -48,19 +49,24 @@ export function createWorldState(seed: string, map: MapDef): World {
     locations,
     routes,
     encounters: new Map(),
+    legends: new Map(),
     scheduler: createScheduler(),
     takenNames: new Set(),
     nextCharacterNumber: 1,
     nextEncounterNumber: 1,
+    nextItemNumber: 1,
     nextEventId: 1,
   };
 }
 
-/** Creates `count` adventurers, each living in a random town. */
+/** Creates `count` adventurers from the towns' commoners, larger towns giving more. */
 export function populate(ctx: SimContext, count: number): void {
   const homes = towns(ctx);
   if (homes.length === 0) throw new Error('The map needs at least one town');
   for (let i = 0; i < count; i++) {
-    createCharacter(ctx, ctx.rng.people.pick(homes), false, FIRST_WAKE_SPREAD);
+    const home = ctx.rng.people.weighted(
+      homes.map((t) => [t, Math.max(1, townPopulation(t))] as const),
+    );
+    createCharacter(ctx, home, false, FIRST_WAKE_SPREAD);
   }
 }

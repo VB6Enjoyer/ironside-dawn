@@ -1,4 +1,4 @@
-import { AFFIX_CHANCE, AFFIXES, creatureDef, type CreatureId } from '../../content';
+import { AFFIX_CHANCE, AFFIXES, creatureDef, spellDef, type CreatureId } from '../../content';
 import { schedule } from '../core/scheduler';
 import type { SimContext } from '../context';
 import type {
@@ -15,12 +15,22 @@ import { adventurerFighter } from './condition';
 import { fightOutcome, fightRound } from './combat-core';
 import { die } from './death';
 import { exitDelve, resumeDelve } from './delve';
+import { weaponSkillOf } from './items';
 import { rollLootItem } from './loot';
+import { cast, chooseSpell, type SpellChoice } from './magic';
+import { addDeed, gainXp, practice } from './progress';
 
 /** Seconds between rounds: blows land a few seconds apart in real-time view. */
 const ROUND_GAP: readonly [number, number] = [3, 6];
 /** A fight this long ends with the adventurer breaking away. */
 const MAX_ROUNDS = 40;
+const XP_PER_CREATURE_LEVEL = 8;
+/** Weapon skill practiced per swing, hit or miss. */
+const WEAPON_PRACTICE = 0.1;
+/** Kills of creatures this strong (or with an affix) are remembered as deeds. */
+const MEMORABLE_LEVEL = 4;
+/** Each chamber deeper raises the chance of an affix by this fraction. */
+const AFFIX_DEPTH_BONUS = 0.15;
 
 export function startFight(
   ctx: SimContext,
@@ -32,8 +42,10 @@ export function startFight(
 ): void {
   const rng = ctx.rng.combat;
   const def = creatureDef(species);
+  // Deeper chambers hold stranger, stronger things.
+  const affixChance = Math.min(0.5, AFFIX_CHANCE * (1 + AFFIX_DEPTH_BONUS * (delve.room - 1)));
   const rolled = Array.from({ length: count }, () => {
-    const affix = rng.chance(AFFIX_CHANCE)
+    const affix = rng.chance(affixChance)
       ? rng.weighted(AFFIXES.map((a) => [a, a.weight] as const))
       : null;
     const hp = Math.max(1, Math.round(rng.roll(def.hp) * (affix?.hpMultiplier ?? 1)));
@@ -47,6 +59,7 @@ export function startFight(
       hp,
       maxHp: hp,
       stamina: null,
+      ward: 0,
       out: null,
     };
     return { affix: affix?.id ?? null, fighter };
@@ -67,6 +80,8 @@ export function startFight(
     foes,
     round: 0,
     startedAt: ctx.world.time,
+    quickened: null,
+    ward: 0,
     spoils: { gold: 0, items: [] },
   };
   ctx.world.encounters.set(encounter.id, encounter);
@@ -89,8 +104,25 @@ export function runRound(ctx: SimContext, encounter: Encounter): void {
   const activity = character.activity;
   if (activity.kind !== 'fighting') throw new Error(`${character.id} is not fighting`);
 
-  const standing = encounter.foes.filter((f) => f.fighter.out === null).length;
-  const self = adventurerFighter(character, world.time, standing);
+  // A spell instead of a swing, if the odds look good.
+  const choice = chooseSpell(ctx, character, encounter);
+  if (choice) {
+    const result = cast(
+      ctx,
+      character,
+      choice.spell,
+      encounter.locationId,
+      encounter,
+      choice.target,
+    );
+    if (result.fatal) {
+      world.encounters.delete(encounter.id);
+      return;
+    }
+    applySpell(ctx, character, encounter, choice, result.amount);
+  }
+
+  const self = adventurerFighter(character, world.time, encounter);
   const fighters = [self, ...encounter.foes.map((f) => f.fighter)];
   const combatant = (index: number): Combatant =>
     index === 0
@@ -98,9 +130,13 @@ export function runRound(ctx: SimContext, encounter: Encounter): void {
       : { kind: 'creature', ref: encounter.foes[index - 1]!.ref };
 
   encounter.round++;
-  const actions = fightRound(ctx.rng.combat, fighters);
+  const actions =
+    fightOutcome(fighters) === null
+      ? fightRound(ctx.rng.combat, fighters, { adventurerActs: !choice })
+      : [];
   character.hp = self.hp;
   character.stamina = self.stamina ?? character.stamina;
+  encounter.ward = self.ward;
 
   let killer: CreatureRef | null = null;
   for (const action of actions) {
@@ -122,6 +158,7 @@ export function runRound(ctx: SimContext, encounter: Encounter): void {
           hit: action.hit,
           critical: action.critical,
           damage: action.damage,
+          absorbed: action.absorbed,
           targetHp: action.targetHp,
           targetMaxHp: target.maxHp,
         },
@@ -129,6 +166,10 @@ export function runRound(ctx: SimContext, encounter: Encounter): void {
       [character.id],
       encounter.locationId,
     );
+    if (action.attacker === 0) {
+      const skill = weaponSkillOf(character.equipment.weapon);
+      if (skill) practice(ctx, character, skill, WEAPON_PRACTICE, encounter.locationId);
+    }
     if (action.targetHp > 0 || !action.hit) continue;
     if (action.target === 0) killer = encounter.foes[action.attacker - 1]!.ref;
     else slay(ctx, character, encounter, action.target - 1);
@@ -176,6 +217,9 @@ function slay(ctx: SimContext, character: Character, encounter: Encounter, foeIn
   const dungeon = ctx.world.locations.get(encounter.locationId)?.dungeon;
   if (dungeon) dungeon.population[species] = Math.max(0, (dungeon.population[species] ?? 0) - 1);
   character.kills[species] = (character.kills[species] ?? 0) + 1;
+  if (def.level >= MEMORABLE_LEVEL || foe.ref.affix) {
+    addDeed(character, { kind: 'slay', at: ctx.world.time, creature: foe.ref });
+  }
 
   const rng = ctx.rng.loot;
   if (def.gold && rng.chance(def.gold.chance)) encounter.spoils.gold += rng.roll(def.gold.dice);
@@ -191,6 +235,40 @@ function slay(ctx: SimContext, character: Character, encounter: Encounter, foeIn
     [character.id],
     encounter.locationId,
   );
+  const xp = Math.round(def.level * XP_PER_CREATURE_LEVEL * (foe.ref.affix ? 1.5 : 1));
+  gainXp(ctx, character, xp, encounter.locationId);
+}
+
+/** Puts a cast spell's effect into the fight. */
+function applySpell(
+  ctx: SimContext,
+  character: Character,
+  encounter: Encounter,
+  choice: SpellChoice,
+  amount: number,
+): void {
+  if (amount <= 0) return;
+  const effect = spellDef(choice.spell).effect;
+  switch (effect.kind) {
+    case 'damage': {
+      const foe = encounter.foes[choice.target!]!;
+      foe.fighter.hp = Math.max(0, foe.fighter.hp - amount);
+      if (foe.fighter.hp === 0) {
+        foe.fighter.out = 'dead';
+        slay(ctx, character, encounter, choice.target!);
+      }
+      return;
+    }
+    case 'heal':
+      character.hp = Math.min(character.maxHp, character.hp + amount);
+      return;
+    case 'quicken':
+      encounter.quickened = { attack: amount, defense: amount };
+      return;
+    case 'ward':
+      encounter.ward += amount;
+      return;
+  }
 }
 
 function win(ctx: SimContext, character: Character, encounter: Encounter, delve: DelveProgress) {

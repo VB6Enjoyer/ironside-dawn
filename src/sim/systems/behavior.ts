@@ -1,8 +1,8 @@
-import { PASTIMES, type LocationKind } from '../../content';
+import { PASTIMES, type LocationKind, type PastimeId } from '../../content';
 import { schedule } from '../core/scheduler';
 import { DAY, HOUR, nextTimeOfDay, timeOfDay } from '../core/time';
 import type { SimContext } from '../context';
-import type { Character, Location, LocationId } from '../model';
+import type { Character, Location, LocationId, LootItem } from '../model';
 import {
   convalescenceHours,
   expireStatuses,
@@ -13,6 +13,9 @@ import {
   type RecoveryPlace,
 } from './condition';
 import { delveStep, enterDelve } from './delve';
+import { weaponSkillOf } from './items';
+import { learnSpells } from './magic';
+import { practice, roleOf } from './progress';
 import { findPath } from './roads';
 import { finishLeg, startJourney, type TravelReason } from './travel';
 
@@ -28,6 +31,9 @@ const MORNING = 6 * HOUR;
 const MAX_LIE_IN = 2 * HOUR;
 export const INN_PRICE = 2;
 const SELLING_TIME = HOUR;
+const TRAINING_PER_HOUR = 0.25;
+/** Arcana per hour of study; the gifted learn three times as fast. */
+const STUDY_PER_HOUR = 0.4;
 /** Days spent in town after returning from a trip. */
 const DAYS_HOME: readonly [number, number] = [2, 6];
 
@@ -68,6 +74,7 @@ export function wakeCharacter(ctx: SimContext, character: Character): void {
         locationOf(ctx, character).kind === 'town' ? 'town' : 'field',
         activity.until - activity.since,
       );
+      learnFromPastime(ctx, character, activity.pastime, activity.until - activity.since);
       break;
     case 'idle':
       break;
@@ -89,7 +96,7 @@ function decide(ctx: SimContext, character: Character, justArrived: boolean): vo
 
   switch (location.kind) {
     case 'town': {
-      if (character.pack.length > 0) {
+      if (sellable(character).length > 0) {
         sellLoot(ctx, character, location);
         return;
       }
@@ -138,7 +145,7 @@ function setOut(ctx: SimContext, character: Character, here: Location): boolean 
   if (needsRecovery(character)) {
     destination = nearestTown(ctx, here.id);
     reason = 'heal';
-  } else if (character.pack.length > 0) {
+  } else if (sellable(character).length > 0) {
     destination = here.id === character.homeId ? nearestTown(ctx, here.id) : character.homeId;
     reason = 'home';
   } else {
@@ -184,11 +191,16 @@ function convalesce(ctx: SimContext, character: Character, location: Location): 
   wakeAt(ctx, character, until);
 }
 
+/** Everything in the pack except legendary items, which adventurers keep. */
+function sellable(character: Character): LootItem[] {
+  return character.pack.filter((p) => !('gear' in p) || p.gear.rarity !== 'legendary');
+}
+
 function sellLoot(ctx: SimContext, character: Character, location: Location): void {
-  const items = character.pack;
+  const items = sellable(character);
   const gold = items.reduce((sum, item) => sum + item.value, 0);
   const now = ctx.world.time;
-  character.pack = [];
+  character.pack = character.pack.filter((p) => !items.includes(p));
   character.homeUntil = now + ctx.rng.behavior.int(...DAYS_HOME) * DAY;
   character.gold += gold;
   character.goldEarned += gold;
@@ -216,7 +228,12 @@ function startPastime(ctx: SimContext, character: Character, location: Location)
   if (options.length === 0) return false;
 
   const rng = ctx.rng.behavior;
-  const pastime = rng.weighted(options.map((p) => [p, p.weight] as const));
+  const weighted = options
+    .filter((p) => !('academy' in p && p.academy) || location.academy)
+    .map((p) => [p, pastimeWeight(character, p.id, p.weight)] as const)
+    .filter(([, w]) => w > 0);
+  if (weighted.length === 0) return false;
+  const pastime = rng.weighted(weighted);
   const duration = rng.int(
     Math.round(pastime.minHours * HOUR),
     Math.round(pastime.maxHours * HOUR),
@@ -234,6 +251,38 @@ function startPastime(ctx: SimContext, character: Character, location: Location)
   );
   wakeAt(ctx, character, now + duration);
   return true;
+}
+
+/** How drawn a character is to a pastime: the gifted and the clever study; fighters train. */
+function pastimeWeight(character: Character, pastime: PastimeId, base: number): number {
+  switch (pastime) {
+    case 'study':
+      if (character.gifted) return 4;
+      return character.stats.wits >= 14 || character.stats.spirit >= 14 ? 0.5 : 0.05;
+    case 'training':
+      return roleOf(character) === 'fighter' ? base * 1.5 : base;
+    default:
+      return base;
+  }
+}
+
+/** Hours spent training or studying improve skills, and study may teach a spell. */
+function learnFromPastime(
+  ctx: SimContext,
+  character: Character,
+  pastime: PastimeId,
+  seconds: number,
+): void {
+  const hours = seconds / HOUR;
+  const locationId = character.locationId!;
+  if (pastime === 'training') {
+    const skill = weaponSkillOf(character.equipment.weapon);
+    if (skill) practice(ctx, character, skill, TRAINING_PER_HOUR * hours, locationId);
+  } else if (pastime === 'study') {
+    const rate = STUDY_PER_HOUR * (character.gifted ? 3 : 1);
+    practice(ctx, character, 'arcana', rate * hours, locationId);
+    learnSpells(ctx, character, locationId);
+  }
 }
 
 function chooseDestination(

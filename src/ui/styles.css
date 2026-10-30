@@ -13,6 +13,10 @@
   --hp: #b5534a;
   --stamina: #5f8f5a;
   --dead: #9a6b6b;
+  --xp: #8a7bb8;
+  --fine: #8fbf7a;
+  --rare: #7aa7d9;
+  --legendary: #e0a14a;
 
   --serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
   --mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
@@ -400,6 +404,68 @@ button.ref:hover {
 
 .bar-stamina .bar-fill {
   background: var(--stamina);
+}
+
+.bar-xp .bar-fill {
+  background: var(--xp);
+}
+
+.rarity-fine {
+  color: var(--fine);
+}
+
+.rarity-rare {
+  color: var(--rare);
+}
+
+.rarity-legendary {
+  color: var(--legendary);
+  font-weight: 600;
+}
+
+.skills {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 3px 12px;
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.skills div {
+  display: contents;
+}
+
+.skills dt {
+  color: var(--muted);
+}
+
+.skills dd {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 0.8rem;
+}
+
+.skill-track {
+  flex: 1;
+  height: 4px;
+  background: var(--panel-raised);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.skill-fill {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+
+.spells {
+  margin: 8px 0 0;
+  font-size: 0.9rem;
+  color: var(--xp);
 }
 
 .chips {

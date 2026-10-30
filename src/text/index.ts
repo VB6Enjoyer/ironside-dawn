@@ -22,4 +22,5 @@ export {
   theCreature,
   TRAP_NAMES,
 } from './words';
-export { braveryWord, describeActivity } from './activity';
+export { braveryWord, describeActivity, describeDeed } from './activity';
+export { anItem, itemName, legendTitle, SKILL_NAMES, SKILL_PHRASES, spellName } from './items';

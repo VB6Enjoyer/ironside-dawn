@@ -1,7 +1,8 @@
 import type { SchedulerState } from '../core/scheduler';
 import type { Character } from './character';
 import type { Encounter } from './encounter';
-import type { CharacterId, EncounterId, LocationId, RouteId } from './ids';
+import type { CharacterId, EncounterId, ItemId, LocationId, RouteId } from './ids';
+import type { Legend } from './item';
 import type { Job } from './jobs';
 import type { Location, Route } from './location';
 
@@ -19,10 +20,13 @@ export interface World {
   readonly routes: Map<RouteId, Route>;
   /** Fights in progress. */
   readonly encounters: Map<EncounterId, Encounter>;
+  /** Every legendary item ever found. */
+  readonly legends: Map<ItemId, Legend>;
   readonly scheduler: SchedulerState<Job>;
   /** Full names in use, so new characters get distinct ones. */
   readonly takenNames: Set<string>;
   nextCharacterNumber: number;
   nextEncounterNumber: number;
+  nextItemNumber: number;
   nextEventId: number;
 }

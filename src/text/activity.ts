@@ -1,13 +1,15 @@
 import type { PastimeId } from '../content';
-import type { Character, LocationId, World } from '../sim';
+import type { Character, Deed, LocationId, World } from '../sim';
 import type { Segment } from './describe';
-import { aCreature } from './words';
+import { SKILL_PHRASES, spellName } from './items';
+import { aCreature, article } from './words';
 
 const PASTIME_PLACES: Record<PastimeId, string> = {
   tavern: 'At a tavern in ',
   market: 'At the market in ',
   training: 'Training in ',
   shrine: 'At a shrine in ',
+  study: 'Studying the arcane in ',
   scout: 'Waiting outside ',
   forage: 'Foraging in ',
   hunt: 'Hunting in ',
@@ -45,8 +47,14 @@ export function describeActivity(character: Character, world: World): Segment[] 
       const death = character.death;
       if (!death) return [{ text: 'Dead' }];
       const where = place(death.locationId);
-      if (death.cause.kind === 'trap') return [{ text: 'Killed by a trap in ' }, where];
-      return [{ text: `Slain by ${aCreature(death.cause.creature)} in ` }, where];
+      switch (death.cause.kind) {
+        case 'trap':
+          return [{ text: 'Killed by a trap in ' }, where];
+        case 'magic':
+          return [{ text: `Killed by a backfiring ${spellName(death.cause.spell)} in ` }, where];
+        case 'creature':
+          return [{ text: `Slain by ${aCreature(death.cause.creature)} in ` }, where];
+      }
     }
   }
 }
@@ -58,4 +66,20 @@ export function braveryWord(bravery: number): string {
   if (bravery < 0.65) return 'steady';
   if (bravery < 0.85) return 'bold';
   return 'fearless';
+}
+
+/** One line for a remembered deed: "Slew an enraged warg". */
+export function describeDeed(deed: Deed): string {
+  switch (deed.kind) {
+    case 'level':
+      return `Reached level ${deed.level}`;
+    case 'legend':
+      return `Found ${deed.name}`;
+    case 'slay':
+      return `Slew ${aCreature(deed.creature)}`;
+    case 'spell':
+      return `Learned ${spellName(deed.spell)}`;
+    case 'rank':
+      return `Became ${article(deed.rank)} ${deed.rank} ${SKILL_PHRASES[deed.skill]}`;
+  }
 }

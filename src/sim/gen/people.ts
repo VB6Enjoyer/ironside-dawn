@@ -1,19 +1,32 @@
-import { SPECIES, STATS, type SpeciesId, type StatId, type Stats } from '../../content';
+import {
+  SKILLS,
+  SPECIES,
+  STATS,
+  weaponBase,
+  type ArmorId,
+  type SkillId,
+  type SpeciesId,
+  type StatId,
+  type Stats,
+  type WeaponId,
+} from '../../content';
 import { schedule } from '../core/scheduler';
 import type { SimContext } from '../context';
 import type { Character, CharacterId, Location } from '../model';
+import { generateItem, starterWeapon } from '../systems/items';
+import { learnSpells } from '../systems/magic';
+import { refreshMaxima } from '../systems/progress';
 import { generateName } from './names';
 
 const STAT_DICE = '2d6+3';
 const STAT_MIN = 3;
 const STAT_MAX = 18;
 const STARTING_GOLD = '2d6+5';
-const BASE_HP = 18;
-const BASE_STAMINA = 6;
 
 /**
- * Creates an adventurer living in `home`, of one of the peoples who live
- * there, and schedules their first decision within `firstWakeWithin` seconds.
+ * Creates an adventurer from the commoners of `home` (ARCHITECTURE.md §4.2:
+ * statistical populations promote individuals), and schedules their first
+ * decision within `firstWakeWithin` seconds.
  */
 export function createCharacter(
   ctx: SimContext,
@@ -24,8 +37,11 @@ export function createCharacter(
   const world = ctx.world;
   const rng = ctx.rng.people;
 
-  const peoples = Object.entries(home.peoples) as [SpeciesId, number][];
+  const peoples = (Object.entries(home.population) as [SpeciesId, number][]).filter(
+    ([, n]) => n > 0,
+  );
   const species: SpeciesId = peoples.length > 0 ? rng.weighted(peoples) : 'human';
+  if (home.population[species]) home.population[species] -= 1;
   const def = SPECIES[species];
 
   const stats = Object.fromEntries(
@@ -34,8 +50,29 @@ export function createCharacter(
       return [stat, Math.min(STAT_MAX, Math.max(STAT_MIN, rng.roll(STAT_DICE) + modifier))];
     }),
   ) as Stats;
-  const maxHp = BASE_HP + stats.toughness;
-  const maxStamina = BASE_STAMINA + Math.round((stats.toughness + stats.might) / 2);
+
+  const gifted = rng.chance(def.giftChance);
+  const weaponId = rng.weighted(Object.entries(def.weapons) as [WeaponId, number][]);
+  const armorId = rng.weighted(Object.entries(def.armor) as [ArmorId, number][]);
+  const itemsRng = ctx.rng.items;
+  const weapon = starterWeapon(ctx, itemsRng, weaponId);
+  const armor = generateItem(ctx, itemsRng, {
+    culture: def.culture,
+    depth: 0,
+    base: armorId,
+    rarity: 'common',
+    material: 'iron',
+  });
+
+  const skills = Object.fromEntries(SKILLS.map((s) => [s, 0])) as Record<SkillId, number>;
+  skills[weaponBase(weaponId).skill] = rng.int(15, 30);
+  for (const skill of ['blades', 'axes', 'blunt', 'polearms'] as const) {
+    if (skills[skill] === 0) skills[skill] = rng.int(0, 8);
+  }
+  for (const skill of ['stealth', 'lockpicking', 'awareness'] as const) {
+    skills[skill] = Math.max(0, rng.int(0, 12) + (stats.agility - 10));
+  }
+  skills.arcana = gifted ? rng.int(15, 30) : 0;
 
   const name = generateName(rng, def.culture, world.takenNames);
   const character: Character = {
@@ -46,12 +83,18 @@ export function createCharacter(
     homeId: home.id,
     arrivedAt: world.time,
     stats,
-    weapon: rng.weighted(Object.entries(def.weapons) as [Character['weapon'], number][]),
     bravery: Math.min(1, Math.max(0.05, rng.gaussian(0.55, 0.2))),
-    hp: maxHp,
-    maxHp,
-    stamina: maxStamina,
-    maxStamina,
+    gifted,
+    level: 1,
+    xp: 0,
+    skills,
+    equipment: { weapon, armor, trinket: null },
+    spells: [],
+    deeds: [],
+    hp: 0,
+    maxHp: 0,
+    stamina: 0,
+    maxStamina: 0,
     statuses: [],
     gold: rng.roll(STARTING_GOLD),
     pack: [],
@@ -62,6 +105,9 @@ export function createCharacter(
     activity: { kind: 'idle' },
     death: null,
   };
+  refreshMaxima(character);
+  character.hp = character.maxHp;
+  character.stamina = character.maxStamina;
   world.characters.set(character.id, character);
 
   ctx.emit(
@@ -72,6 +118,8 @@ export function createCharacter(
     [character.id],
     home.id,
   );
+  // The gifted arrive already knowing a spell or two.
+  if (gifted) learnSpells(ctx, character, home.id);
   schedule(world.scheduler, world.time + rng.int(0, firstWakeWithin), {
     kind: 'character.wake',
     characterId: character.id,
@@ -81,4 +129,9 @@ export function createCharacter(
 
 export function towns(ctx: SimContext): Location[] {
   return [...ctx.world.locations.values()].filter((l) => l.kind === 'town');
+}
+
+/** Total commoners in a town. */
+export function townPopulation(town: Location): number {
+  return Object.values(town.population).reduce<number>((sum, n) => sum + (n ?? 0), 0);
 }

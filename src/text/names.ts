@@ -1,11 +1,12 @@
-import type { LocationKind, SpeciesId, WeaponId } from '../content';
+import type { ItemBaseId, LocationKind, SpeciesId } from '../content';
 import type { CharacterId, LocationId, World } from '../sim';
 
 /** Looks up what the renderer needs to name things in prose. */
 export interface NameResolver {
   character(
     id: CharacterId,
-  ): { readonly name: string; readonly species: SpeciesId; readonly weapon: WeaponId } | undefined;
+  ):
+    { readonly name: string; readonly species: SpeciesId; readonly weapon: ItemBaseId } | undefined;
   location(
     id: LocationId,
   ):
@@ -17,7 +18,13 @@ export function worldNames(world: World): NameResolver {
   return {
     character(id) {
       const c = world.characters.get(id);
-      return c && { name: `${c.givenName} ${c.familyName}`, species: c.species, weapon: c.weapon };
+      return (
+        c && {
+          name: `${c.givenName} ${c.familyName}`,
+          species: c.species,
+          weapon: c.equipment.weapon.base,
+        }
+      );
     },
     location(id) {
       return world.locations.get(id);

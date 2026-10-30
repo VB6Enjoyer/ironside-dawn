@@ -68,6 +68,8 @@ export function createSimulation(options: SimulationOptions): Simulation {
       combat: root.fork('combat'),
       loot: root.fork('loot'),
       ecology: root.fork('ecology'),
+      magic: root.fork('magic'),
+      items: root.fork('items'),
     },
     emit(body, actors, locationId) {
       const event = {

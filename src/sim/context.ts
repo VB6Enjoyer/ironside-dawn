@@ -13,6 +13,8 @@ export interface SimContext {
     readonly combat: Rng;
     readonly loot: Rng;
     readonly ecology: Rng;
+    readonly magic: Rng;
+    readonly items: Rng;
   };
   emit(body: EventBody, actors: readonly EntityId[], locationId: LocationId | null): SimEvent;
 }

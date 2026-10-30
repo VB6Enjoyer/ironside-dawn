@@ -27,6 +27,8 @@ export interface FighterState {
   readonly maxHp: number;
   /** Null for creatures, which never tire. */
   stamina: number | null;
+  /** Magical protection that absorbs damage until spent. */
+  ward: number;
   out: null | 'dead' | 'fled';
 }
 
@@ -37,6 +39,9 @@ export interface Encounter {
   readonly foes: { readonly ref: CreatureRef; readonly fighter: FighterState }[];
   round: number;
   readonly startedAt: number;
+  /** The character's spells in effect for this fight. */
+  quickened: { readonly attack: number; readonly defense: number } | null;
+  ward: number;
   /** Coins and items dropped by slain foes, claimed if the character wins. */
   spoils: { gold: number; items: LootItem[] };
 }

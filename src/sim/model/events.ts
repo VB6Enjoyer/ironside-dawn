@@ -1,7 +1,8 @@
-import type { PastimeId, TrapId } from '../../content';
+import type { PastimeId, SkillId, SpellId, StatId, TrapId } from '../../content';
 import type { DeathCause, LootItem } from './character';
 import type { CreatureRef } from './encounter';
 import type { CharacterId, EntityId, EventId, LocationId } from './ids';
+import type { Item } from './item';
 
 /**
  * Structured events: the single source of truth for "what happened"
@@ -46,6 +47,8 @@ export type EventBody =
   | Body<'character.pastime', CharacterAt & { readonly pastime: PastimeId }>
   | Body<'character.rest', CharacterAt & { readonly paid: boolean }>
   | Body<'character.convalesce', CharacterAt>
+  | Body<'character.levelup', CharacterAt & { readonly level: number }>
+  | Body<'character.skill', CharacterAt & { readonly skill: SkillId; readonly rank: string }>
   | Body<'character.death', CharacterAt & { readonly cause: DeathCause; readonly kills: number }>
   // Travel
   | Body<
@@ -70,6 +73,8 @@ export type EventBody =
         readonly room: number;
         readonly gold: number;
         readonly items: readonly LootItem[];
+        /** How the chest was opened. */
+        readonly lock: 'none' | 'picked' | 'forced';
       }
     >
   | Body<
@@ -108,6 +113,8 @@ export type EventBody =
         readonly hit: boolean;
         readonly critical: boolean;
         readonly damage: number;
+        /** Damage soaked up by a magical ward. */
+        readonly absorbed: number;
         readonly targetHp: number;
         readonly targetMaxHp: number;
       }
@@ -125,6 +132,34 @@ export type EventBody =
       }
     >
   | Body<'combat.escape', CharacterAt & { readonly hp: number; readonly maxHp: number }>
+  // Gear
+  | Body<'item.equip', CharacterAt & { readonly item: Item; readonly replaced: Item | null }>
+  | Body<
+      'item.legend',
+      CharacterAt & {
+        readonly item: Item;
+        /** Whose it was before, if it was lost with a fallen adventurer. */
+        readonly previousOwner: CharacterId | null;
+      }
+    >
+  // Magic
+  | Body<'magic.learn', CharacterAt & { readonly spell: SpellId }>
+  | Body<
+      'magic.cast',
+      CharacterAt & {
+        readonly spell: SpellId;
+        readonly outcome: 'success' | 'partial' | 'failure' | 'backlash';
+        readonly target: CreatureRef | null;
+        /** Damage dealt, hit points healed, or ward strength. 0 if nothing happened. */
+        readonly amount: number;
+        readonly paid: {
+          readonly stamina: number;
+          readonly health: number;
+          readonly drained: StatId | null;
+          readonly dizzy: boolean;
+        };
+      }
+    >
   // Trade
   | Body<
       'trade.sell',
@@ -153,6 +188,8 @@ export const EVENT_IMPORTANCE: Record<EventType, Importance> = {
   'character.pastime': Importance.Trivial,
   'character.rest': Importance.Trivial,
   'character.convalesce': Importance.Trivial,
+  'character.levelup': Importance.Normal,
+  'character.skill': Importance.Normal,
   'character.death': Importance.Notable,
   'travel.depart': Importance.Normal,
   'travel.pass': Importance.Trivial,
@@ -169,5 +206,9 @@ export const EVENT_IMPORTANCE: Record<EventType, Importance> = {
   'combat.flee': Importance.Trivial,
   'combat.victory': Importance.Normal,
   'combat.escape': Importance.Normal,
+  'item.equip': Importance.Normal,
+  'item.legend': Importance.Notable,
+  'magic.learn': Importance.Normal,
+  'magic.cast': Importance.Normal,
   'trade.sell': Importance.Normal,
 };

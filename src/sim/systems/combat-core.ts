@@ -24,6 +24,8 @@ export type FightAction =
       readonly hit: boolean;
       readonly critical: boolean;
       readonly damage: number;
+      /** Damage soaked up by the target's ward. */
+      readonly absorbed: number;
       readonly targetHp: number;
     }
   | { readonly kind: 'flee'; readonly who: number; readonly success: boolean };
@@ -35,7 +37,11 @@ export type FightOutcome = 'won' | 'lost' | 'fled';
  * rolled each round). A fighter below its flee threshold tries to run instead
  * of attacking; a failed attempt costs the turn.
  */
-export function fightRound(rng: Rng, fighters: FighterState[]): FightAction[] {
+export function fightRound(
+  rng: Rng,
+  fighters: FighterState[],
+  { adventurerActs = true }: { adventurerActs?: boolean } = {},
+): FightAction[] {
   const order = fighters
     .map((fighter, index) => ({ index, fighter }))
     .filter(({ fighter }) => fighter.out === null)
@@ -46,6 +52,8 @@ export function fightRound(rng: Rng, fighters: FighterState[]): FightAction[] {
   for (const { index } of order) {
     const self = fighters[index]!;
     if (self.out !== null) continue;
+    // The adventurer may have spent this round casting a spell instead.
+    if (index === 0 && !adventurerActs) continue;
     const enemies = enemiesOf(fighters, index);
     if (enemies.length === 0) break;
 
@@ -100,10 +108,13 @@ function attack(
   const hit = critical || (die !== 1 && die + toHit >= defense);
 
   let damage = 0;
+  let absorbed = 0;
   if (hit) {
     const dice = rng.roll(attacker.damage) + (critical ? rng.roll(attacker.damage) : 0);
     damage = Math.max(1, dice + attacker.damageBonus);
-    target.hp = Math.max(0, target.hp - damage);
+    absorbed = Math.min(target.ward, damage);
+    target.ward -= absorbed;
+    target.hp = Math.max(0, target.hp - (damage - absorbed));
     if (target.hp === 0) target.out = 'dead';
   }
   return {
@@ -113,6 +124,7 @@ function attack(
     hit,
     critical,
     damage,
+    absorbed,
     targetHp: target.hp,
   };
 }

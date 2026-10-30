@@ -1,6 +1,6 @@
 import type { CultureId } from './cultures';
 import type { StatId } from './stats';
-import type { WeaponId } from './weapons';
+import type { ArmorId, WeaponId } from './items';
 
 /** Peoples (WORLD.md §2): everything species-specific is data. */
 export interface SpeciesDef {
@@ -12,8 +12,11 @@ export interface SpeciesDef {
   readonly lifespan: number;
   /** Baseline feelings toward other peoples, -1 (hostile) to 1 (friendly). Used from Phase 5. */
   readonly attitudes: Readonly<Record<string, number>>;
-  /** Relative preference among weapons. */
+  /** Relative preference among starting weapons and armor. */
   readonly weapons: Partial<Record<WeaponId, number>>;
+  readonly armor: Partial<Record<ArmorId, number>>;
+  /** Chance of being born with the gift for magic (WORLD.md §4). */
+  readonly giftChance: number;
 }
 
 export const SPECIES = {
@@ -24,6 +27,8 @@ export const SPECIES = {
     lifespan: 70,
     attitudes: { human: 0.3, elf: 0, dwarf: 0 },
     weapons: { longsword: 3, shortsword: 2, spear: 2, mace: 2, axe: 1 },
+    armor: { padded: 1, leather: 2, scale: 1 },
+    giftChance: 0.05,
   },
   elf: {
     id: 'elf',
@@ -32,6 +37,8 @@ export const SPECIES = {
     lifespan: 600,
     attitudes: { elf: 0.5, human: -0.1, dwarf: -0.3 },
     weapons: { leafblade: 4, longsword: 2, spear: 1 },
+    armor: { padded: 1, leather: 3 },
+    giftChance: 0.18,
   },
   dwarf: {
     id: 'dwarf',
@@ -40,6 +47,8 @@ export const SPECIES = {
     lifespan: 250,
     attitudes: { dwarf: 0.5, human: 0, elf: -0.3 },
     weapons: { axe: 4, warhammer: 3, mace: 1 },
+    armor: { leather: 1, scale: 2 },
+    giftChance: 0.03,
   },
 } as const satisfies Record<string, SpeciesDef>;
 

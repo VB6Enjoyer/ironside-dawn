@@ -1,21 +1,28 @@
 import { useEffect } from 'react';
 
-import { creatureDef, STATS, weaponDef, type CreatureId, type StatId } from '../../content';
+import { creatureDef, SKILLS, STATS, type CreatureId, type StatId } from '../../content';
 import {
   conditionsOf,
+  roleOf,
+  statValue,
+  xpForLevel,
   type Character,
+  type Item,
   type CharacterId,
   type SimEvent,
   type World,
 } from '../../sim';
 import {
   braveryWord,
-  capitalize,
+  anItem,
   describeActivity,
+  describeDeed,
   describeEvent,
   formatTimestamp,
   lootList,
+  SKILL_NAMES,
   SPECIES_NAMES,
+  spellName,
   type NameResolver,
 } from '../../text';
 import { formatCount } from '../format';
@@ -67,7 +74,8 @@ export function CharacterCard({ world, characterId, log, names, onSelect, onClos
             {character.givenName} {character.familyName}
           </h2>
           <p className="card-subtitle">
-            {capitalize(species)} of {home?.name ?? 'nowhere'}
+            Level {character.level} {roleOf(character)} · {species} of {home?.name ?? 'nowhere'}
+            {character.gifted && ' · gifted'}
           </p>
         </div>
         <button type="button" className="card-close" onClick={onClose} aria-label="Close">
@@ -89,6 +97,12 @@ export function CharacterCard({ world, characterId, log, names, onSelect, onClos
             max={character.maxStamina}
             kind="stamina"
           />
+          <Bar
+            label="Experience"
+            value={character.xp - xpForLevel(character.level)}
+            max={xpForLevel(character.level + 1) - xpForLevel(character.level)}
+            kind="xp"
+          />
           <Conditions character={character} now={world.time} />
         </section>
       )}
@@ -99,16 +113,65 @@ export function CharacterCard({ world, characterId, log, names, onSelect, onClos
           {STATS.map((stat) => (
             <div key={stat}>
               <dt>{STAT_LABELS[stat]}</dt>
-              <dd>{character.stats[stat]}</dd>
+              <dd>
+                {statValue(character, stat)}
+                {statValue(character, stat) !== character.stats[stat] && (
+                  <span className="muted"> ({character.stats[stat]})</span>
+                )}
+              </dd>
             </div>
           ))}
         </dl>
       </section>
 
       <section className="card-section">
+        <h3>Equipment</h3>
         <dl className="facts">
           <dt>Weapon</dt>
-          <dd>{weaponDef(character.weapon).name}</dd>
+          <dd>
+            <ItemName item={character.equipment.weapon} />
+          </dd>
+          <dt>Armor</dt>
+          <dd>
+            {character.equipment.armor ? (
+              <ItemName item={character.equipment.armor} />
+            ) : (
+              <span className="muted">none</span>
+            )}
+          </dd>
+          <dt>Trinket</dt>
+          <dd>
+            {character.equipment.trinket ? (
+              <ItemName item={character.equipment.trinket} />
+            ) : (
+              <span className="muted">none</span>
+            )}
+          </dd>
+        </dl>
+      </section>
+
+      <section className="card-section">
+        <h3>Skills</h3>
+        <dl className="skills">
+          {SKILLS.filter((skill) => character.skills[skill] >= 1).map((skill) => (
+            <div key={skill}>
+              <dt>{SKILL_NAMES[skill]}</dt>
+              <dd>
+                <span className="skill-track">
+                  <span className="skill-fill" style={{ width: `${character.skills[skill]}%` }} />
+                </span>
+                {Math.floor(character.skills[skill])}
+              </dd>
+            </div>
+          ))}
+        </dl>
+        {character.spells.length > 0 && (
+          <p className="spells">Spells: {character.spells.map(spellName).join(', ')}</p>
+        )}
+      </section>
+
+      <section className="card-section">
+        <dl className="facts">
           <dt>Temper</dt>
           <dd>{braveryWord(character.bravery)}</dd>
           <dt>Gold</dt>
@@ -131,6 +194,23 @@ export function CharacterCard({ world, characterId, log, names, onSelect, onClos
         </dl>
       </section>
 
+      {character.deeds.length > 0 && (
+        <section className="card-section">
+          <h3>Deeds</h3>
+          <ol className="card-recent">
+            {[...character.deeds]
+              .reverse()
+              .slice(0, 10)
+              .map((deed, i) => (
+                <li key={i}>
+                  <time>{formatTimestamp(deed.at)}</time>
+                  <span>{describeDeed(deed)}</span>
+                </li>
+              ))}
+          </ol>
+        </section>
+      )}
+
       {recent.length > 0 && (
         <section className="card-section">
           <h3>Recently</h3>
@@ -150,6 +230,10 @@ export function CharacterCard({ world, characterId, log, names, onSelect, onClos
   );
 }
 
+function ItemName({ item }: { item: Item }) {
+  return <span className={`rarity-${item.rarity}`}>{anItem(item)}</span>;
+}
+
 function Bar({
   label,
   value,
@@ -159,7 +243,7 @@ function Bar({
   label: string;
   value: number;
   max: number;
-  kind: 'hp' | 'stamina';
+  kind: 'hp' | 'stamina' | 'xp';
 }) {
   const shown = Math.max(0, Math.ceil(value));
   const fraction = Math.max(0, Math.min(1, value / max));

@@ -159,6 +159,7 @@ describe('words', () => {
         hit: true,
         critical: false,
         damage: 5,
+        absorbed: 0,
         targetHp: 3,
         targetMaxHp: 8,
       },

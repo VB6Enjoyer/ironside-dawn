@@ -1,25 +1,36 @@
-import { weaponDef, type StatId } from '../../content';
+import { itemBase, type StatId } from '../../content';
 import { HOUR } from '../core/time';
-import type { Character, FighterState } from '../model';
+import type { Character, Encounter, FighterState } from '../model';
 import { WOUNDED_BELOW } from './combat-core';
+import { gearTotals } from './items';
+import { levelAttackBonus, levelDefenseBonus, skillBonus } from './progress';
 
 /**
  * A character's body: modifiers, conditions, fitness, and healing.
  * Wounded and exhausted are derived from hit points and stamina; timed
- * conditions such as dizziness are stored (ROADMAP.md Phase 2).
+ * conditions such as dizziness and drained attributes are stored.
  */
 
-export type Condition = 'wounded' | 'exhausted' | 'dizzy';
+export type Condition = 'wounded' | 'exhausted' | 'dizzy' | 'drained';
 
 const DIZZY_ATTACK_PENALTY = 2;
 const DIZZY_DEFENSE_PENALTY = 2;
-/** Adventurers wear armor and are trained fighters, unlike the beasts they meet. */
-const BASE_DEFENSE = 14;
-const BASE_ATTACK = 4;
+/** Without armor. Adventurers start with some (padded, leather or scale). */
+const BASE_DEFENSE = 11;
+const BASE_ATTACK = 2;
+
+/** An attribute including gear and any drain. */
+export function statValue(character: Character, stat: StatId): number {
+  const drained = character.statuses.reduce(
+    (total, s) => total + (s.kind === 'drained' && s.stat === stat ? s.amount : 0),
+    0,
+  );
+  return character.stats[stat] + (gearTotals(character).stats[stat] ?? 0) - drained;
+}
 
 /** The usual d20 modifier: 10 is average, each 2 points is ±1. */
 export function modifier(character: Character, stat: StatId): number {
-  return Math.floor((character.stats[stat] - 10) / 2);
+  return Math.floor((statValue(character, stat) - 10) / 2);
 }
 
 export function isAlive(character: Character): boolean {
@@ -31,11 +42,16 @@ export function conditionsOf(character: Character, now: number): Condition[] {
   if (character.hp < character.maxHp * WOUNDED_BELOW) conditions.push('wounded');
   if (character.stamina <= 0) conditions.push('exhausted');
   if (isDizzy(character, now)) conditions.push('dizzy');
+  if (isDrained(character, now)) conditions.push('drained');
   return conditions;
 }
 
 export function isDizzy(character: Character, now: number): boolean {
   return character.statuses.some((s) => s.kind === 'dizzy' && s.until > now);
+}
+
+export function isDrained(character: Character, now: number): boolean {
+  return character.statuses.some((s) => s.kind === 'drained' && s.until > now);
 }
 
 export function expireStatuses(character: Character, now: number): void {
@@ -73,19 +89,32 @@ const MAX_FLEE_THRESHOLD = 0.8;
 export function adventurerFighter(
   character: Character,
   now: number,
-  foesStanding: number,
+  encounter: Encounter,
 ): FighterState {
-  const weapon = weaponDef(character.weapon);
+  const gear = gearTotals(character);
+  const weapon = itemBase(character.equipment.weapon.base);
   const dizzy = isDizzy(character, now);
+  const quickened = encounter.quickened;
+  const foesStanding = encounter.foes.filter((f) => f.fighter.out === null).length;
+  const weaponSkill = weapon.slot === 'weapon' ? skillBonus(character, weapon.skill) : 0;
   return {
     attack:
       BASE_ATTACK +
+      weaponSkill +
+      levelAttackBonus(character) +
       Math.max(modifier(character, 'might'), modifier(character, 'agility')) +
-      weapon.accuracy -
+      gear.attack +
+      (quickened?.attack ?? 0) -
       (dizzy ? DIZZY_ATTACK_PENALTY : 0),
-    damage: weapon.damage,
-    damageBonus: modifier(character, 'might'),
-    defense: BASE_DEFENSE + modifier(character, 'agility') - (dizzy ? DIZZY_DEFENSE_PENALTY : 0),
+    damage: weapon.slot === 'weapon' ? weapon.damage : '1d3',
+    damageBonus: modifier(character, 'might') + gear.damage,
+    defense:
+      BASE_DEFENSE +
+      modifier(character, 'agility') +
+      levelDefenseBonus(character) +
+      gear.defense +
+      (quickened?.defense ?? 0) -
+      (dizzy ? DIZZY_DEFENSE_PENALTY : 0),
     agility: modifier(character, 'agility'),
     fleeBelow: Math.min(
       MAX_FLEE_THRESHOLD,
@@ -94,6 +123,7 @@ export function adventurerFighter(
     hp: character.hp,
     maxHp: character.maxHp,
     stamina: character.stamina,
+    ward: encounter.ward,
     out: null,
   };
 }

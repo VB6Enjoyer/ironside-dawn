@@ -3,13 +3,16 @@ import type {
   CultureId,
   LootId,
   PastimeId,
+  SkillId,
   SpeciesId,
+  SpellId,
+  StatId,
   Stats,
   TrapId,
-  WeaponId,
 } from '../../content';
 import type { CreatureRef } from './encounter';
-import type { CharacterId, EncounterId, LocationId } from './ids';
+import type { CharacterId, EncounterId, ItemId, LocationId } from './ids';
+import type { Equipment, Item } from './item';
 
 export interface Character {
   readonly id: CharacterId;
@@ -22,14 +25,25 @@ export interface Character {
   readonly arrivedAt: number;
 
   readonly stats: Stats;
-  readonly weapon: WeaponId;
   /** 0 (timid) to 1 (fearless). The first trait; full personalities arrive in Phase 4. */
   readonly bravery: number;
+  /** Born with the gift for magic (WORLD.md §4). */
+  readonly gifted: boolean;
+
+  level: number;
+  xp: number;
+  /** Proficiency from 0 to 100 in each skill, grown by use. */
+  skills: Record<SkillId, number>;
+  equipment: Equipment;
+  spells: SpellId[];
+  /** Memorable moments, newest last, for the character card. Capped. */
+  deeds: Deed[];
 
   hp: number;
-  readonly maxHp: number;
+  /** Recomputed from toughness, level and gear. */
+  maxHp: number;
   stamina: number;
-  readonly maxStamina: number;
+  maxStamina: number;
   /** Timed conditions. Wounded and exhausted are derived from hp and stamina instead. */
   statuses: TimedStatus[];
 
@@ -48,15 +62,27 @@ export interface Character {
   death: Death | null;
 }
 
-export interface TimedStatus {
-  readonly kind: 'dizzy';
-  readonly until: number;
-}
+export type TimedStatus =
+  | { readonly kind: 'dizzy'; readonly until: number }
+  /** An attribute temporarily weakened, usually by magic. */
+  | {
+      readonly kind: 'drained';
+      readonly stat: StatId;
+      readonly amount: number;
+      readonly until: number;
+    };
 
-export interface LootItem {
-  readonly loot: LootId;
-  readonly value: number;
-}
+/** Something carried to sell: a trophy or a piece of gear not worth wearing. */
+export type LootItem =
+  | { readonly loot: LootId; readonly value: number }
+  | { readonly gear: Item; readonly value: number };
+
+export type Deed =
+  | { readonly kind: 'level'; readonly at: number; readonly level: number }
+  | { readonly kind: 'legend'; readonly at: number; readonly itemId: ItemId; readonly name: string }
+  | { readonly kind: 'slay'; readonly at: number; readonly creature: CreatureRef }
+  | { readonly kind: 'spell'; readonly at: number; readonly spell: SpellId }
+  | { readonly kind: 'rank'; readonly at: number; readonly skill: SkillId; readonly rank: string };
 
 export interface Death {
   readonly at: number;
@@ -66,7 +92,8 @@ export interface Death {
 
 export type DeathCause =
   | { readonly kind: 'creature'; readonly creature: CreatureRef }
-  | { readonly kind: 'trap'; readonly trap: TrapId };
+  | { readonly kind: 'trap'; readonly trap: TrapId }
+  | { readonly kind: 'magic'; readonly spell: SpellId };
 
 export interface DelveProgress {
   readonly locationId: LocationId;
