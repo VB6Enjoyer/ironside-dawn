@@ -1,7 +1,9 @@
 import { schedule } from '../core/scheduler';
 import type { SimContext } from '../context';
-import type { Character, LocationId } from '../model';
+import type { Character, EventOfType, LocationId } from '../model';
 import { findPath, roadsFrom } from './roads';
+
+export type TravelReason = EventOfType<'travel.depart'>['data']['reason'];
 
 /** How much a single leg's duration varies around the road's typical time. */
 const LEG_DURATION_SD = 0.12;
@@ -9,7 +11,12 @@ const LEG_DURATION_MIN = 0.75;
 const LEG_DURATION_MAX = 1.4;
 
 /** Sets out for `destinationId`. Returns false if there is no way there. */
-export function startJourney(ctx: SimContext, character: Character, destinationId: LocationId) {
+export function startJourney(
+  ctx: SimContext,
+  character: Character,
+  destinationId: LocationId,
+  reason: TravelReason,
+): boolean {
   const fromId = character.locationId;
   if (fromId === null) throw new Error(`${character.id} cannot depart while on the road`);
 
@@ -25,6 +32,7 @@ export function startJourney(ctx: SimContext, character: Character, destinationI
         fromId,
         destinationId,
         expectedDuration: path.duration,
+        reason,
       },
     },
     [character.id],

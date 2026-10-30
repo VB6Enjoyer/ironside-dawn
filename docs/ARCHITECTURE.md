@@ -226,7 +226,9 @@ full-world scans in hot paths. Techniques, from day one onward:
 3. **Silent detail.** Fights and delves are always resolved fully, so RNG use
    is identical either way. Fine-grained events (each blow, each room) are only
    _emitted_ when someone is watching that character or place. Emitting never
-   touches world RNG or state, so it can't change history.
+   touches world RNG or state, so it can't change history. _(Planned for
+   Phase 6 with follow mode. Until then every blow is emitted as a trivial
+   event; detail events will need IDs that don't shift the main sequence.)_
 4. **Retention by importance.** Unwatched trivial events are never stored.
    Normal events expire after a while. Notable and legendary events are kept
    forever.

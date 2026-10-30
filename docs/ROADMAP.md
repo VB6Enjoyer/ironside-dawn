@@ -128,49 +128,72 @@ watch weeks go by without the page stuttering.
 
 **Peoples and creatures**
 
-- [ ] Species as data (`WORLD.md` §2): stat modifiers, lifespan, and baseline
+- [x] Species as data (`WORLD.md` §2): stat modifiers, lifespan, and baseline
       attitudes. Add **elves** and **dwarves** as characters alongside humans.
-- [ ] **Creature templates** in `src/content/creatures` (species, base stats,
+- [x] **Creature templates** in `src/content/creatures` (species, base stats,
       level range, loot table, instincts), with RNG variance and an occasional
       **affix** ("Enraged Infernal Imp", "Ancient Warg").
-- [ ] First hostile things: beasts, **lesser undead** (skeletons, zombies),
+- [x] First hostile things: beasts, **lesser undead** (skeletons, zombies),
       and **lesser demons** (imps, hounds), all as creatures.
-- [ ] **Statistical populations**: a dungeon holds _counts_ ("skeletons ≈ 30"),
+- [x] **Statistical populations**: a dungeon holds _counts_ ("skeletons ≈ 30"),
       and encounters draw individuals from them. Killing creatures lowers the
       count, and the count recovers slowly (`ARCHITECTURE.md` §4.2).
 
 **Combat and the body**
 
-- [ ] Character **stats**: a small, readable set (e.g. Might, Agility,
+- [x] Character **stats**: a small, readable set (e.g. Might, Agility,
       Toughness, Wits, Spirit, Presence), plus **HP** and **Stamina**.
-- [ ] **Status effects** framework (timed modifiers): wounded, exhausted,
+- [x] **Status effects** framework (timed modifiers): wounded, exhausted,
       dizzy, drained. Combat uses it now; magic reuses it in Phase 3.
-- [ ] **Dungeons** with a danger level and an **encounter table**.
+- [x] **Dungeons** with a danger level and an **encounter table**.
       Exploration happens in rooms or turns, each of which can be a fight,
       treasure, a trap, or nothing.
-- [ ] **Combat resolver**: opposed rolls, damage dice, crits, stamina use, and a
+- [x] **Combat resolver**: opposed rolls, damage dice, crits, stamina use, and a
       flee check (based on HP%, stamina, and a bravery value). It handles
-      1-vs-1 and small groups. Fights resolve in full every time, but
-      blow-by-blow events are only **emitted when watched** (silent detail);
-      the summary event is always emitted.
-- [ ] **Death** (permanent, with an obituary event), **loot** (gold + simple
+      1-vs-1 and small groups. Each round is its own scheduled job, a few
+      in-game seconds apart, so blows land in real time. _Silent detail
+      (emitting blow-by-blow events only when watched) moved to Phase 6,
+      together with follow mode; for now every blow is a trivial event._
+- [x] **Death** (permanent, with an obituary event), **loot** (gold + simple
       items), and **wounds** that need rest in town to heal.
-- [ ] Simple rule-based behavior until Phase 4: healthy → go delve; hurt →
+- [x] Simple rule-based behavior until Phase 4: healthy → go delve; hurt →
       return to town and rest; carrying loot → go home.
-- [ ] Gold exists. Selling loot happens at a fixed vendor price for now; the
+- [x] Gold exists. Selling loot happens at a fixed vendor price for now; the
       economy comes in Phase 7.
 
 **UI and tooling**
 
-- [ ] Log filter by importance.
-- [ ] Clicking a character name opens a **basic character card** (species,
+- [x] Log filter by importance.
+- [x] Clicking a character name opens a **basic character card** (species,
       stats, HP and stamina, statuses, gold, location, kill count).
-- [ ] Headless report: deaths by cause, kills by species, gold earned.
-- [ ] Monte Carlo balance tests for the combat resolver.
+- [x] Headless report: deaths by cause, kills by species, gold earned.
+- [x] Monte Carlo balance tests for the combat resolver.
 
 **Exit criteria:** Over a simulated month, some characters get rich, some limp
 home, and some die to skeletons in the Dungeon of Misery. At Real-time speed,
 you can watch a single fight blow by blow.
+
+**Status: done.** Notes from building it:
+
+- **Balance** comes from a Monte Carlo test of the combat core: an average
+  adventurer against each creature's usual group. Adventurers wear armor and
+  are trained (defense 14, +4 to hit, about 28 HP), so commons kill them about
+  1% of the time, wargs 3–5%, and cave bears and hellhounds about 8%.
+  Headless, a world loses about three adventurers a month.
+- **Flee and avoid**: braver characters hold on longer before fleeing, the
+  outnumbered flee sooner, and a delver who spots something frightening (a
+  cave bear, two wargs) may try to slip away unseen. A failed attempt starts
+  the fight.
+- **Days at home**: after selling loot or convalescing, adventurers spend 2–6
+  days in town before their next trip. Without this they delved almost daily
+  and died far too often.
+- **Newcomers** (pulled forward from Phase 3, minimal): while fewer than 20
+  adventurers are alive, there's a daily 50% chance that one arrives in a
+  town. This keeps a long-running world from emptying.
+- Brindlemoor is part dwarven, Saltmere part elven. Each people has its own
+  naming culture (generic, sylvan, deephold).
+- `npm run sim -- --quiet` prints a world report: deaths by cause, kills by
+  species, the richest adventurers, and dungeon populations.
 
 ---
 
@@ -181,44 +204,84 @@ for it.
 
 **Growth**
 
-- [ ] **XP and levels** with a level curve that keeps progression slow.
-- [ ] **Skills that improve with use**: swordsmanship rises by fighting with
+- [x] **XP and levels** with a level curve that keeps progression slow.
+- [x] **Skills that improve with use**: swordsmanship rises by fighting with
       swords, lockpicking by opening chests. Characters drift into roles
       ("fighter", "scout", "mystic") from what they do instead of picking a
       class.
-- [ ] **Equipment slots** and item effects on combat.
-- [ ] **Item generation**: base type × material × rarity × affixes ("Duskblade
+- [x] **Equipment slots** and item effects on combat.
+- [x] **Item generation**: base type × material × rarity × affixes ("Duskblade
       of the Ember", "Rusted Iron Axe"), all culture-tagged. Named unique items
       are rare and get remembered.
-- [ ] Characters equip upgrades they find. Better gear changes outcomes.
-- [ ] **Population replenishment**: new adventurers come out of towns'
-      statistical populations at a rate tied to world conditions.
-- [ ] Creatures scale with dungeon depth, and deeper levels unlock as
+- [x] Characters equip upgrades they find. Better gear changes outcomes.
+- [x] **Population replenishment**: new adventurers come out of towns'
+      statistical populations at a rate tied to world conditions. (A
+      minimal version, newcomers arriving while the population is below
+      target, landed in Phase 2.)
+- [x] Creatures scale with dungeon depth, and deeper levels unlock as
       characters grow.
 
 **Sorcery, first pass** (`WORLD.md` §4)
 
-- [ ] **Arcana** skill: learned slowly by study (only in certain towns, from
+- [x] **Arcana** skill: learned slowly by study (only in certain towns, from
       mentors or tomes), or boosted by **the gift** (rare, rolled at creation,
       rate by species).
-- [ ] **Spells as data**: effect, difficulty, and a **cost profile** (stamina,
+- [x] **Spells as data**: effect, difficulty, and a **cost profile** (stamina,
       health, stat drain, dizziness). Cost scales with power and goes down with
       mastery.
-- [ ] **Casting roll** with four outcomes: success / partial / failure /
+- [x] **Casting roll** with four outcomes: success / partial / failure /
       backlash. Casting while dizzy or drained raises backlash odds.
-- [ ] 4 starter spells: Ember Bolt, Mend Flesh, Quickening, Ward of Ash.
-- [ ] A simple "cast if the odds are good" rule until the utility AI arrives.
-- [ ] Headless metrics: casts, backlashes, and deaths by self-inflicted magic.
+- [x] 4 starter spells: Ember Bolt, Mend Flesh, Quickening, Ward of Ash.
+- [x] A simple "cast if the odds are good" rule until the utility AI arrives.
+- [x] Headless metrics: casts, backlashes, and deaths by self-inflicted magic.
 
 **UI**
 
-- [ ] Character card shows level, skills, gear, known spells, and a short list
+- [x] Character card shows level, skills, gear, known spells, and a short list
       of notable deeds.
 
 **Exit criteria:** After a simulated year there is a visible spread: veterans
 at level 8+ with named gear, newcomers at level 1, a handful of mages whose
 spells sometimes win a fight and sometimes leave them dizzy and bleeding, and a
 graveyard that tells the rest.
+
+**Status: done.** Notes from building it:
+
+- **Levels**: experience comes from kills (8 × creature level, half again for
+  an affix), treasure, avoided traps and chambers explored. Level `n` needs
+  `50·n·(n−1)` XP in total (level 8 at 2,800). Each level adds 3 HP; every
+  third adds +1 to hit, every fourth +1 defense. After a year, survivors
+  range from level 1 to about 9.
+- **Skills** (blades, axes, blunt, polearms, stealth, lockpicking, awareness,
+  arcana) grow with use, more slowly the higher they are, faster with good
+  wits. Every 10 points is +1 to the rolls they help. Ranks (apprentice 20,
+  journeyman 40, expert 60, master 80) are announced. A year's survivors reach
+  expert with their weapon. The best skill decides the role.
+- **Gear**: weapon, armor and trinket slots. Items combine a base, a material
+  (only metal armor takes one), a rarity (common, fine, rare, legendary) and
+  up to two affixes. Deeper chambers give rarer finds. Adventurers wear what
+  scores better and sell the rest.
+- **Legendary items** are rare (one or two a year per world) and tracked in
+  `world.legends`. They are never sold. When their owner dies, they stay in
+  that dungeon until a later delver finds them: _"finds Duskblade in the
+  Dungeon of Misery, where Rufus Ironclaw fell."_
+- **Depth**: deeper chambers bring more affixed creatures, bigger groups and
+  more gold. Delvers grow uneasy past chamber 3 + their level.
+- **Locked chests**: half of all chests are locked. Picking the lock trains
+  lockpicking; forcing it spoils half the gold and any item.
+- **Magic**: the gifted (5% of humans, 18% of elves, 3% of dwarves) start
+  with arcana and a spell or two. Others can study at the academies of
+  Concordale and Saltmere, but only the clever or spiritual bother, and
+  slowly. A world has a few casters at any time. Casting replaces a swing
+  for that round; costs shrink with mastery; backlashes double the cost and
+  burn, and can kill.
+- **Population**: towns hold commoner counts by people (Concordale 1,200
+  humans; Brindlemoor 500 humans and 350 dwarves; Saltmere 600 humans and 400
+  elves). Adventurers are drawn from them, and towns grow slowly. Newcomers
+  arrive faster the further the world is below 20 adventurers.
+- Headless, a world loses 11–28 adventurers a year, fewer than in Phase 2
+  because survivors now grow stronger. 500 characters still run 10 years in
+  about 75 seconds.
 
 ---
 
@@ -306,8 +369,10 @@ compression work fully, and harden the technical base.
 **Observation tools**
 
 - [ ] **Follow mode**: pin a character and the log filters to them, with
-      their card always visible. Following also turns on silent-detail
-      emission for them.
+      their card always visible.
+- [ ] **Silent detail** (moved from Phase 2): blow-by-blow and chamber-by-
+      chamber events are only emitted for followed characters and watched
+      places, without changing event IDs or history (`ARCHITECTURE.md` §4.2).
 - [ ] **Character profile page**: biography generated from life events,
       stats over time, gear, spells, relationships, memories, and a timeline.
 - [ ] **Location view**: who is here now, populations, recent events, and

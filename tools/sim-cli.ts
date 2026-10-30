@@ -2,24 +2,31 @@
  * Headless simulation runner (ARCHITECTURE.md §7).
  *
  *   npm run sim -- --seed 42 --days 7
- *   npm run sim -- --seed 42 --days 365 --quiet
+ *   npm run sim -- --seed 42 --days 365 --quiet     (just the world report)
  */
 import { randomInt } from 'node:crypto';
 import { parseArgs } from 'node:util';
 
+import { creatureDef, type CreatureId } from '../src/content';
+import { roleOf } from '../src/sim/systems/progress';
 import {
   createSimulation,
   DAY,
   Importance,
   StreamHash,
   WORLD_START,
+  type CharacterId,
   type SimEvent,
+  type World,
 } from '../src/sim';
 import {
+  anItem,
   describeEvent,
   formatDate,
   formatTimestamp,
   toPlainText,
+  spellName,
+  TRAP_NAMES,
   worldNames,
   type NameResolver,
 } from '../src/text';
@@ -77,6 +84,7 @@ function main(): number {
 
   const hash = new StreamHash();
   const counts = new Map<string, number>();
+  const castOutcomes = new Map<string, number>();
   let printed = 0;
 
   const started = performance.now();
@@ -97,6 +105,9 @@ function main(): number {
     onEvent(event) {
       hash.update(JSON.stringify(event));
       counts.set(event.type, (counts.get(event.type) ?? 0) + 1);
+      if (event.type === 'magic.cast') {
+        castOutcomes.set(event.data.outcome, (castOutcomes.get(event.data.outcome) ?? 0) + 1);
+      }
       if (live) print(event, names);
       else pending.push(event);
     },
@@ -115,13 +126,120 @@ function main(): number {
       `Seed:        ${seed}${values.seed === undefined ? ` (pass --seed ${seed} to reproduce)` : ''}`,
       `Simulated:   ${days} days with ${characterCount} characters, to ${formatDate(sim.world.time)}`,
       `Events:      ${total}${values.quiet ? '' : ` (${printed} printed)`}`,
-      ...[...counts].map(([type, n]) => `  ${type.padEnd(22)} ${n}`),
       `Jobs run:    ${jobsRun}`,
       `Wall time:   ${seconds.toFixed(2)}s (${Math.round(days / seconds)} days/s)`,
       `Event hash:  ${hash.digest()}`,
+      '',
+      ...worldReport(sim.world, counts, castOutcomes),
     ].join('\n'),
   );
   return 0;
+}
+
+/** World health at a glance (ARCHITECTURE.md §7): who lives, who died, what's left. */
+function worldReport(
+  world: World,
+  counts: ReadonlyMap<string, number>,
+  castOutcomes: ReadonlyMap<string, number>,
+): string[] {
+  const characters = [...world.characters.values()];
+  const living = characters.filter((c) => c.death === null);
+  const fallen = characters.filter((c) => c.death !== null);
+
+  const tally = (keys: readonly string[]) => {
+    const totals = new Map<string, number>();
+    for (const key of keys) totals.set(key, (totals.get(key) ?? 0) + 1);
+    return [...totals].sort((a, b) => b[1] - a[1]);
+  };
+  const deathCauses = tally(
+    fallen.map(({ death }) => {
+      const cause = death!.cause;
+      switch (cause.kind) {
+        case 'creature':
+          return creatureDef(cause.creature.species).plural;
+        case 'trap':
+          return `${TRAP_NAMES[cause.trap]}s`;
+        case 'magic':
+          return `their own ${spellName(cause.spell)}`;
+      }
+    }),
+  );
+  const kills = new Map<CreatureId, number>();
+  for (const c of characters) {
+    for (const [species, n] of Object.entries(c.kills) as [CreatureId, number][]) {
+      kills.set(species, (kills.get(species) ?? 0) + n);
+    }
+  }
+  const richest = [...living].sort((a, b) => b.gold - a.gold).slice(0, 5);
+  const veterans = [...living].sort((a, b) => b.level - a.level || b.xp - a.xp).slice(0, 5);
+  const levels = tally(living.map((c) => `level ${c.level}`)).sort(
+    (a, b) => Number(a[0].slice(6)) - Number(b[0].slice(6)),
+  );
+  const casters = living.filter((c) => c.spells.length > 0);
+  const name = (id: string | null) => {
+    const c = id ? world.characters.get(id as CharacterId) : undefined;
+    return c ? `${c.givenName} ${c.familyName}` : 'nobody';
+  };
+  const earned = characters.reduce((sum, c) => sum + c.goldEarned, 0);
+  const row = (label: string, value: string | number) => `  ${label.padEnd(22)} ${value}`;
+
+  return [
+    'People',
+    row('Alive', `${living.length} (of ${characters.length} who ever lived)`),
+    row('Died', fallen.length),
+    ...deathCauses.map(([cause, n]) => row(`  to ${cause}`, n)),
+    row('Gold earned, all time', earned),
+    row('Richest alive', ''),
+    ...richest.map((c) => row(`  ${c.givenName} ${c.familyName}`, `${c.gold} gold`)),
+    '',
+    'Growth',
+    ...levels.map(([level, n]) => row(level, n)),
+    row('Veterans', ''),
+    ...veterans.map((c) =>
+      row(
+        `  ${c.givenName} ${c.familyName}`,
+        `level ${c.level} ${roleOf(c)}, wielding ${anItem(c.equipment.weapon)}`,
+      ),
+    ),
+    '',
+    'Magic',
+    row('Casters alive', `${casters.length} (${living.filter((c) => c.gifted).length} gifted)`),
+    ...[...castOutcomes].sort((a, b) => b[1] - a[1]).map(([outcome, n]) => row(`  ${outcome}`, n)),
+    '',
+    'Legendary items',
+    ...(world.legends.size === 0 ? ['  none yet'] : []),
+    ...[...world.legends.values()].map((legend) =>
+      row(
+        `  ${legend.item.uniqueName}`,
+        legend.holder
+          ? `held by ${name(legend.holder)}`
+          : legend.lostAt
+            ? `lost in ${world.locations.get(legend.lostAt)?.name}`
+            : 'whereabouts unknown',
+      ),
+    ),
+    '',
+    'Kills by species',
+    ...[...kills]
+      .sort((a, b) => b[1] - a[1])
+      .map(([species, n]) => row(creatureDef(species).plural, n)),
+    '',
+    'Dungeon populations',
+    ...[...world.locations.values()]
+      .filter((l) => l.dungeon)
+      .flatMap((l) => [
+        `  ${l.name}`,
+        ...l.dungeon!.def.inhabitants.map(({ creature, max }) =>
+          row(
+            `  ${creatureDef(creature).plural}`,
+            `${l.dungeon!.population[creature] ?? 0} / ${max}`,
+          ),
+        ),
+      ]),
+    '',
+    'Events by type',
+    ...[...counts].sort((a, b) => b[1] - a[1]).map(([type, n]) => row(type, n)),
+  ];
 }
 
 function fail(message: string): number {

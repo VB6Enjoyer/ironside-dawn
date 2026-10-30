@@ -111,7 +111,8 @@ also wreck the caster.
 Casting requires the **Arcana** skill, which comes from one of two sources:
 
 1. **Study**: slow learning from mentors, tomes, or academies found only in
-   certain places. Most mages come from here, and it takes years.
+   certain places (in the starter world, Concordale and Saltmere). Only the
+   clever or spiritual bother, and it takes years.
 2. **The gift**: an innate aptitude rolled at birth. It is rare, and the rate
    varies by species (elves and demons more often, humans less). Gifted
    characters learn faster, can cast earlier, and are sometimes dangerous to
