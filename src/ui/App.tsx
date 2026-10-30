@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { createLocalHost } from '../host';
 import { browserFrames } from '../host/browser-frames';
+import type { CharacterId } from '../sim';
 import { worldNames } from '../text';
+import { CharacterCard } from './components/CharacterCard';
 import { Controls } from './components/Controls';
 import { EventLog } from './components/EventLog';
 import { StatusBar } from './components/StatusBar';
@@ -41,6 +43,8 @@ function WorldView({ seed }: { seed: string }) {
   const [host] = useState(() => createLocalHost({ seed, frames: browserFrames }));
   const snapshot = useHostSnapshot(host);
   const names = useMemo(() => worldNames(host.world), [host]);
+  const [selected, setSelected] = useState<CharacterId | null>(null);
+  const closeCard = useCallback(() => setSelected(null), []);
 
   // The world is already running when you arrive. Pausing on unmount stops
   // the frame loop, so a discarded world is simply garbage-collected.
@@ -52,7 +56,24 @@ function WorldView({ seed }: { seed: string }) {
   return (
     <>
       <Controls host={host} snapshot={snapshot} />
-      <EventLog log={snapshot.log} names={names} />
+      <div className={`world-area${selected ? ' with-card' : ''}`}>
+        <EventLog
+          log={snapshot.log}
+          names={names}
+          selected={selected}
+          onSelectCharacter={setSelected}
+        />
+        {selected && (
+          <CharacterCard
+            world={host.world}
+            characterId={selected}
+            log={snapshot.log}
+            names={names}
+            onSelect={setSelected}
+            onClose={closeCard}
+          />
+        )}
+      </div>
       <StatusBar snapshot={snapshot} />
     </>
   );
