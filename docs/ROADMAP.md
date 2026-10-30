@@ -128,49 +128,72 @@ watch weeks go by without the page stuttering.
 
 **Peoples and creatures**
 
-- [ ] Species as data (`WORLD.md` §2): stat modifiers, lifespan, and baseline
+- [x] Species as data (`WORLD.md` §2): stat modifiers, lifespan, and baseline
       attitudes. Add **elves** and **dwarves** as characters alongside humans.
-- [ ] **Creature templates** in `src/content/creatures` (species, base stats,
+- [x] **Creature templates** in `src/content/creatures` (species, base stats,
       level range, loot table, instincts), with RNG variance and an occasional
       **affix** ("Enraged Infernal Imp", "Ancient Warg").
-- [ ] First hostile things: beasts, **lesser undead** (skeletons, zombies),
+- [x] First hostile things: beasts, **lesser undead** (skeletons, zombies),
       and **lesser demons** (imps, hounds), all as creatures.
-- [ ] **Statistical populations**: a dungeon holds _counts_ ("skeletons ≈ 30"),
+- [x] **Statistical populations**: a dungeon holds _counts_ ("skeletons ≈ 30"),
       and encounters draw individuals from them. Killing creatures lowers the
       count, and the count recovers slowly (`ARCHITECTURE.md` §4.2).
 
 **Combat and the body**
 
-- [ ] Character **stats**: a small, readable set (e.g. Might, Agility,
+- [x] Character **stats**: a small, readable set (e.g. Might, Agility,
       Toughness, Wits, Spirit, Presence), plus **HP** and **Stamina**.
-- [ ] **Status effects** framework (timed modifiers): wounded, exhausted,
+- [x] **Status effects** framework (timed modifiers): wounded, exhausted,
       dizzy, drained. Combat uses it now; magic reuses it in Phase 3.
-- [ ] **Dungeons** with a danger level and an **encounter table**.
+- [x] **Dungeons** with a danger level and an **encounter table**.
       Exploration happens in rooms or turns, each of which can be a fight,
       treasure, a trap, or nothing.
-- [ ] **Combat resolver**: opposed rolls, damage dice, crits, stamina use, and a
+- [x] **Combat resolver**: opposed rolls, damage dice, crits, stamina use, and a
       flee check (based on HP%, stamina, and a bravery value). It handles
-      1-vs-1 and small groups. Fights resolve in full every time, but
-      blow-by-blow events are only **emitted when watched** (silent detail);
-      the summary event is always emitted.
-- [ ] **Death** (permanent, with an obituary event), **loot** (gold + simple
+      1-vs-1 and small groups. Each round is its own scheduled job, a few
+      in-game seconds apart, so blows land in real time. _Silent detail
+      (emitting blow-by-blow events only when watched) moved to Phase 6,
+      together with follow mode; for now every blow is a trivial event._
+- [x] **Death** (permanent, with an obituary event), **loot** (gold + simple
       items), and **wounds** that need rest in town to heal.
-- [ ] Simple rule-based behavior until Phase 4: healthy → go delve; hurt →
+- [x] Simple rule-based behavior until Phase 4: healthy → go delve; hurt →
       return to town and rest; carrying loot → go home.
-- [ ] Gold exists. Selling loot happens at a fixed vendor price for now; the
+- [x] Gold exists. Selling loot happens at a fixed vendor price for now; the
       economy comes in Phase 7.
 
 **UI and tooling**
 
-- [ ] Log filter by importance.
-- [ ] Clicking a character name opens a **basic character card** (species,
+- [x] Log filter by importance.
+- [x] Clicking a character name opens a **basic character card** (species,
       stats, HP and stamina, statuses, gold, location, kill count).
-- [ ] Headless report: deaths by cause, kills by species, gold earned.
-- [ ] Monte Carlo balance tests for the combat resolver.
+- [x] Headless report: deaths by cause, kills by species, gold earned.
+- [x] Monte Carlo balance tests for the combat resolver.
 
 **Exit criteria:** Over a simulated month, some characters get rich, some limp
 home, and some die to skeletons in the Dungeon of Misery. At Real-time speed,
 you can watch a single fight blow by blow.
+
+**Status: done.** Notes from building it:
+
+- **Balance** comes from a Monte Carlo test of the combat core: an average
+  adventurer against each creature's usual group. Adventurers wear armor and
+  are trained (defense 14, +4 to hit, about 28 HP), so commons kill them about
+  1% of the time, wargs 3–5%, and cave bears and hellhounds about 8%.
+  Headless, a world loses about three adventurers a month.
+- **Flee and avoid**: braver characters hold on longer before fleeing, the
+  outnumbered flee sooner, and a delver who spots something frightening (a
+  cave bear, two wargs) may try to slip away unseen. A failed attempt starts
+  the fight.
+- **Days at home**: after selling loot or convalescing, adventurers spend 2–6
+  days in town before their next trip. Without this they delved almost daily
+  and died far too often.
+- **Newcomers** (pulled forward from Phase 3, minimal): while fewer than 20
+  adventurers are alive, there's a daily 50% chance that one arrives in a
+  town. This keeps a long-running world from emptying.
+- Brindlemoor is part dwarven, Saltmere part elven. Each people has its own
+  naming culture (generic, sylvan, deephold).
+- `npm run sim -- --quiet` prints a world report: deaths by cause, kills by
+  species, the richest adventurers, and dungeon populations.
 
 ---
 
@@ -192,7 +215,9 @@ for it.
       are rare and get remembered.
 - [ ] Characters equip upgrades they find. Better gear changes outcomes.
 - [ ] **Population replenishment**: new adventurers come out of towns'
-      statistical populations at a rate tied to world conditions.
+      statistical populations at a rate tied to world conditions. (A
+      minimal version, newcomers arriving while the population is below
+      target, landed in Phase 2.)
 - [ ] Creatures scale with dungeon depth, and deeper levels unlock as
       characters grow.
 
@@ -306,8 +331,10 @@ compression work fully, and harden the technical base.
 **Observation tools**
 
 - [ ] **Follow mode**: pin a character and the log filters to them, with
-      their card always visible. Following also turns on silent-detail
-      emission for them.
+      their card always visible.
+- [ ] **Silent detail** (moved from Phase 2): blow-by-blow and chamber-by-
+      chamber events are only emitted for followed characters and watched
+      places, without changing event IDs or history (`ARCHITECTURE.md` §4.2).
 - [ ] **Character profile page**: biography generated from life events,
       stats over time, gear, spells, relationships, memories, and a timeline.
 - [ ] **Location view**: who is here now, populations, recent events, and

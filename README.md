@@ -28,9 +28,10 @@ town's market, or watch a dungeon's population change over time.
 
 ## Status
 
-Phase 1 (The Heartbeat) is done: a small world of 20 adventurers who travel,
-linger and sleep, shown in a live log at five speeds. Phase 2 (Blood & Gold)
-is next. The plan is in:
+Phase 2 (Blood & Gold) is done: human, elven and dwarven adventurers delve
+two dungeons chamber by chamber, fight creatures blow by blow, loot, sell,
+heal, and die. Click any name in the log to open their character card.
+Phase 3 (Growth & Sorcery) is next. The plan is in:
 
 - [`docs/ROADMAP.md`](docs/ROADMAP.md): the phased development plan, with exit
   criteria for each milestone.
@@ -54,7 +55,7 @@ npm run dev
 | Command                             | What it does                                                  |
 | ----------------------------------- | ------------------------------------------------------------- |
 | `npm run dev`                       | Start the dev server                                          |
-| `npm run sim -- --seed 42 --days 7` | Run a world headless and print its log (`--help` for options) |
+| `npm run sim -- --seed 42 --days 7` | Run a world headless: its log, then a world report (`--help`) |
 | `npm test`                          | Run the tests                                                 |
 | `npm run check`                     | Typecheck, lint, format check and tests, as CI does           |
 | `npm run build`                     | Production build into `dist/`                                 |
