@@ -181,7 +181,8 @@ export function createLocalHost(options: LocalHostOptions): SimHost {
         floorOverride,
         floor: floor(),
         log,
-        eventCount,
+        // Events still waiting to be flushed into the log aren't counted yet.
+        eventCount: eventCount - pending.length,
         hiddenCount,
         characterCount: sim.world.characters.size,
         measuredRate: running ? measuredRate : 0,

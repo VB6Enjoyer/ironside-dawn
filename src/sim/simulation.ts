@@ -7,10 +7,15 @@ import { createWorldState, populate } from './gen/world';
 import { EVENT_IMPORTANCE, type Job, type SimEvent, type World } from './model';
 import { wakeCharacter } from './systems/behavior';
 import { beginSeason, scheduleNextSeason } from './systems/calendar';
+import { runRound } from './systems/combat';
+import { daily, scheduleDaily } from './systems/ecology';
 
 export interface SimulationOptions {
   readonly seed: string | number;
-  /** Number of adventurers at world creation. Defaults to 20. */
+  /**
+   * Adventurers at world creation. Newcomers arrive while fewer than this
+   * many are alive. Defaults to 20.
+   */
   readonly characterCount?: number;
   /** How many recent events to keep in memory. Defaults to 10,000. */
   readonly eventCapacity?: number;
@@ -51,10 +56,19 @@ export function createSimulation(options: SimulationOptions): Simulation {
   const world = createWorldState(String(options.seed), options.map ?? STARTER_MAP);
   const events = new EventStore(options.eventCapacity);
   if (options.onEvent) events.subscribe(options.onEvent);
+  const targetPopulation = options.characterCount ?? 20;
 
   const ctx: SimContext = {
     world,
-    rng: { behavior: root.fork('behavior'), travel: root.fork('travel') },
+    rng: {
+      behavior: root.fork('behavior'),
+      travel: root.fork('travel'),
+      people: root.fork('people'),
+      delve: root.fork('delve'),
+      combat: root.fork('combat'),
+      loot: root.fork('loot'),
+      ecology: root.fork('ecology'),
+    },
     emit(body, actors, locationId) {
       const event = {
         ...body,
@@ -70,8 +84,9 @@ export function createSimulation(options: SimulationOptions): Simulation {
   };
 
   ctx.emit({ type: 'world.created', data: { seed: world.seed } }, [], null);
-  populate(ctx, root.fork('names'), options.characterCount ?? 20);
+  populate(ctx, targetPopulation);
   scheduleNextSeason(ctx);
+  scheduleDaily(ctx);
 
   function run(job: Job): void {
     switch (job.kind) {
@@ -81,6 +96,15 @@ export function createSimulation(options: SimulationOptions): Simulation {
         wakeCharacter(ctx, character);
         return;
       }
+      case 'combat.round': {
+        const encounter = world.encounters.get(job.encounterId);
+        if (!encounter) throw new Error(`Unknown encounter ${job.encounterId}`);
+        runRound(ctx, encounter);
+        return;
+      }
+      case 'world.daily':
+        daily(ctx, targetPopulation);
+        return;
       case 'calendar.season':
         beginSeason(ctx);
         return;

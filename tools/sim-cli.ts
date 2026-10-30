@@ -2,11 +2,12 @@
  * Headless simulation runner (ARCHITECTURE.md §7).
  *
  *   npm run sim -- --seed 42 --days 7
- *   npm run sim -- --seed 42 --days 365 --quiet
+ *   npm run sim -- --seed 42 --days 365 --quiet     (just the world report)
  */
 import { randomInt } from 'node:crypto';
 import { parseArgs } from 'node:util';
 
+import { creatureDef, type CreatureId } from '../src/content';
 import {
   createSimulation,
   DAY,
@@ -14,12 +15,14 @@ import {
   StreamHash,
   WORLD_START,
   type SimEvent,
+  type World,
 } from '../src/sim';
 import {
   describeEvent,
   formatDate,
   formatTimestamp,
   toPlainText,
+  TRAP_NAMES,
   worldNames,
   type NameResolver,
 } from '../src/text';
@@ -115,13 +118,74 @@ function main(): number {
       `Seed:        ${seed}${values.seed === undefined ? ` (pass --seed ${seed} to reproduce)` : ''}`,
       `Simulated:   ${days} days with ${characterCount} characters, to ${formatDate(sim.world.time)}`,
       `Events:      ${total}${values.quiet ? '' : ` (${printed} printed)`}`,
-      ...[...counts].map(([type, n]) => `  ${type.padEnd(22)} ${n}`),
       `Jobs run:    ${jobsRun}`,
       `Wall time:   ${seconds.toFixed(2)}s (${Math.round(days / seconds)} days/s)`,
       `Event hash:  ${hash.digest()}`,
+      '',
+      ...worldReport(sim.world, counts),
     ].join('\n'),
   );
   return 0;
+}
+
+/** World health at a glance (ARCHITECTURE.md §7): who lives, who died, what's left. */
+function worldReport(world: World, counts: ReadonlyMap<string, number>): string[] {
+  const characters = [...world.characters.values()];
+  const living = characters.filter((c) => c.death === null);
+  const fallen = characters.filter((c) => c.death !== null);
+
+  const tally = (keys: readonly string[]) => {
+    const totals = new Map<string, number>();
+    for (const key of keys) totals.set(key, (totals.get(key) ?? 0) + 1);
+    return [...totals].sort((a, b) => b[1] - a[1]);
+  };
+  const deathCauses = tally(
+    fallen.map(({ death }) =>
+      death!.cause.kind === 'creature'
+        ? creatureDef(death!.cause.creature.species).plural
+        : `${TRAP_NAMES[death!.cause.trap]}s`,
+    ),
+  );
+  const kills = new Map<CreatureId, number>();
+  for (const c of characters) {
+    for (const [species, n] of Object.entries(c.kills) as [CreatureId, number][]) {
+      kills.set(species, (kills.get(species) ?? 0) + n);
+    }
+  }
+  const richest = [...living].sort((a, b) => b.gold - a.gold).slice(0, 5);
+  const earned = characters.reduce((sum, c) => sum + c.goldEarned, 0);
+  const row = (label: string, value: string | number) => `  ${label.padEnd(22)} ${value}`;
+
+  return [
+    'People',
+    row('Alive', `${living.length} (of ${characters.length} who ever lived)`),
+    row('Died', fallen.length),
+    ...deathCauses.map(([cause, n]) => row(`  to ${cause}`, n)),
+    row('Gold earned, all time', earned),
+    row('Richest alive', ''),
+    ...richest.map((c) => row(`  ${c.givenName} ${c.familyName}`, `${c.gold} gold`)),
+    '',
+    'Kills by species',
+    ...[...kills]
+      .sort((a, b) => b[1] - a[1])
+      .map(([species, n]) => row(creatureDef(species).plural, n)),
+    '',
+    'Dungeon populations',
+    ...[...world.locations.values()]
+      .filter((l) => l.dungeon)
+      .flatMap((l) => [
+        `  ${l.name}`,
+        ...l.dungeon!.def.inhabitants.map(({ creature, max }) =>
+          row(
+            `  ${creatureDef(creature).plural}`,
+            `${l.dungeon!.population[creature] ?? 0} / ${max}`,
+          ),
+        ),
+      ]),
+    '',
+    'Events by type',
+    ...[...counts].sort((a, b) => b[1] - a[1]).map(([type, n]) => row(type, n)),
+  ];
 }
 
 function fail(message: string): number {

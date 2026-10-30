@@ -1,7 +1,6 @@
 /**
- * Cultures (WORLD.md §6). Phase 1 ships a single generic medieval culture so
- * the culture plumbing exists from the start; mythology-inspired culture
- * packs arrive in Phase 10.
+ * Cultures (WORLD.md §6). Each people has a generic culture of its own for
+ * now; mythology-inspired culture packs arrive in Phase 10.
  */
 
 export interface CultureDef {
@@ -37,6 +36,42 @@ export const CULTURES = {
     familyNameSuffixes: [
       'brook', 'by', 'croft', 'field', 'ford', 'gate', 'hill', 'holm', 'ley', 'more',
       'stead', 'ton', 'well', 'wick', 'wood',
+    ],
+  },
+  sylvan: {
+    id: 'sylvan',
+    name: 'Sylvan (elven)',
+    // prettier-ignore
+    givenNames: [
+      'Aelith', 'Aerendir', 'Caelion', 'Elandra', 'Elowen', 'Faelar', 'Ilmarë', 'Isilwen',
+      'Lathiel', 'Liriel', 'Maerith', 'Nimloth', 'Orophin', 'Quenya', 'Saelis', 'Sylvaine',
+      'Taeriel', 'Thalion', 'Vaelis', 'Yllanë', 'Aranel', 'Celeborn', 'Eirian', 'Naeril',
+    ],
+    // prettier-ignore
+    familyNamePrefixes: [
+      'Moon', 'Star', 'Silver', 'Dawn', 'Dusk', 'Mist', 'Leaf', 'Wind', 'Thorn', 'Willow',
+    ],
+    // prettier-ignore
+    familyNameSuffixes: [
+      'whisper', 'bough', 'song', 'shade', 'glade', 'bloom', 'brook', 'veil', 'wing',
+    ],
+  },
+  deephold: {
+    id: 'deephold',
+    name: 'Deephold (dwarven)',
+    // prettier-ignore
+    givenNames: [
+      'Bardin', 'Bofri', 'Brunhild', 'Dagna', 'Dvalin', 'Gerda', 'Gimra', 'Grimnir',
+      'Hakon', 'Helga', 'Ingrid', 'Korgan', 'Mordrin', 'Nali', 'Orsik', 'Ragna',
+      'Skaldi', 'Thora', 'Torgrim', 'Ulfa', 'Vistra', 'Yrsa',
+    ],
+    // prettier-ignore
+    familyNamePrefixes: [
+      'Iron', 'Stone', 'Deep', 'Gold', 'Flint', 'Copper', 'Ember', 'Granite', 'Anvil', 'Coal',
+    ],
+    // prettier-ignore
+    familyNameSuffixes: [
+      'beard', 'hammer', 'fist', 'delve', 'forge', 'helm', 'shield', 'brow', 'vein', 'mantle',
     ],
   },
 } as const satisfies Record<string, CultureDef>;

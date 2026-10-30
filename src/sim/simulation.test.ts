@@ -98,9 +98,9 @@ describe('a simulated season', () => {
 
   it('opens with the world and its characters', () => {
     expect(events[0]?.type).toBe('world.created');
-    const introduced = events.filter((e) => e.type === 'character.introduced');
-    expect(introduced).toHaveLength(20);
-    expect(sim.world.characters.size).toBe(20);
+    const founders = events.filter((e) => e.type === 'character.introduced' && !e.data.newcomer);
+    expect(founders).toHaveLength(20);
+    expect(founders.every((e) => e.t === WORLD_START)).toBe(true);
   });
 
   it('announces the new season at midnight', () => {
@@ -142,6 +142,8 @@ describe('a simulated season', () => {
           break;
         case 'character.pastime':
         case 'character.rest':
+        case 'character.convalesce':
+        case 'delve.enter':
           expect(journeys.has(e.data.characterId)).toBe(false);
           expect(position.get(e.data.characterId)).toBe(e.data.locationId);
           break;
@@ -163,10 +165,100 @@ describe('a simulated season', () => {
     const travelers = new Set(
       events.filter((e) => e.type === 'travel.depart').map((e) => e.actors[0]),
     );
-    expect(travelers.size).toBe(20);
+    const founders = [...sim.world.characters.values()].filter((c) => c.arrivedAt === WORLD_START);
+    for (const founder of founders) expect(travelers.has(founder.id)).toBe(true);
     const visited = new Set(
       events.filter((e) => e.type === 'travel.arrive').map((e) => e.locationId),
     );
     expect(visited.size).toBe(sim.world.locations.size);
+  });
+});
+
+describe('a year of danger', () => {
+  const { sim, events } = run('danger', 365);
+  const characters = [...sim.world.characters.values()];
+
+  it('has fights, deaths, loot and newcomers', () => {
+    const count = (type: SimEvent['type']) => events.filter((e) => e.type === type).length;
+    expect(count('combat.start')).toBeGreaterThan(500);
+    expect(count('combat.victory')).toBeGreaterThan(count('combat.escape'));
+    expect(count('character.death')).toBeGreaterThan(5);
+    expect(count('trade.sell')).toBeGreaterThan(100);
+    expect(characters.some((c) => c.arrivedAt > WORLD_START)).toBe(true);
+  });
+
+  it('closes every fight with a victory, an escape or a death, one fight at a time', () => {
+    const fighting = new Set<CharacterId>();
+    for (const e of events) {
+      if (e.type === 'combat.start') {
+        expect(fighting.has(e.data.characterId)).toBe(false);
+        fighting.add(e.data.characterId);
+      }
+      if (e.type === 'combat.victory' || e.type === 'combat.escape') {
+        expect(fighting.delete(e.data.characterId)).toBe(true);
+      }
+      if (e.type === 'character.death' && e.data.cause.kind === 'creature') {
+        expect(fighting.delete(e.data.characterId)).toBe(true);
+      }
+    }
+    // Only fights still going at the end of the year remain open.
+    expect(fighting.size).toBe(sim.world.encounters.size);
+  });
+
+  it('keeps the dead dead', () => {
+    const deathAt = new Map<string, number>();
+    for (const e of events) {
+      if (e.type === 'character.death') deathAt.set(e.data.characterId, e.id);
+      for (const actor of e.actors) {
+        const died = deathAt.get(actor);
+        if (died !== undefined) expect(e.id, `${e.type} after death`).toBe(died);
+      }
+    }
+    for (const c of characters.filter((c) => c.death)) {
+      expect(c.activity.kind).toBe('dead');
+      expect(c.hp).toBe(0);
+    }
+  });
+
+  it('keeps bodies and purses within bounds', () => {
+    for (const c of characters) {
+      expect(c.hp).toBeGreaterThanOrEqual(0);
+      expect(c.hp).toBeLessThanOrEqual(c.maxHp);
+      expect(c.stamina).toBeGreaterThanOrEqual(0);
+      expect(c.stamina).toBeLessThanOrEqual(c.maxStamina);
+      expect(c.gold).toBeGreaterThanOrEqual(0);
+    }
+  });
+
+  it('counts kills on the slayer', () => {
+    const kills = new Map<string, number>();
+    for (const e of events) {
+      if (e.type === 'combat.kill')
+        kills.set(e.data.characterId, (kills.get(e.data.characterId) ?? 0) + 1);
+    }
+    for (const c of characters) {
+      const total = Object.values(c.kills).reduce((sum, n) => sum + n, 0);
+      expect(total).toBe(kills.get(c.id) ?? 0);
+    }
+  });
+
+  it('keeps dungeon populations between zero and capacity', () => {
+    for (const location of sim.world.locations.values()) {
+      for (const { creature, max } of location.dungeon?.def.inhabitants ?? []) {
+        const count = location.dungeon!.population[creature] ?? 0;
+        expect(count).toBeGreaterThanOrEqual(0);
+        expect(count).toBeLessThanOrEqual(max);
+      }
+    }
+  });
+
+  it('replaces the fallen with newcomers, never above the target population', () => {
+    let living = 0;
+    for (const e of events) {
+      if (e.type === 'character.introduced') living++;
+      if (e.type === 'character.death') living--;
+      expect(living).toBeLessThanOrEqual(20);
+    }
+    expect(living).toBeGreaterThanOrEqual(15);
   });
 });
