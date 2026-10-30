@@ -1,5 +1,5 @@
 {
-  // The simulation core and content tables. Deliberately has no DOM and no
+  // The simulation core, content tables and event text. Deliberately has no DOM and no
   // Node types: this code must run unchanged in a Web Worker, in Node, and in
   // tests (ARCHITECTURE.md §3).
   "extends": "./tsconfig.base.json",
@@ -8,6 +8,6 @@
     "lib": ["ES2023"],
     "types": []
   },
-  "include": ["src/sim", "src/content"],
+  "include": ["src/sim", "src/content", "src/text"],
   "exclude": ["**/*.test.ts"]
 }

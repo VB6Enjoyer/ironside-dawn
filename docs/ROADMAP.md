@@ -70,43 +70,55 @@ Characters go places, and you see it happen.
 
 **Simulation**
 
-- [ ] World clock in **seconds**, plus a calendar formatter
+- [x] World clock in **seconds**, plus a calendar formatter
       (`Y1 · Day 12 · 09:00:00`).
-- [ ] **Scheduler**: a priority queue of `(time, actorId, action)`. Actors
+- [x] **Scheduler**: a priority queue of `(time, actorId, action)`. Actors
       are only processed when they are due (`ARCHITECTURE.md` §4.2).
-- [ ] World container with entity tables and ID generation.
-- [ ] **Event system**: typed `SimEvent`s with importance levels, an in-memory
+- [x] World container with entity tables and ID generation.
+- [x] **Event system**: typed `SimEvent`s with importance levels, an in-memory
       store, and subscribers.
-- [ ] Content plumbing with **culture tags**. Ship one generic medieval
+- [x] Content plumbing with **culture tags**. Ship one generic medieval
       culture: its name generator, location names, and so on.
-- [ ] A small hand-made world: 3 towns, 2 dungeons, 1 wilderness area, and the
+- [x] A small hand-made world: 3 towns, 2 dungeons, 1 wilderness area, and the
       **travel routes** between them as a graph with travel times.
-- [ ] Characters as plain data: name, `species` (humans only for now),
+- [x] Characters as plain data: name, `species` (humans only for now),
       `culture`, home town, current location, and state
       (`idle | traveling | resting`).
-- [ ] The simplest possible behavior: idle characters pick a random
+- [x] The simplest possible behavior: idle characters pick a random
       destination, travel there (scheduled arrival), and wait a random time.
-- [ ] Spawn about 20 characters at world creation.
+- [x] Spawn about 20 characters at world creation.
 
 **UI**
 
-- [ ] `SimHost` interface: `start / pause / setSpeed / step`. It may run on the
+- [x] `SimHost` interface: `start / pause / setSpeed / step`. It may run on the
       main thread for now.
-- [ ] **Speed tiers**: ⏸ · Real-time · Minute · Hour · Day · Max, with a
+- [x] **Speed tiers**: ⏸ · Real-time · Minute · Hour · Day · Max, with a
       default log importance floor per tier (`ARCHITECTURE.md` §4.2).
-- [ ] **Live event log**: virtualized, auto-scrolling with a "pinned to
+- [x] **Live event log**: virtualized, auto-scrolling with a "pinned to
       bottom" toggle, timestamps in world time.
-- [ ] Event → text templates with 2–3 phrasings per event type.
+- [x] Event → text templates with 2–3 phrasings per event type.
 
 **Tooling**
 
-- [ ] Headless runner can run N days and dump the log.
-- [ ] **Determinism test** in CI: same seed → same event hash, _including
+- [x] Headless runner can run N days and dump the log.
+- [x] **Determinism test** in CI: same seed → same event hash, _including
       across different speed tiers_ (the golden rule).
 
 **Exit criteria:** Open the page, press play, and read _"Rufus sets out from
 Concordale toward the Dungeon of Misery…"_. Switch from Real-time to Day and
 watch weeks go by without the page stuttering.
+
+**Status: done.** Notes from building it:
+
+- Characters also have a `pastime` state (tavern, market, foraging…) between
+  journeys, and sleep at night: nobody sets out between 21:00 and 06:00.
+- A year is four 90-day seasons: Thaw, Highsun, Harvest and Deepwinter. Season
+  changes are the only notable events so far, so the log is sparse at Day and
+  Max speeds unless the Detail setting is lowered.
+- Real-time and Minute show everything by default (not just normal and up):
+  at those speeds trivial events are what make the world feel alive.
+- The world seed is in the page URL (`?seed=42`), so a world can be shared.
+- Headless, 500 characters run 10 in-game years in about 12 seconds.
 
 ---
 

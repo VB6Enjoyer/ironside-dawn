@@ -1,35 +1,62 @@
 /**
  * Headless simulation runner (ARCHITECTURE.md §7).
  *
- * Phase 0: proves the seeded RNG is reproducible from the command line.
- * Later phases grow this into "run N years and report world health".
- *
- *   npm run sim -- --seed 42
+ *   npm run sim -- --seed 42 --days 7
+ *   npm run sim -- --seed 42 --days 365 --quiet
  */
 import { randomInt } from 'node:crypto';
 import { parseArgs } from 'node:util';
 
-import { createRng } from '../src/sim';
+import {
+  createSimulation,
+  DAY,
+  Importance,
+  StreamHash,
+  WORLD_START,
+  type SimEvent,
+} from '../src/sim';
+import {
+  describeEvent,
+  formatDate,
+  formatTimestamp,
+  toPlainText,
+  worldNames,
+  type NameResolver,
+} from '../src/text';
 
-const USAGE = `Usage: npm run sim -- [--seed <seed>]
+const IMPORTANCE_BY_NAME: Record<string, Importance> = {
+  trivial: Importance.Trivial,
+  normal: Importance.Normal,
+  notable: Importance.Notable,
+  legendary: Importance.Legendary,
+};
+
+const USAGE = `Usage: npm run sim -- [options]
 
 Options:
-  --seed <seed>  World seed (any text or number). Random if omitted.
-  --help         Show this message.`;
+  --seed <seed>            World seed (any text or number). Random if omitted.
+  --days <n>               In-game days to simulate. Default: 3.
+  --characters <n>         Number of adventurers. Default: 20.
+  --importance <level>     Lowest importance to print: trivial, normal, notable,
+                           legendary. Default: trivial.
+  --quiet                  Print only the summary, not the log.
+  --help                   Show this message.`;
 
 function main(): number {
-  let values: { seed?: string; help?: boolean };
+  let values;
   try {
     ({ values } = parseArgs({
       options: {
         seed: { type: 'string' },
+        days: { type: 'string', default: '3' },
+        characters: { type: 'string', default: '20' },
+        importance: { type: 'string', default: 'trivial' },
+        quiet: { type: 'boolean', default: false },
         help: { type: 'boolean', short: 'h' },
       },
     }));
   } catch (error) {
-    console.error(error instanceof Error ? error.message : error);
-    console.error(USAGE);
-    return 1;
+    return fail(error instanceof Error ? error.message : String(error));
   }
 
   if (values.help) {
@@ -38,30 +65,69 @@ function main(): number {
   }
 
   const seed = values.seed ?? String(randomInt(1, 1_000_000));
-  if (seed.length === 0) {
-    console.error('--seed must not be empty');
-    return 1;
+  const days = Number(values.days);
+  const characterCount = Number(values.characters);
+  const floor = IMPORTANCE_BY_NAME[values.importance];
+  if (seed.length === 0) return fail('--seed must not be empty');
+  if (!(days > 0)) return fail('--days must be a positive number');
+  if (!Number.isSafeInteger(characterCount) || characterCount < 1) {
+    return fail('--characters must be a positive integer');
   }
-  const rng = createRng(seed);
-  const combat = rng.fork('combat');
+  if (floor === undefined) return fail(`Unknown importance "${values.importance}"`);
 
-  const lines = [
-    `Seed: ${seed}${values.seed === undefined ? ` (pass --seed ${seed} to reproduce)` : ''}`,
-    '',
-    `d20 rolls:      ${Array.from({ length: 5 }, () => rng.roll('d20')).join(', ')}`,
-    `2d6+1:          ${rng.roll('2d6+1')}`,
-    `Coin flips:     ${Array.from({ length: 8 }, () => (rng.chance(0.5) ? 'H' : 'T')).join('')}`,
-    `Height (cm):    ${rng.gaussian(172, 8).toFixed(1)}`,
-    `Loot drop:      ${rng.weighted([
-      ['nothing', 60],
-      ['copper coins', 30],
-      ['a rusted blade', 9],
-      ['a cursed ring', 1],
-    ])}`,
-    `Combat stream:  ${Array.from({ length: 5 }, () => combat.roll('d20')).join(', ')}`,
-  ];
-  console.log(lines.join('\n'));
+  const hash = new StreamHash();
+  const counts = new Map<string, number>();
+  let printed = 0;
+
+  const started = performance.now();
+  // Events emitted while the world is being created arrive before `sim`
+  // exists, so they wait in `pending` until names can be resolved.
+  let live = false;
+  const pending: SimEvent[] = [];
+  const print = (event: SimEvent, names: NameResolver) => {
+    if (values.quiet || event.importance < floor) return;
+    printed++;
+    console.log(`[${formatTimestamp(event.t)}]  ${toPlainText(describeEvent(event, names))}`);
+  };
+
+  const sim = createSimulation({
+    seed,
+    characterCount,
+    eventCapacity: 1,
+    onEvent(event) {
+      hash.update(JSON.stringify(event));
+      counts.set(event.type, (counts.get(event.type) ?? 0) + 1);
+      if (live) print(event, names);
+      else pending.push(event);
+    },
+  });
+  const names = worldNames(sim.world);
+  live = true;
+  for (const event of pending) print(event, names);
+
+  const { jobsRun } = sim.advance(WORLD_START + Math.round(days * DAY));
+  const seconds = (performance.now() - started) / 1000;
+
+  const total = sim.world.nextEventId - 1;
+  console.log(
+    [
+      '',
+      `Seed:        ${seed}${values.seed === undefined ? ` (pass --seed ${seed} to reproduce)` : ''}`,
+      `Simulated:   ${days} days with ${characterCount} characters, to ${formatDate(sim.world.time)}`,
+      `Events:      ${total}${values.quiet ? '' : ` (${printed} printed)`}`,
+      ...[...counts].map(([type, n]) => `  ${type.padEnd(22)} ${n}`),
+      `Jobs run:    ${jobsRun}`,
+      `Wall time:   ${seconds.toFixed(2)}s (${Math.round(days / seconds)} days/s)`,
+      `Event hash:  ${hash.digest()}`,
+    ].join('\n'),
+  );
   return 0;
+}
+
+function fail(message: string): number {
+  console.error(message);
+  console.error(USAGE);
+  return 1;
 }
 
 process.exitCode = main();

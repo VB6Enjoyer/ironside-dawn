@@ -30,19 +30,19 @@ Every technical decision below follows from these five pillars.
 
 ## 2. Tech stack
 
-| Concern         | Choice                                   | Notes                                                                                                                                |
-| --------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| Language        | **TypeScript** (strict)                  | The data model will be large and deeply connected. Types make that manageable. Pinned to 6.0.x until typescript-eslint supports 7.x. |
-| Build/dev       | **Vite**                                 | Fast HMR, native Web Worker support, minimal configuration.                                                                          |
-| UI              | **React**                                | Panels, profiles, inspectors, and links between entities are ordinary UI work.                                                       |
-| UI state        | **Zustand**                              | Small. Holds the UI's copy of world snapshots plus UI-only state.                                                                    |
-| Long lists      | **TanStack Virtual** (or react-virtuoso) | The event log will reach hundreds of thousands of lines. Only visible rows are rendered.                                             |
-| Sim ↔ UI        | **Web Worker** + **Comlink**             | Keeps the simulation off the render thread (see §5).                                                                                 |
-| Map (later)     | **PixiJS** on a `<canvas>`               | Used only where a picture helps: the world map and route overlays.                                                                   |
-| Tests           | **Vitest**                               | Same config as Vite. Also used for determinism and statistical tests.                                                                |
-| Headless runner | **tsx** (Node)                           | Runs `npm run sim -- --seed 42 --years 50` for balancing and debugging.                                                              |
-| Persistence     | **IndexedDB** (via `idb`)                | Saves are larger than `localStorage` allows.                                                                                         |
-| Desktop (later) | **Tauri**                                | Wraps the same web build as a native app for Windows, macOS, and Linux.                                                              |
+| Concern         | Choice                                           | Notes                                                                                                                                |
+| --------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Language        | **TypeScript** (strict)                          | The data model will be large and deeply connected. Types make that manageable. Pinned to 6.0.x until typescript-eslint supports 7.x. |
+| Build/dev       | **Vite**                                         | Fast HMR, native Web Worker support, minimal configuration.                                                                          |
+| UI              | **React**                                        | Panels, profiles, inspectors, and links between entities are ordinary UI work.                                                       |
+| UI state        | **`useSyncExternalStore`** (Zustand if it grows) | The host is the store; React subscribes to its snapshots.                                                                            |
+| Long lists      | **TanStack Virtual**                             | The event log will reach hundreds of thousands of lines. Only visible rows are rendered.                                             |
+| Sim ↔ UI        | **Web Worker** + **Comlink**                     | Keeps the simulation off the render thread (see §5).                                                                                 |
+| Map (later)     | **PixiJS** on a `<canvas>`                       | Used only where a picture helps: the world map and route overlays.                                                                   |
+| Tests           | **Vitest**                                       | Same config as Vite. Also used for determinism and statistical tests.                                                                |
+| Headless runner | **tsx** (Node)                                   | Runs `npm run sim -- --seed 42 --years 50` for balancing and debugging.                                                              |
+| Persistence     | **IndexedDB** (via `idb`)                        | Saves are larger than `localStorage` allows.                                                                                         |
+| Desktop (later) | **Tauri**                                        | Wraps the same web build as a native app for Windows, macOS, and Linux.                                                              |
 
 ### Why HTML/React rather than a non-HTML GUI?
 
@@ -90,7 +90,7 @@ Alternatives considered:
              ▼
 ┌──────────────────────── Main thread ───────────────────────┐
 │   SimHost (start/pause/speed/save)                         │
-│   UI store (Zustand) ──► React panels                      │
+│   Host snapshot (useSyncExternalStore) ──► React panels   │
 │      Log · Character profile · Location view · Map · Stats │
 │   Text renderer: Event ──► "Rufus enters the Dungeon …"    │
 └────────────────────────────────────────────────────────────┘
@@ -101,7 +101,7 @@ Alternatives considered:
 └────────────────────────────────────────────────────────────┘
 ```
 
-### Directory layout (target)
+### Directory layout
 
 ```
 src/
@@ -110,19 +110,20 @@ src/
     model/             # types: Character, Location, Item, Creature, Event …
     systems/           # travel, combat, loot, progression, ai, social, economy …
     gen/               # world, name, creature, and item generators
-    index.ts           # createWorld(seed, config), step(world, until)
+    simulation.ts      # createSimulation(options), advance(until)
   content/             # data tables: species, cultures, creatures, items, spells, names
-  host/                # worker entry + SimHost interface (Comlink)
+  text/                # event → prose, calendar names. No DOM; shared by UI and CLI.
+  host/                # SimHost (main thread now, worker in Phase 6) + speed tiers
   ui/                  # React app
-    components/  panels/  store/  text/   # text/ = event → prose templates
 tools/
   sim-cli.ts           # headless runner
 docs/
 ```
 
 The rule that `src/sim/` never imports the DOM is enforced, not just agreed on.
-`src/sim/` gets its own `tsconfig` without the `DOM` lib, plus an ESLint
-`no-restricted-imports` rule.
+`src/sim/`, `src/content/` and `src/text/` share a `tsconfig` without the `DOM`
+lib, plus ESLint rules against UI imports, Node built-ins, `Math.random()` and
+wall-clock time.
 
 ---
 
@@ -170,7 +171,9 @@ algorithm, because changing it would silently change every seed and save.
 - **The base unit is the in-game second.** World time is a single integer
   (a JS number safely counts ~285 million years of seconds). The calendar
   (seconds → minutes → hours → days → seasons → years) is derived from it for
-  display, e.g. _"Y3 · Day 41 (Highsun) · 14:20:07"_.
+  display, e.g. _"Year 3 · Highsun 11 · 14:20:07"_. A year is four seasons of
+  90 days: Thaw, Highsun, Harvest and Deepwinter. Worlds begin at 06:00 on
+  day 1 of year 1.
 - **Scheduler-driven, not tick-everyone.** Nobody gets updated every second.
   Each actor is in a priority queue keyed by _when it next needs to decide
   something_. A character walking for 6 hours is not touched for those 6
@@ -187,7 +190,7 @@ algorithm, because changing it would silently change every seed and save.
 | Tier             | Sim time per real second              | Log shows (default floor)                                 | For watching…    |
 | ---------------- | ------------------------------------- | --------------------------------------------------------- | ---------------- |
 | **Real-time**    | 1 second                              | Everything, including blow-by-blow for watched characters | a duel           |
-| **Minute**       | 1 minute                              | Normal and above                                          | a dungeon delve  |
+| **Minute**       | 1 minute                              | Everything                                                | a dungeon delve  |
 | **Hour**         | 1 hour                                | Normal and above, rate-limited                            | a day in a town  |
 | **Day**          | 1 day                                 | Notable and above                                         | a season passing |
 | **Season**       | ~1 season                             | Notable and above                                         | years passing    |
