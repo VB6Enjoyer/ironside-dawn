@@ -204,46 +204,84 @@ for it.
 
 **Growth**
 
-- [ ] **XP and levels** with a level curve that keeps progression slow.
-- [ ] **Skills that improve with use**: swordsmanship rises by fighting with
+- [x] **XP and levels** with a level curve that keeps progression slow.
+- [x] **Skills that improve with use**: swordsmanship rises by fighting with
       swords, lockpicking by opening chests. Characters drift into roles
       ("fighter", "scout", "mystic") from what they do instead of picking a
       class.
-- [ ] **Equipment slots** and item effects on combat.
-- [ ] **Item generation**: base type × material × rarity × affixes ("Duskblade
+- [x] **Equipment slots** and item effects on combat.
+- [x] **Item generation**: base type × material × rarity × affixes ("Duskblade
       of the Ember", "Rusted Iron Axe"), all culture-tagged. Named unique items
       are rare and get remembered.
-- [ ] Characters equip upgrades they find. Better gear changes outcomes.
-- [ ] **Population replenishment**: new adventurers come out of towns'
+- [x] Characters equip upgrades they find. Better gear changes outcomes.
+- [x] **Population replenishment**: new adventurers come out of towns'
       statistical populations at a rate tied to world conditions. (A
       minimal version, newcomers arriving while the population is below
       target, landed in Phase 2.)
-- [ ] Creatures scale with dungeon depth, and deeper levels unlock as
+- [x] Creatures scale with dungeon depth, and deeper levels unlock as
       characters grow.
 
 **Sorcery, first pass** (`WORLD.md` §4)
 
-- [ ] **Arcana** skill: learned slowly by study (only in certain towns, from
+- [x] **Arcana** skill: learned slowly by study (only in certain towns, from
       mentors or tomes), or boosted by **the gift** (rare, rolled at creation,
       rate by species).
-- [ ] **Spells as data**: effect, difficulty, and a **cost profile** (stamina,
+- [x] **Spells as data**: effect, difficulty, and a **cost profile** (stamina,
       health, stat drain, dizziness). Cost scales with power and goes down with
       mastery.
-- [ ] **Casting roll** with four outcomes: success / partial / failure /
+- [x] **Casting roll** with four outcomes: success / partial / failure /
       backlash. Casting while dizzy or drained raises backlash odds.
-- [ ] 4 starter spells: Ember Bolt, Mend Flesh, Quickening, Ward of Ash.
-- [ ] A simple "cast if the odds are good" rule until the utility AI arrives.
-- [ ] Headless metrics: casts, backlashes, and deaths by self-inflicted magic.
+- [x] 4 starter spells: Ember Bolt, Mend Flesh, Quickening, Ward of Ash.
+- [x] A simple "cast if the odds are good" rule until the utility AI arrives.
+- [x] Headless metrics: casts, backlashes, and deaths by self-inflicted magic.
 
 **UI**
 
-- [ ] Character card shows level, skills, gear, known spells, and a short list
+- [x] Character card shows level, skills, gear, known spells, and a short list
       of notable deeds.
 
 **Exit criteria:** After a simulated year there is a visible spread: veterans
 at level 8+ with named gear, newcomers at level 1, a handful of mages whose
 spells sometimes win a fight and sometimes leave them dizzy and bleeding, and a
 graveyard that tells the rest.
+
+**Status: done.** Notes from building it:
+
+- **Levels**: experience comes from kills (8 × creature level, half again for
+  an affix), treasure, avoided traps and chambers explored. Level `n` needs
+  `50·n·(n−1)` XP in total (level 8 at 2,800). Each level adds 3 HP; every
+  third adds +1 to hit, every fourth +1 defense. After a year, survivors
+  range from level 1 to about 9.
+- **Skills** (blades, axes, blunt, polearms, stealth, lockpicking, awareness,
+  arcana) grow with use, more slowly the higher they are, faster with good
+  wits. Every 10 points is +1 to the rolls they help. Ranks (apprentice 20,
+  journeyman 40, expert 60, master 80) are announced. A year's survivors reach
+  expert with their weapon. The best skill decides the role.
+- **Gear**: weapon, armor and trinket slots. Items combine a base, a material
+  (only metal armor takes one), a rarity (common, fine, rare, legendary) and
+  up to two affixes. Deeper chambers give rarer finds. Adventurers wear what
+  scores better and sell the rest.
+- **Legendary items** are rare (one or two a year per world) and tracked in
+  `world.legends`. They are never sold. When their owner dies, they stay in
+  that dungeon until a later delver finds them: _"finds Duskblade in the
+  Dungeon of Misery, where Rufus Ironclaw fell."_
+- **Depth**: deeper chambers bring more affixed creatures, bigger groups and
+  more gold. Delvers grow uneasy past chamber 3 + their level.
+- **Locked chests**: half of all chests are locked. Picking the lock trains
+  lockpicking; forcing it spoils half the gold and any item.
+- **Magic**: the gifted (5% of humans, 18% of elves, 3% of dwarves) start
+  with arcana and a spell or two. Others can study at the academies of
+  Concordale and Saltmere, but only the clever or spiritual bother, and
+  slowly. A world has a few casters at any time. Casting replaces a swing
+  for that round; costs shrink with mastery; backlashes double the cost and
+  burn, and can kill.
+- **Population**: towns hold commoner counts by people (Concordale 1,200
+  humans; Brindlemoor 500 humans and 350 dwarves; Saltmere 600 humans and 400
+  elves). Adventurers are drawn from them, and towns grow slowly. Newcomers
+  arrive faster the further the world is below 20 adventurers.
+- Headless, a world loses 11–28 adventurers a year, fewer than in Phase 2
+  because survivors now grow stronger. 500 characters still run 10 years in
+  about 75 seconds.
 
 ---
 

@@ -28,10 +28,10 @@ town's market, or watch a dungeon's population change over time.
 
 ## Status
 
-Phase 2 (Blood & Gold) is done: human, elven and dwarven adventurers delve
-two dungeons chamber by chamber, fight creatures blow by blow, loot, sell,
-heal, and die. Click any name in the log to open their character card.
-Phase 3 (Growth & Sorcery) is next. The plan is in:
+Phase 3 (Growth & Sorcery) is done: adventurers level up, hone skills with
+use, find and wear gear (a few of them legendary, remembered by the world),
+and a gifted or studious few gamble with costly magic. Click any name in the
+log to open their character card. Phase 4 (Minds) is next. The plan is in:
 
 - [`docs/ROADMAP.md`](docs/ROADMAP.md): the phased development plan, with exit
   criteria for each milestone.
