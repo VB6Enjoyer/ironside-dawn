@@ -15,6 +15,8 @@ export interface SimContext {
     readonly ecology: Rng;
     readonly magic: Rng;
     readonly items: Rng;
+    readonly social: Rng;
+    readonly outlaws: Rng;
   };
   emit(body: EventBody, actors: readonly EntityId[], locationId: LocationId | null): SimEvent;
 }

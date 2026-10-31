@@ -198,6 +198,10 @@ That last one makes a good log line.
   roads will eventually be able to haggle in Elvish.
 - Open question: is there a **trade tongue** (a pidgin spoken badly by many
   merchants), or does it emerge naturally? (§7)
+- So far (Phase 5) there are three tongues: **Common** (humans), **Sylvan**
+  (elves) and **Deeptongue** (dwarves). Common is human speech, not a trade
+  tongue, though it gets around because humans live in every town. A
+  character can hold a conversation at 30 and is fluent at 70.
 
 ---
 

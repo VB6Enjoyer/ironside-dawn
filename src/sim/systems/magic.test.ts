@@ -29,7 +29,7 @@ describe('casting', () => {
     const outcomes = new Map<string, number>();
     for (let i = 0; i < 2000; i++) {
       rested();
-      const { outcome } = cast(ctx, c, 'mend-flesh', c.homeId, null, null);
+      const { outcome } = cast(ctx, c, 'mend-flesh', c.homeId, null);
       outcomes.set(outcome, (outcomes.get(outcome) ?? 0) + 1);
     }
     expect([...outcomes.keys()].sort()).toEqual(['backlash', 'failure', 'partial', 'success']);
@@ -43,7 +43,7 @@ describe('casting', () => {
       for (let i = 0; i < 2000; i++) {
         rested();
         if (dizzy) c.statuses = [{ kind: 'dizzy', until: ctx.world.time + 1 }];
-        if (cast(ctx, c, 'ember-bolt', c.homeId, null, null).outcome === 'backlash') backlashes++;
+        if (cast(ctx, c, 'ember-bolt', c.homeId, null).outcome === 'backlash') backlashes++;
       }
       return backlashes / 2000;
     };
@@ -57,7 +57,7 @@ describe('casting', () => {
       // Casting practices arcana, which lowers later costs, so check each cast's own.
       const costs = costsFor(c, spellDef('mend-flesh'));
       const before = c.hp;
-      const { outcome, amount } = cast(ctx, c, 'mend-flesh', c.homeId, null, null);
+      const { outcome, amount } = cast(ctx, c, 'mend-flesh', c.homeId, null);
       const event = ctx.events.at(-1)!;
       if (event.type !== 'magic.cast') throw new Error('expected a cast event');
       const health = event.data.paid.health;
@@ -86,7 +86,7 @@ describe('casting', () => {
     for (let i = 0; i < 200 && !died; i++) {
       c.hp = 3;
       c.statuses = [];
-      died = cast(ctx, c, 'mend-flesh', c.homeId, null, null).fatal;
+      died = cast(ctx, c, 'mend-flesh', c.homeId, null).fatal;
     }
     expect(died).toBe(true);
     expect(c.death?.cause).toEqual({ kind: 'magic', spell: 'mend-flesh' });

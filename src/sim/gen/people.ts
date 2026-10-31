@@ -10,14 +10,15 @@ import {
   type Stats,
   type WeaponId,
 } from '../../content';
-import { schedule } from '../core/scheduler';
 import type { SimContext } from '../context';
 import type { Character, CharacterId, Location } from '../model';
 import { generateItem, starterWeapon } from '../systems/items';
 import { learnSpells } from '../systems/magic';
 import { initialDrives, rollTraits } from '../systems/mind';
 import { refreshMaxima } from '../systems/progress';
+import { wakeAt } from '../systems/wake';
 import { generateName } from './names';
+import { arrive } from '../systems/whereabouts';
 
 const STAT_DICE = '2d6+3';
 const STAT_MIN = 3;
@@ -107,14 +108,21 @@ export function createCharacter(
     expectations: {},
     visited: [home.id],
     goal: null,
+    opinions: {},
+    languages: { [def.language]: 100 },
+    partyId: null,
+    outlaw: null,
+    reputation: {},
     locationId: home.id,
     activity: { kind: 'idle' },
+    wakeToken: 0,
     death: null,
   };
   refreshMaxima(character);
   character.hp = character.maxHp;
   character.stamina = character.maxStamina;
   world.characters.set(character.id, character);
+  arrive(world, character);
 
   ctx.emit(
     {
@@ -126,10 +134,7 @@ export function createCharacter(
   );
   // The gifted arrive already knowing a spell or two.
   if (gifted) learnSpells(ctx, character, home.id);
-  schedule(world.scheduler, world.time + rng.int(0, firstWakeWithin), {
-    kind: 'character.wake',
-    characterId: character.id,
-  });
+  wakeAt(ctx, character, world.time + rng.int(0, firstWakeWithin));
   return character;
 }
 

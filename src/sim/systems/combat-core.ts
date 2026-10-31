@@ -1,10 +1,10 @@
 import type { Rng } from '../core/rng';
-import type { FighterState } from '../model';
+import type { FighterState, Side } from '../model';
 
 /**
- * Pure combat rules: one round of a fight between an adventurer (index 0) and
- * one or more foes. No world access, so balance can be tested by running
- * thousands of fights directly (ROADMAP.md Phase 2).
+ * Pure combat rules: one round of a fight between two sides, each any mix of
+ * characters and creatures. No world access, so balance can be tested by
+ * running thousands of fights directly (ROADMAP.md Phase 2).
  */
 
 /** Below this fraction of hit points a fighter is wounded: -1 to hit. */
@@ -15,6 +15,8 @@ const EXHAUSTED_ATTACK_PENALTY = 2;
 const EXHAUSTED_DEFENSE_PENALTY = 1;
 /** Fleeing succeeds on d20 + agility >= this + the fastest enemy's agility. */
 export const FLEE_DIFFICULTY = 6;
+/** Extra difficulty for a cornered side: hunters come ready to cut off escape. */
+export const CORNERED_PENALTY = 5;
 
 export type FightAction =
   | {
@@ -30,17 +32,20 @@ export type FightAction =
     }
   | { readonly kind: 'flee'; readonly who: number; readonly success: boolean };
 
-export type FightOutcome = 'won' | 'lost' | 'fled';
-
 /**
  * Everyone still standing acts once, in initiative order (d20 + agility,
- * rolled each round). A fighter below its flee threshold tries to run instead
- * of attacking; a failed attempt costs the turn.
+ * rolled each round), attacking a random enemy. A fighter below its flee
+ * threshold tries to run instead; a failed attempt costs the turn. Fighters
+ * in `idle` (casting a spell this round) don't act. A `cornered` side finds
+ * running harder.
  */
 export function fightRound(
   rng: Rng,
   fighters: FighterState[],
-  { adventurerActs = true }: { adventurerActs?: boolean } = {},
+  {
+    idle = new Set<number>(),
+    cornered = null,
+  }: { idle?: ReadonlySet<number>; cornered?: Side | null } = {},
 ): FightAction[] {
   const order = fighters
     .map((fighter, index) => ({ index, fighter }))
@@ -51,38 +56,45 @@ export function fightRound(
   const actions: FightAction[] = [];
   for (const { index } of order) {
     const self = fighters[index]!;
-    if (self.out !== null) continue;
-    // The adventurer may have spent this round casting a spell instead.
-    if (index === 0 && !adventurerActs) continue;
-    const enemies = enemiesOf(fighters, index);
+    if (self.out !== null || idle.has(index)) continue;
+    const enemies = enemiesOf(fighters, self.side);
     if (enemies.length === 0) break;
 
     if (self.hp < self.maxHp * self.fleeBelow) {
       const fastest = Math.max(...enemies.map((i) => fighters[i]!.agility));
-      const success = rng.int(1, 20) + self.agility >= FLEE_DIFFICULTY + fastest;
+      const difficulty = FLEE_DIFFICULTY + (self.side === cornered ? CORNERED_PENALTY : 0);
+      const success = rng.int(1, 20) + self.agility >= difficulty + fastest;
       if (success) self.out = 'fled';
       actions.push({ kind: 'flee', who: index, success });
       continue;
     }
 
-    const target = index === 0 ? rng.pick(enemies) : 0;
+    const target = rng.pick(enemies);
     actions.push(attack(rng, index, self, target, fighters[target]!));
   }
   return actions;
 }
 
-/** The result from the adventurer's side, or null if the fight goes on. */
-export function fightOutcome(fighters: readonly FighterState[]): FightOutcome | null {
-  const adventurer = fighters[0]!;
-  if (adventurer.out === 'dead') return 'lost';
-  if (adventurer.out === 'fled') return 'fled';
-  return enemiesOf(fighters, 0).length === 0 ? 'won' : null;
+/** The side still standing once the other has none left, 'none' if neither, or null if both fight on. */
+export function fightWinner(fighters: readonly FighterState[]): Side | 'none' | null {
+  const zero = standing(fighters, 0) > 0;
+  const one = standing(fighters, 1) > 0;
+  if (zero && one) return null;
+  return zero ? 0 : one ? 1 : 'none';
 }
 
-function enemiesOf(fighters: readonly FighterState[], index: number): number[] {
-  if (index !== 0) return fighters[0]!.out === null ? [0] : [];
+export function standing(fighters: readonly FighterState[], side: Side): number {
+  let count = 0;
+  for (const f of fighters) if (f.side === side && f.out === null) count++;
+  return count;
+}
+
+function enemiesOf(fighters: readonly FighterState[], side: Side): number[] {
   const enemies: number[] = [];
-  for (let i = 1; i < fighters.length; i++) if (fighters[i]!.out === null) enemies.push(i);
+  for (let i = 0; i < fighters.length; i++) {
+    const f = fighters[i]!;
+    if (f.side !== side && f.out === null) enemies.push(i);
+  }
   return enemies;
 }
 

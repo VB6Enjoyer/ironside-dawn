@@ -1,7 +1,10 @@
-import { schedule } from '../core/scheduler';
 import type { SimContext } from '../context';
 import type { Character, EventOfType, LocationId, Motive } from '../model';
+import { ambush } from './outlaws';
 import { findPath, roadsFrom } from './roads';
+import { followersOf } from './social';
+import { wakeAt } from './wake';
+import { moveTo } from './whereabouts';
 
 export type TravelReason = EventOfType<'travel.depart'>['data']['reason'];
 
@@ -17,6 +20,7 @@ export function startJourney(
   destinationId: LocationId,
   reason: TravelReason,
   why: readonly Motive[] = [],
+  companions: readonly Character[] = [],
 ): boolean {
   const fromId = character.locationId;
   if (fromId === null) throw new Error(`${character.id} cannot depart while on the road`);
@@ -35,9 +39,10 @@ export function startJourney(
         expectedDuration: path.duration,
         reason,
         why,
+        companions: companions.map((c) => c.id),
       },
     },
-    [character.id],
+    [character.id, ...companions.map((c) => c.id)],
     fromId,
   );
   beginLeg(ctx, character, fromId, firstStop, destinationId, remaining);
@@ -45,24 +50,30 @@ export function startJourney(
 }
 
 /**
- * Ends the current leg. Returns true if the character reached its
- * destination; otherwise it passes through and starts the next leg.
+ * Ends the current leg: the character (and any companions) reach its end. They
+ * have `arrived`, are `passing` through on the way, or were `ambushed` there.
  */
-export function finishLeg(ctx: SimContext, character: Character): boolean {
+export function finishLeg(
+  ctx: SimContext,
+  character: Character,
+): 'arrived' | 'passing' | 'ambushed' {
   const activity = character.activity;
   if (activity.kind !== 'traveling') throw new Error(`${character.id} is not traveling`);
 
   const here = activity.leg.to;
+  const companions = followersOf(ctx, character);
+  for (const c of [character, ...companions]) moveTo(ctx.world, c, here);
+  if (ambush(ctx, character, ctx.world.locations.get(here)!)) return 'ambushed';
+
   const [nextStop, ...remaining] = activity.remaining;
   if (nextStop === undefined) {
-    character.locationId = here;
     character.activity = { kind: 'idle' };
     ctx.emit(
       { type: 'travel.arrive', data: { characterId: character.id, locationId: here } },
-      [character.id],
+      [character.id, ...companions.map((c) => c.id)],
       here,
     );
-    return true;
+    return 'arrived';
   }
 
   ctx.emit(
@@ -78,7 +89,7 @@ export function finishLeg(ctx: SimContext, character: Character): boolean {
     here,
   );
   beginLeg(ctx, character, here, nextStop, activity.destinationId, remaining);
-  return false;
+  return 'passing';
 }
 
 function beginLeg(
@@ -99,12 +110,12 @@ function beginLeg(
   const departedAt = ctx.world.time;
   const arrivesAt = departedAt + Math.round(link.route.duration * factor);
 
-  character.locationId = null;
+  for (const c of [character, ...followersOf(ctx, character)]) moveTo(ctx.world, c, null);
   character.activity = {
     kind: 'traveling',
     destinationId,
     leg: { from, to, departedAt, arrivesAt },
     remaining,
   };
-  schedule(ctx.world.scheduler, arrivesAt, { kind: 'character.wake', characterId: character.id });
+  wakeAt(ctx, character, arrivesAt);
 }

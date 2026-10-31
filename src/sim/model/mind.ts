@@ -1,6 +1,6 @@
 import type { SpellId } from '../../content';
 import type { CreatureRef } from './encounter';
-import type { LocationId } from './ids';
+import type { CharacterId, LocationId } from './ids';
 
 /**
  * A character's mind (ROADMAP.md Phase 4, ARCHITECTURE.md §4.5–4.6): the
@@ -39,7 +39,15 @@ export type MemoryEvent =
     }
   | { readonly kind: 'treasure'; readonly locationId: LocationId; readonly itemName: string }
   | { readonly kind: 'backlash'; readonly locationId: LocationId; readonly spell: SpellId }
-  | { readonly kind: 'level'; readonly level: number };
+  | { readonly kind: 'level'; readonly level: number }
+  /** A friend died. */
+  | { readonly kind: 'grief'; readonly characterId: CharacterId }
+  /** Robbed or attacked by someone. */
+  | {
+      readonly kind: 'wronged';
+      readonly characterId: CharacterId;
+      readonly locationId: LocationId;
+    };
 
 export type Memory = MemoryEvent & {
   readonly at: number;
@@ -67,7 +75,10 @@ export type Motive =
   | { readonly kind: 'fond'; readonly locationId: LocationId }
   | { readonly kind: 'novelty'; readonly locationId: LocationId }
   | { readonly kind: 'home' }
-  | { readonly kind: 'loot' };
+  | { readonly kind: 'loot' }
+  | { readonly kind: 'bounty'; readonly outlawId: CharacterId }
+  | { readonly kind: 'revenge'; readonly characterId: CharacterId }
+  | { readonly kind: 'friends' };
 
 /** What a character is currently trying to do, and why. */
 export interface Goal {
@@ -84,7 +95,11 @@ export interface Goal {
     | 'travel'
     | 'home'
     | 'rest'
-    | 'wait';
+    | 'wait'
+    | 'hunt'
+    | 'lurk';
   readonly locationId: LocationId | null;
   readonly why: readonly Motive[];
+  /** Who they are after, when hunting. */
+  readonly targetId?: CharacterId;
 }

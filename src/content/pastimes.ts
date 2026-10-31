@@ -33,6 +33,8 @@ export const PASTIMES = [
   { id: 'scout', culture: 'generic', kind: 'dungeon', minHours: 0.5, maxHours: 2, weight: 1 },
   { id: 'forage', culture: 'generic', kind: 'wilderness', minHours: 1, maxHours: 4, weight: 3 },
   { id: 'hunt', culture: 'generic', kind: 'wilderness', minHours: 2, maxHours: 5, weight: 2 },
+  /** Outlaws waiting by the road for travelers to rob. */
+  { id: 'lurk', culture: 'generic', kind: 'wilderness', minHours: 4, maxHours: 9, weight: 0 },
 ] as const satisfies readonly PastimeDef[];
 
 export type PastimeId = (typeof PASTIMES)[number]['id'];

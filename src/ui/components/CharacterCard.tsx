@@ -2,11 +2,13 @@ import { Fragment, useEffect } from 'react';
 
 import {
   creatureDef,
+  LANGUAGES,
   SKILLS,
   STATS,
   TRAIT_POLES,
   TRAITS,
   type CreatureId,
+  type LanguageId,
   type StatId,
 } from '../../content';
 import {
@@ -21,6 +23,7 @@ import {
   type Expectation,
   type Item,
   type LocationId,
+  type Opinion,
   type CharacterId,
   type SimEvent,
   type World,
@@ -235,6 +238,7 @@ export function CharacterCard({ world, characterId, log, names, onSelect, onClos
         </dl>
       </section>
 
+      <Bonds character={character} world={world} onSelect={onSelect} />
       <Memories character={character} world={world} />
       <Places character={character} world={world} />
 
@@ -272,6 +276,118 @@ export function CharacterCard({ world, characterId, log, names, onSelect, onClos
       )}
     </aside>
   );
+}
+
+/** Party, friends, rivals, languages, and any criminal record. */
+function Bonds({
+  character,
+  world,
+  onSelect,
+}: {
+  character: Character;
+  world: World;
+  onSelect(id: CharacterId): void;
+}) {
+  const link = (id: CharacterId) => {
+    const other = world.characters.get(id);
+    if (!other) return null;
+    return (
+      <button
+        type="button"
+        className={`ref ref-character${other.death ? ' ref-dead' : ''}`}
+        onClick={() => onSelect(id)}
+      >
+        {other.givenName} {other.familyName}
+      </button>
+    );
+  };
+  const list = (ids: readonly CharacterId[]) =>
+    ids.map((id, i) => (
+      <Fragment key={id}>
+        {i > 0 && ', '}
+        {link(id)}
+      </Fragment>
+    ));
+  const party = character.partyId ? world.parties.get(character.partyId) : undefined;
+  const bonds = Object.entries(character.opinions) as [CharacterId, Opinion][];
+  const friends = bonds.filter(([, o]) => o.bond === 'friend').map(([id]) => id);
+  const rivals = bonds.filter(([, o]) => o.bond === 'rival').map(([id]) => id);
+  const languages = (Object.entries(character.languages) as [LanguageId, number][])
+    .filter(([, level]) => level >= 5)
+    .sort((a, b) => b[1] - a[1]);
+  const record = character.outlaw;
+  const bounty = world.bounties.get(character.id);
+  const standing = (Object.entries(character.reputation) as [LocationId, number][]).filter(
+    ([, r]) => Math.abs(r) >= 0.2,
+  );
+  const leader = party ? world.characters.get(party.leaderId) : undefined;
+
+  return (
+    <section className="card-section">
+      <h3>Bonds</h3>
+      <dl className="facts">
+        {party && (
+          <>
+            <dt>{record ? 'Gang' : 'Party'}</dt>
+            <dd>
+              {list(party.members.filter((id) => id !== character.id))}
+              <span className="muted">
+                {party.leaderId === character.id
+                  ? ' (they lead)'
+                  : ` (led by ${leader?.givenName})`}
+              </span>
+            </dd>
+          </>
+        )}
+        <dt>Friends</dt>
+        <dd>{friends.length > 0 ? list(friends) : <span className="muted">none yet</span>}</dd>
+        {rivals.length > 0 && (
+          <>
+            <dt>Rivals</dt>
+            <dd>{list(rivals)}</dd>
+          </>
+        )}
+        <dt>Speaks</dt>
+        <dd>
+          {languages
+            .map(([language, level]) => `${LANGUAGES[language].name}${fluency(level)}`)
+            .join(', ')}
+        </dd>
+        {record && (
+          <>
+            <dt>Outlaw</dt>
+            <dd className="outlaw">
+              since {formatTimestamp(record.since)}; {record.crimes}{' '}
+              {record.crimes === 1 ? 'crime' : 'crimes'}
+              {record.murders > 0 &&
+                `, ${record.murders} ${record.murders === 1 ? 'murder' : 'murders'}`}
+              {bounty && `; ${bounty.amount} gold on their head`}
+            </dd>
+          </>
+        )}
+        {standing.length > 0 && (
+          <>
+            <dt>Standing</dt>
+            <dd>
+              {standing
+                .map(
+                  ([id, r]) =>
+                    `${world.locations.get(id)?.name ?? id}: ${r > 0 ? 'welcome' : 'wanted'}`,
+                )
+                .join(', ')}
+            </dd>
+          </>
+        )}
+      </dl>
+    </section>
+  );
+}
+
+function fluency(level: number): string {
+  if (level >= 100) return '';
+  if (level >= 70) return ' (fluent)';
+  if (level >= 30) return ' (conversational)';
+  return ' (a little)';
 }
 
 function Memories({ character, world }: { character: Character; world: World }) {

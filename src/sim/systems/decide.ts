@@ -1,9 +1,10 @@
 import { PASTIMES, type PastimeId } from '../../content';
 import { HOUR } from '../core/time';
 import type { SimContext } from '../context';
-import type { Character, Location, LocationId, LootItem, Motive } from '../model';
+import type { Character, CharacterId, Location, LocationId, LootItem, Motive } from '../model';
 import { isDizzy, isFitToDelve, needsRecovery } from './condition';
 import { fearOf, hasVisited, healthNeed, wealthNeed } from './mind';
+import { isWantedIn } from './outlaws';
 import { roleOf } from './progress';
 import { findPath } from './roads';
 import type { TravelReason } from './travel';
@@ -20,7 +21,13 @@ export type Action =
   | { readonly kind: 'convalesce' }
   | { readonly kind: 'pastime'; readonly pastime: PastimeId }
   | { readonly kind: 'delve' }
-  | { readonly kind: 'travel'; readonly to: LocationId; readonly reason: TravelReason };
+  | {
+      readonly kind: 'travel';
+      readonly to: LocationId;
+      readonly reason: TravelReason;
+      /** For a hunt: who they are after. */
+      readonly target?: CharacterId;
+    };
 
 export interface Decision {
   readonly action: Action;
@@ -113,6 +120,8 @@ function optionsAt(ctx: SimContext, character: Character, here: Location): Optio
           terms: [
             { value: TOWN_COMFORT * (1 - drives.purpose), motive: null },
             ...pastimeTerms(character, pastime),
+            // A wanted outlaw is not welcome to linger.
+            ...(isWantedIn(character, here.id) ? [{ value: -0.25, motive: null }] : []),
           ],
         });
       }
@@ -134,6 +143,18 @@ function optionsAt(ctx: SimContext, character: Character, here: Location): Optio
       break;
     }
     case 'wilderness': {
+      if (!recovering && character.outlaw) {
+        options.push({
+          action: { kind: 'pastime', pastime: 'lurk' },
+          terms: [
+            { value: 0.35, motive: null },
+            { value: 0.6 * wealth, motive: { kind: 'drive', drive: 'wealth' } },
+            { value: 0.2 * traits.greed, motive: null },
+            // Where they were run to ground or nearly killed, they are wary of lingering.
+            { value: -0.5 * fearOf(character, here.id, now), motive: null },
+          ],
+        });
+      }
       if (!recovering) {
         for (const pastime of pastimesAt(here, character)) {
           options.push({
@@ -186,6 +207,12 @@ function optionsAt(ctx: SimContext, character: Character, here: Location): Optio
       } else {
         terms.push({ value: 0.06 * nearness, motive: null });
       }
+      if (character.outlaw && there.kind === 'wilderness') {
+        terms.push({ value: 0.4 * nearness, motive: { kind: 'drive', drive: 'wealth' } });
+      }
+      if (there.kind === 'town' && isWantedIn(character, there.id)) {
+        terms.push({ value: -0.3, motive: null });
+      }
       if (!hasVisited(character, there.id)) {
         terms.push({
           value: 0.3 * traits.curiosity * nearness,
@@ -194,6 +221,10 @@ function optionsAt(ctx: SimContext, character: Character, here: Location): Optio
       }
     }
     options.push({ action: { kind: 'travel', to: there.id, reason }, terms });
+  }
+
+  if (here.kind === 'town' && !character.outlaw && !recovering) {
+    options.push(...huntOptions(ctx, character, here));
   }
   return options;
 }
@@ -228,6 +259,63 @@ function delveTerms(ctx: SimContext, character: Character, place: LocationId): T
   // straight back in for the sake of it.
   const eagerness = Math.min(1, drives.purpose / RESTLESS);
   return terms.map((t) => (t.value > 0 ? { ...t, value: t.value * eagerness } : t));
+}
+
+/**
+ * Going after an outlaw: for the bounty (the honorable and the greedy), or
+ * for revenge on whoever killed a friend. Only if they stand a chance.
+ */
+function huntOptions(ctx: SimContext, character: Character, here: Location): Option[] {
+  const { traits, drives } = character;
+  const options: Option[] = [];
+  const eagerness = Math.min(1, drives.purpose / RESTLESS);
+  for (const bounty of ctx.world.bounties.values()) {
+    const outlaw = ctx.world.characters.get(bounty.outlawId);
+    if (!outlaw?.outlaw || outlaw.death || outlaw.id === character.id) continue;
+    const affinity = character.opinions[outlaw.id]?.affinity ?? 0;
+    if (affinity > 0.3) continue; // won't hunt a friend
+    const revenge = affinity <= -0.5;
+    // Too content to bother, unless it's personal.
+    if (eagerness < 0.3 && !revenge) continue;
+    const party = 1 + followersOrMembers(ctx, character);
+    const outmatched = character.level + 2 * (party - 1) < outlaw.level - 1;
+    if (outmatched && !(revenge && traits.bravery >= 0.6)) continue;
+
+    const where = outlaw.outlaw.lastSeenAt;
+    const hours = (findPath(ctx.world, here.id, where)?.duration ?? Infinity) / HOUR;
+    if (!Number.isFinite(hours)) continue;
+    const nearness = 1 / (1 + hours / DISTANCE_HALVING_HOURS);
+    const reward = Math.min(1, bounty.amount / 150);
+    // Each fruitless chase makes the next less tempting.
+    const persistence = 1 / (1 + (character.opinions[outlaw.id]?.hunted ?? 0));
+    const terms: Term[] = [
+      {
+        value:
+          eagerness *
+          nearness *
+          persistence *
+          (0.05 + 0.25 * traits.honor + 0.4 * traits.greed * reward) *
+          (0.5 + traits.bravery),
+        motive: { kind: 'bounty', outlawId: outlaw.id },
+      },
+    ];
+    if (revenge) {
+      terms.push({
+        value: 0.5 * nearness * persistence,
+        motive: { kind: 'revenge', characterId: outlaw.id },
+      });
+    }
+    options.push({
+      action: { kind: 'travel', to: where, reason: 'hunt', target: outlaw.id },
+      terms,
+    });
+  }
+  return options;
+}
+
+function followersOrMembers(ctx: SimContext, character: Character): number {
+  if (!character.partyId) return 0;
+  return (ctx.world.parties.get(character.partyId)?.members.length ?? 1) - 1;
 }
 
 function pastimeTerms(character: Character, pastime: PastimeId): Term[] {
@@ -267,6 +355,7 @@ function pastimesAt(location: Location, character: Character): PastimeId[] {
     (p) =>
       p.kind === location.kind &&
       p.id !== 'scout' &&
+      p.id !== 'lurk' &&
       (!('academy' in p && p.academy) || (location.academy && canStudy(character))),
   ).map((p) => p.id);
 }

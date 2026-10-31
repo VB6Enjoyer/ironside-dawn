@@ -350,41 +350,101 @@ talk to strangers, and sometimes turn to crime.
 
 **Bonds**
 
-- [ ] **Opinions** (affinity, trust, familiarity), updated by shared events:
+- [x] **Opinions** (affinity, trust, familiarity), updated by shared events:
       fought side by side, saved my life, stole the loot, met at the inn.
-- [ ] **Socializing** at inns and taverns, shaped by sociability and a
+- [x] **Socializing** at inns and taverns, shaped by sociability and a
       **same-species preference** (`WORLD.md` §5).
-- [ ] **Parties**: characters with high mutual trust form adventuring groups,
+- [x] **Parties**: characters with high mutual trust form adventuring groups,
       share loot (fairly, depending on honor), and split up over disputes or
       deaths.
-- [ ] **Rivalries and grudges**, including revenge-seeking.
-- [ ] **Mourning**: losing a close friend affects mood and decisions.
+- [x] **Rivalries and grudges**, including revenge-seeking.
+- [x] **Mourning**: losing a close friend affects mood and decisions.
 
 **Languages** (`WORLD.md` §5)
 
-- [ ] One native language per people. **Language proficiency as a skill**,
+- [x] One native language per people. **Language proficiency as a skill**,
       learned through exposure and teaching.
-- [ ] Shared language gates **parley** (talking down a fight, surrender,
+- [x] Shared language gates **parley** (talking down a fight, surrender,
       bribes), speeds up friendship, and carries rumors and warnings.
-- [ ] Computed **hostility** (`ARCHITECTURE.md` §4.8): species attitude +
+- [x] Computed **hostility** (`ARCHITECTURE.md` §4.8): species attitude +
       morality + relationship + language.
 
 **Outlaws** (`WORLD.md` §3)
 
-- [ ] Circumstances + low honor/compassion → **banditry, theft, murder**.
+- [x] Circumstances + low honor/compassion → **banditry, theft, murder**.
       Outlaws ambush travelers and can form gangs.
-- [ ] **Reputation** per town, **bounties** for crimes, and bounty hunters. Some
+- [x] **Reputation** per town, **bounties** for crimes, and bounty hunters. Some
       outlaws reform.
 
 **UI**
 
-- [ ] A **Relationships** tab (friends, rivals, party), languages known, a
+- [x] A **Relationships** tab (friends, rivals, party), languages known, a
       crimes and bounties section, and party events in the log.
 
 **Exit criteria:** You can see a dwarven party form, survive a dungeon, lose
 a member, and fall apart. A broke human adventurer turns bandit, robs a
 caravan of elves who couldn't parley with him, and has a bounty on his head by
 season's end.
+
+**Status: done.** Notes from building it:
+
+- **Opinions** are sparse per character (affinity, trust, familiarity, last
+  seen), capped at 30 with the faintest forgotten. Meeting at a tavern,
+  fighting side by side, a fair or unfair split of the spoils, robbery and
+  murder all move them. Strong mutual affinity and familiarity make
+  **friends**; deep dislike makes **rivals**. Quarrels are likelier between
+  the uncompassionate and between rivals.
+- **Socializing** happens at taverns: whom you meet is weighted toward your
+  own species, people you know and friends, and away from rivals and known
+  outlaws. Warmth comes from species attitude and moral compatibility, scaled
+  by how well the two can talk.
+- **Parties** form between friends who trust each other (up to 4). The leader
+  decides for the members who are in town, fit and loyal; they travel, delve
+  and fight together, and the spoils are split by the leader's honor. Parties
+  break up over quarrels, a member turning outlaw, or deaths. Party wake-ups
+  use tokens, so a member whose plans are cut short (joining a party, an
+  ambush) ignores the stale wake-up left in the queue.
+- **Mourning and grudges**: a friend's death leaves a long grief memory and
+  a black mark against the killer, which can send the bereaved on a revenge
+  hunt, even when they'd otherwise be too content to go.
+- **Languages**: common, sylvan and deeptongue. Each person speaks their own
+  and picks up the others from the town they live in (a little a day, by the
+  town's mix of peoples) and faster from friends. Conversational at 30, fluent
+  at 70. Communication scales how fast friendships grow, whether rumors and
+  warnings about dangerous dungeons pass, and whether an outlaw's demand is
+  understood.
+- **Hostility** is computed, not assigned: species attitude, the two
+  characters' compassion, their opinion of each other, and whether they share
+  a tongue.
+- **Outlaws**: the broke, greedy and dishonorable may turn. They lurk in the
+  wilderness and size up passing travelers. If the odds look good they
+  demand gold: travelers who understand and are timid or outmatched pay;
+  those who refuse, or who can't understand the demand, fight. Robbery and
+  murder raise a bounty and sink the outlaw's standing in every town, and a
+  wanted outlaw is refused at inns. **Bounty hunters** (honorable or greedy,
+  and those seeking revenge) travel to where the outlaw was last seen. Hunted
+  outlaws are cornered and find running harder; without that, they always got
+  away and no bounty was ever paid. Each fruitless chase makes the next less
+  tempting. Some prosperous outlaws pay restitution and reform.
+- Fights now have **two sides**, each any mix of characters and creatures,
+  so the same combat code runs delves, ambushes and hunts.
+- In a 100-adventurer world over two years, about 8 robberies, 8 murders
+  and 4 bounty claims happen, with two dozen parties alive at the end.
+  Rivalries, a party member leaving, and reforms are rare; any given year may
+  not see one.
+- **UI**: the character card has a **Bonds** section (party or gang,
+  friends, rivals, languages, outlaw record and bounty, standing in towns),
+  with names that link to other cards. All the new events read as prose in
+  the log.
+- **Exit criteria**, mostly met: parties form, delve, lose members and break
+  up; broke adventurers turn bandit, rob travelers and get bounties. There are
+  no caravans to rob until Phase 7, and travelers who can't understand an
+  outlaw fight rather than pay.
+- **Performance**: a location index replaced whole-world scans, and gear
+  totals are cached. 500 characters run 10 years in about 5 minutes (299 s
+  headless), just inside the target with no room to spare. Deciding is now
+  most of the cost; Phase 6's worker and fast-forward work will need to win
+  some back.
 
 ---
 

@@ -1,7 +1,7 @@
-import { creatureDef, SPELLS, spellDef, type SpellDef, type SpellId } from '../../content';
+import { SPELLS, spellDef, type SpellDef, type SpellId } from '../../content';
 import { HOUR, MINUTE } from '../core/time';
 import type { SimContext } from '../context';
-import type { Character, Encounter, EventOfType, LocationId } from '../model';
+import type { Character, Combatant, EventOfType, LocationId } from '../model';
 import { WOUNDED_BELOW } from './combat-core';
 import { isDizzy, isDrained, modifier } from './condition';
 import { die } from './death';
@@ -72,8 +72,7 @@ export function cast(
   character: Character,
   spellId: SpellId,
   locationId: LocationId,
-  encounter: Encounter | null,
-  targetIndex: number | null,
+  target: Combatant | null,
 ): CastResult {
   const rng = ctx.rng.magic;
   const now = ctx.world.time;
@@ -131,7 +130,6 @@ export function cast(
   practice(ctx, character, 'arcana', ARCANA_PER_CAST, locationId);
   if (outcome === 'success') gainXp(ctx, character, 2, locationId);
 
-  const target = targetIndex !== null && encounter ? encounter.foes[targetIndex]!.ref : null;
   ctx.emit(
     {
       type: 'magic.cast',
@@ -181,7 +179,7 @@ function affordable(character: Character, spell: SpellDef): boolean {
 export interface SpellChoice {
   readonly spell: SpellId;
   /** The foe to target, for damage spells. */
-  readonly target: number | null;
+  readonly target: Combatant | null;
 }
 
 /** What a plain swing of the weapon is worth, against which spells are weighed. */
@@ -198,42 +196,39 @@ const SPELL_NOISE = 0.1;
 export function chooseSpell(
   ctx: SimContext,
   character: Character,
-  encounter: Encounter,
+  fight: SpellContext,
 ): SpellChoice | null {
-  if (character.spells.length === 0) return null;
+  if (character.spells.length === 0 || fight.enemies.length === 0) return null;
   const rng = ctx.rng.magic;
   const now = ctx.world.time;
-  const standing = encounter.foes
-    .map((f, i) => ({ f, i }))
-    .filter(({ f }) => f.fighter.out === null);
-  if (standing.length === 0) return null;
 
   const hpFraction = character.hp / character.maxHp;
-  const threat = standing.reduce((sum, { f }) => sum + creatureDef(f.ref.species).level, 0);
-  const weakest = standing.reduce((a, b) => (b.f.fighter.hp < a.f.fighter.hp ? b : a));
+  const threat = fight.enemies.reduce((sum, e) => sum + e.level, 0);
+  const weakest = fight.enemies.reduce((a, b) => (b.hp < a.hp ? b : a));
   const riskWeight = 1.5 - character.traits.bravery;
   const backlashOdds =
     (1 + (isDizzy(character, now) ? 2 : 0) + (isDrained(character, now) ? 2 : 0)) / 20;
+  const early = fight.round === 0;
 
   let best: { choice: SpellChoice; value: number } | null = null;
   for (const spell of character.spells.map(spellDef)) {
     if (!affordable(character, spell)) continue;
     const odds = successChance(character, spell, now);
     let benefit = 0;
-    let target: number | null = null;
+    let target: Combatant | null = null;
     switch (spell.effect.kind) {
       case 'heal':
         benefit = 2 * (1 - hpFraction) ** 2;
         break;
       case 'damage':
-        benefit = Math.min(1, averageRoll(spell.effect.dice) / Math.max(1, weakest.f.fighter.hp));
-        target = weakest.i;
+        benefit = Math.min(1, averageRoll(spell.effect.dice) / Math.max(1, weakest.hp));
+        target = weakest.target;
         break;
       case 'ward':
-        benefit = encounter.ward === 0 ? 0.25 * threat * (encounter.round === 0 ? 1 : 0.5) : 0;
+        benefit = fight.warded ? 0 : 0.25 * threat * (early ? 1 : 0.5);
         break;
       case 'quicken':
-        benefit = encounter.quickened ? 0 : 0.2 * threat * (encounter.round === 0 ? 1 : 0.4);
+        benefit = fight.quickened ? 0 : 0.2 * threat * (early ? 1 : 0.4);
         break;
     }
     const costs = costsFor(character, spell);
@@ -246,4 +241,17 @@ export function chooseSpell(
       best = { choice: { spell: spell.id as SpellId, target }, value };
   }
   return best && best.value > SWING_VALUE ? best.choice : null;
+}
+
+/** What a caster can see of the fight when choosing a spell. */
+export interface SpellContext {
+  readonly round: number;
+  readonly warded: boolean;
+  readonly quickened: boolean;
+  /** Enemies still standing, with a rough level comparable to a creature's. */
+  readonly enemies: readonly {
+    readonly target: Combatant;
+    readonly hp: number;
+    readonly level: number;
+  }[];
 }

@@ -13,6 +13,7 @@ const PASTIME_PLACES: Record<PastimeId, string> = {
   scout: 'Waiting outside ',
   forage: 'Foraging in ',
   hunt: 'Hunting in ',
+  lurk: 'Lying in wait by the road in ',
 };
 
 /** What a character is doing right now, for the character card. */
@@ -43,6 +44,21 @@ export function describeActivity(character: Character, world: World): Segment[] 
       return [{ text: 'Delving in ' }, here, { text: `, chamber ${activity.room}` }];
     case 'fighting':
       return [{ text: 'Fighting for their life in ' }, here];
+    case 'accompanying': {
+      const leader = world.characters.get(activity.leaderId);
+      const name = leader ? `${leader.givenName} ${leader.familyName}` : 'their party';
+      return character.locationId
+        ? [
+            { text: `With ` },
+            { text: name, ref: { kind: 'character', id: activity.leaderId } },
+            { text: ' in ' },
+            here,
+          ]
+        : [
+            { text: 'On the road with ' },
+            { text: name, ref: { kind: 'character', id: activity.leaderId } },
+          ];
+    }
     case 'dead': {
       const death = character.death;
       if (!death) return [{ text: 'Dead' }];
@@ -52,6 +68,16 @@ export function describeActivity(character: Character, world: World): Segment[] 
           return [{ text: 'Killed by a trap in ' }, where];
         case 'magic':
           return [{ text: `Killed by a backfiring ${spellName(death.cause.spell)} in ` }, where];
+        case 'character': {
+          const killer = world.characters.get(death.cause.characterId);
+          const name = killer ? `${killer.givenName} ${killer.familyName}` : 'someone';
+          return [
+            { text: 'Killed by ' },
+            { text: name, ref: { kind: 'character', id: death.cause.characterId } },
+            { text: ' in ' },
+            where,
+          ];
+        }
         case 'creature':
           return [{ text: `Slain by ${aCreature(death.cause.creature)} in ` }, where];
       }

@@ -285,6 +285,15 @@ button.ref:hover {
   text-decoration-color: var(--character);
 }
 
+button.ref-dead {
+  color: var(--dead);
+  text-decoration-color: rgba(154, 107, 107, 0.4);
+}
+
+.outlaw {
+  color: var(--hp);
+}
+
 .log-row-selected {
   background: rgba(227, 197, 143, 0.07);
   border-left-color: var(--character);

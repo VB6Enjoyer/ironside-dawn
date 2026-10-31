@@ -1,5 +1,5 @@
 import type { AffixId, CreatureId } from '../../content';
-import type { LootItem } from './character';
+import type { DelveProgress, LootItem } from './character';
 import type { CharacterId, EncounterId, LocationId } from './ids';
 
 /**
@@ -14,8 +14,11 @@ export interface CreatureRef {
   readonly ordinal: number;
 }
 
-/** One side's numbers in a fight (ARCHITECTURE.md §4.3: plain data). */
+export type Side = 0 | 1;
+
+/** One combatant's numbers in a fight (ARCHITECTURE.md §4.3: plain data). */
 export interface FighterState {
+  readonly side: Side;
   readonly attack: number;
   readonly damage: string;
   readonly damageBonus: number;
@@ -32,16 +35,29 @@ export interface FighterState {
   out: null | 'dead' | 'fled';
 }
 
+export interface EncounterSide {
+  readonly characters: CharacterId[];
+  readonly creatures: { readonly ref: CreatureRef; readonly fighter: FighterState }[];
+}
+
+/**
+ * A fight between two sides (ROADMAP.md Phase 5): a party against a dungeon's
+ * creatures, outlaws against travelers, bounty hunters against an outlaw.
+ */
 export interface Encounter {
   readonly id: EncounterId;
-  readonly characterId: CharacterId;
+  readonly kind: 'delve' | 'ambush' | 'hunt';
   readonly locationId: LocationId;
-  readonly foes: { readonly ref: CreatureRef; readonly fighter: FighterState }[];
+  readonly sides: readonly [EncounterSide, EncounterSide];
   round: number;
   readonly startedAt: number;
-  /** The character's spells in effect for this fight. */
-  quickened: { readonly attack: number; readonly defense: number } | null;
-  ward: number;
-  /** Coins and items dropped by slain foes, claimed if the character wins. */
+  /** Characters who have left the fight. */
+  out: Partial<Record<CharacterId, 'dead' | 'fled'>>;
+  /** Spells in effect for each character in this fight. */
+  quickened: Partial<Record<CharacterId, { readonly attack: number; readonly defense: number }>>;
+  wards: Partial<Record<CharacterId, number>>;
+  /** For a delve: whose delve to continue after a won fight. */
+  readonly delve: { readonly leaderId: CharacterId; readonly progress: DelveProgress } | null;
+  /** Coins and items dropped by slain creatures, claimed by the winners. */
   spoils: { gold: number; items: LootItem[] };
 }

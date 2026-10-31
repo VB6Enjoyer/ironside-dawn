@@ -1,5 +1,6 @@
 import {
   creatureDef,
+  LANGUAGES,
   type CreatureId,
   type ItemBaseId,
   type PastimeId,
@@ -53,6 +54,12 @@ interface Helpers {
   l(id: LocationId): Segment;
   /** Either side of a fight: a character's name or "the skeleton". */
   who(combatant: Combatant): Part;
+  /** Several characters: "Rufus, Edith and Hugh". */
+  group(ids: readonly CharacterId[]): Part[];
+  /** The other side of a fight: names and creatures, "Reynard and two wolves". */
+  foes(foes: readonly Combatant[]): Part[];
+  /** A town's name, for bounty notices. */
+  place(id: LocationId): Segment;
   kindOf(id: LocationId): 'town' | 'dungeon' | 'wilderness' | undefined;
   /** "a human", "an elf". */
   aSpecies(id: CharacterId): string;
@@ -94,6 +101,10 @@ const PASTIME_PHRASES: Record<PastimeId, readonly ((c: Segment, l: Segment) => P
     (c, l) => [c, ' gathers berries and roots in ', l, '.'],
   ],
   hunt: [(c, l) => [c, ' goes hunting in ', l, '.'], (c, l) => [c, ' sets snares in ', l, '.']],
+  lurk: [
+    (c, l) => [c, ' lies in wait by the road through ', l, '.'],
+    (c, l) => [c, ' watches the road through ', l, ' for travelers with full purses.'],
+  ],
 };
 
 const WEAPON_VERBS: Record<WeaponId, readonly string[]> = {
@@ -216,6 +227,12 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
       if (cause.kind === 'magic') {
         return [c, ` is consumed by a backfiring ${spellName(cause.spell)} in `, l, `${legacy}.`];
       }
+      if (cause.kind === 'character') {
+        return h.pick<Part[]>([
+          [c, ' is cut down by ', h.c(cause.characterId), ' in ', l, `${legacy}.`],
+          [c, ' dies at the hands of ', h.c(cause.characterId), ' in ', l, `${legacy}.`],
+        ]);
+      }
       return h.pick<Part[]>([
         [c, ` is slain by ${aCreature(cause.creature)} in `, l, `${legacy}.`],
         [c, ` falls to ${aCreature(cause.creature)} in `, l, `${legacy}.`],
@@ -228,7 +245,24 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
       const c = h.c(e.data.characterId);
       const from = h.l(e.data.fromId);
       const to = h.l(e.data.destinationId);
+      const quarry = e.data.why.find((m) => m.kind === 'bounty' || m.kind === 'revenge');
+      if (e.data.companions.length > 0) {
+        const party = h.group([e.data.characterId, ...e.data.companions]);
+        if (e.data.reason === 'hunt' && quarry) {
+          const id = quarry.kind === 'bounty' ? quarry.outlawId : quarry.characterId;
+          return [...party, ' set out from ', from, ' to hunt down ', h.c(id), '.'];
+        }
+        return h.pick<Part[]>([
+          [...party, ' set out together from ', from, ' toward ', to, '.'],
+          [...party, ' leave ', from, ' together, bound for ', to, '.'],
+        ]);
+      }
       switch (e.data.reason) {
+        case 'hunt': {
+          if (!quarry) return [c, ' sets out from ', from, ' toward ', to, '.'];
+          const id = quarry.kind === 'bounty' ? quarry.outlawId : quarry.characterId;
+          return [c, ' sets out from ', from, ' to hunt down ', h.c(id), '.'];
+        }
         case 'heal':
           return [c, ' limps out of ', from, ', heading for ', to, ' to recover.'];
         case 'home':
@@ -305,7 +339,15 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
   ],
 
   'delve.enter': [
-    (e, h) => [h.c(e.data.characterId), ' enters ', h.l(e.data.locationId), '.'],
+    (e, h) =>
+      e.data.companions.length > 0
+        ? [
+            ...h.group([e.data.characterId, ...e.data.companions]),
+            ' descend into ',
+            h.l(e.data.locationId),
+            ' together.',
+          ]
+        : [h.c(e.data.characterId), ' enters ', h.l(e.data.locationId), '.'],
     (e, h) => [
       h.c(e.data.characterId),
       ' lights a torch and descends into ',
@@ -374,9 +416,31 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
   ],
 
   'combat.start': [
-    (e, h) => [h.c(e.data.characterId), ` is attacked by ${creatureGroup(e.data.foes)}.`],
-    (e, h) => [h.c(e.data.characterId), ` engages ${creatureGroup(e.data.foes)} in battle.`],
-    (e, h) => [h.c(e.data.characterId), ` comes face to face with ${creatureGroup(e.data.foes)}.`],
+    (e, h) => {
+      const party = e.data.characterIds;
+      const us = h.group(party);
+      const them = h.foes(e.data.foes);
+      const many = party.length > 1;
+      switch (e.data.kind) {
+        case 'ambush':
+          return [...us, many ? ' fight back against ' : ' fights back against ', ...them, '.'];
+        case 'hunt':
+          return [
+            ...us,
+            many ? ' corner ' : ' corners ',
+            ...them,
+            ' in ',
+            h.l(e.data.locationId),
+            '.',
+          ];
+        case 'delve':
+          return h.pick<Part[]>([
+            [...us, many ? ' are attacked by ' : ' is attacked by ', ...them, '.'],
+            [...us, many ? ' engage ' : ' engages ', ...them, ' in battle.'],
+            [...us, many ? ' come face to face with ' : ' comes face to face with ', ...them, '.'],
+          ]);
+      }
+    },
   ],
   'combat.attack': [
     (e, h) => {
@@ -429,13 +493,21 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
   ],
   'combat.victory': [
     (e, h) => {
-      const c = h.c(e.data.characterId);
-      const state = condition(e.data.hp, e.data.maxHp);
+      const us = h.group(e.data.characterIds);
+      const many = e.data.characterIds.length > 1;
+      const them = h.foes(e.data.foes);
       const loot = spoils(e.data.gold, e.data.items);
-      const tail = loot ? `, and loots ${loot}.` : '.';
+      // Condition is the leader's; for a party it would mislead.
+      const state = many ? '' : `, ${condition(e.data.hp, e.data.maxHp)}`;
+      const tail = loot ? `, and ${many ? 'loot' : 'loots'} ${loot}.` : '.';
       return h.pick<Part[]>([
-        [c, ` defeats ${creatureGroup(e.data.foes)}, ${state}${tail}`],
-        [c, ` stands victorious over ${creatureGroup(e.data.foes)}, ${state}${tail}`],
+        [...us, many ? ' defeat ' : ' defeats ', ...them, `${state}${tail}`],
+        [
+          ...us,
+          many ? ' stand victorious over ' : ' stands victorious over ',
+          ...them,
+          `${state}${tail}`,
+        ],
       ]);
     },
   ],
@@ -500,7 +572,7 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
     (e, h) => {
       const c = h.c(e.data.characterId);
       const spell = spellName(e.data.spell);
-      const target = e.data.target ? theCreature(e.data.target) : 'the foe';
+      const target: Part = e.data.target ? h.who(e.data.target) : 'the foe';
       const { outcome, amount, paid } = e.data;
       if (outcome === 'failure') return [c, `'s ${spell} fizzles out.`];
       if (outcome === 'backlash') {
@@ -510,8 +582,8 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
       switch (e.data.spell) {
         case 'ember-bolt':
           return weak
-            ? [c, `'s Ember Bolt sputters, singeing ${target} for ${amount} damage.`]
-            : [c, ` hurls an Ember Bolt at ${target} for ${amount} damage.`];
+            ? [c, "'s Ember Bolt sputters, singeing ", target, ` for ${amount} damage.`]
+            : [c, ' hurls an Ember Bolt at ', target, ` for ${amount} damage.`];
         case 'mend-flesh':
           return [c, ` casts Mend Flesh, paying in blood, and heals ${amount}.`];
         case 'quickening':
@@ -522,6 +594,168 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
           return [c, ` raises a Ward of Ash${weak ? ', thin and flickering' : ''} (${amount}).`];
       }
     },
+  ],
+  'social.meet': [
+    (e, h) =>
+      e.data.understood
+        ? h.pick<Part[]>([
+            [
+              h.c(e.data.characterId),
+              ' shares a table with ',
+              h.c(e.data.otherId),
+              ' in ',
+              h.l(e.data.locationId),
+              '.',
+            ],
+            [h.c(e.data.characterId), ' strikes up a conversation with ', h.c(e.data.otherId), '.'],
+          ])
+        : [
+            h.c(e.data.characterId),
+            ' and ',
+            h.c(e.data.otherId),
+            ' share a table in ',
+            h.l(e.data.locationId),
+            ", though neither speaks the other's tongue.",
+          ],
+  ],
+  'social.friend': [
+    (e, h) => [h.c(e.data.characterId), ' and ', h.c(e.data.otherId), ' have become friends.'],
+    (e, h) => [h.c(e.data.characterId), ' and ', h.c(e.data.otherId), ' are fast friends now.'],
+  ],
+  'social.rival': [
+    (e, h) => [h.c(e.data.characterId), ' has come to despise ', h.c(e.data.otherId), '.'],
+    (e, h) => [h.c(e.data.characterId), ' now counts ', h.c(e.data.otherId), ' an enemy.'],
+  ],
+  'social.quarrel': [
+    (e, h) => [
+      h.c(e.data.characterId),
+      ' and ',
+      h.c(e.data.otherId),
+      ' quarrel bitterly in ',
+      h.l(e.data.locationId),
+      '.',
+    ],
+    (e, h) => [
+      h.c(e.data.characterId),
+      ' and ',
+      h.c(e.data.otherId),
+      ' come to blows over a game of dice.',
+    ],
+  ],
+  'social.mourn': [
+    (e, h) => [h.c(e.data.characterId), ' mourns ', h.c(e.data.deceasedId), '.'],
+    (e, h) => [h.c(e.data.characterId), ' drinks to the memory of ', h.c(e.data.deceasedId), '.'],
+  ],
+  'social.rumor': [
+    (e, h) =>
+      e.data.warning
+        ? [
+            h.c(e.data.otherId),
+            ' warns ',
+            h.c(e.data.characterId),
+            ' to beware ',
+            h.l(e.data.aboutId),
+            '.',
+          ]
+        : [
+            h.c(e.data.otherId),
+            ' tells ',
+            h.c(e.data.characterId),
+            ' about ',
+            h.l(e.data.aboutId),
+            '.',
+          ],
+  ],
+  'character.language': [
+    (e, h) =>
+      e.data.level === 'fluent'
+        ? [h.c(e.data.characterId), ` now speaks ${LANGUAGES[e.data.language].name} fluently.`]
+        : [h.c(e.data.characterId), ` can now get by in ${LANGUAGES[e.data.language].name}.`],
+  ],
+  'party.form': [
+    (e, h) => [...h.group(e.data.memberIds), ' band together as an adventuring party.'],
+    (e, h) => [...h.group(e.data.memberIds), ' agree to adventure together.'],
+  ],
+  'party.join': [(e, h) => [h.c(e.data.characterId), ' joins ', h.c(e.data.leaderId), "'s party."]],
+  'party.leave': [
+    (e, h) =>
+      e.data.reason === 'outlaw'
+        ? [
+            h.c(e.data.characterId),
+            ' abandons ',
+            h.c(e.data.leaderId),
+            "'s party for a life of crime.",
+          ]
+        : [h.c(e.data.characterId), ' leaves ', h.c(e.data.leaderId), "'s party in disgust."],
+  ],
+  'party.disband': [
+    (e, h) => {
+      switch (e.data.reason) {
+        case 'death':
+          return [h.c(e.data.characterId), "'s party breaks up after the loss of a companion."];
+        case 'quarrel':
+          return [h.c(e.data.characterId), "'s party falls apart in bitterness."];
+        case 'outlaw':
+          return [h.c(e.data.characterId), "'s party breaks up."];
+      }
+    },
+  ],
+  'party.share': [
+    (e, h) =>
+      e.data.fair
+        ? [h.c(e.data.characterId), ` shares out ${e.data.gold} gold fairly among the party.`]
+        : [
+            h.c(e.data.characterId),
+            ` keeps the lion's share of ${e.data.gold} gold, and the party grumbles.`,
+          ],
+  ],
+  'outlaw.turn': [
+    (e, h) => [h.c(e.data.characterId), ', broke and bitter, turns to banditry.'],
+    (e, h) => [h.c(e.data.characterId), ' takes to the roads as an outlaw.'],
+  ],
+  'outlaw.ambush': [
+    (e, h) => {
+      const outlaws = h.group(e.data.outlawIds);
+      const victims = h.group(e.data.victimIds);
+      const many = e.data.outlawIds.length > 1;
+      const lead = [
+        ...outlaws,
+        many ? ' waylay ' : ' waylays ',
+        ...victims,
+        ' in ',
+        h.l(e.data.locationId),
+      ];
+      switch (e.data.parley) {
+        case 'surrendered':
+          return [...lead, ' and demand their gold.'];
+        case 'refused':
+          return [...lead, ', but they refuse to pay.'];
+        case 'misunderstood':
+          return [...lead, ', but neither side understands the other.'];
+      }
+    },
+  ],
+  'crime.robbery': [
+    (e, h) => [h.c(e.data.characterId), ' robs ', h.c(e.data.victimId), ` of ${e.data.gold} gold.`],
+  ],
+  'bounty.post': [
+    (e, h) => [
+      h.place(e.data.locationId),
+      ` posts a bounty of ${e.data.amount} gold on `,
+      h.c(e.data.characterId),
+      '.',
+    ],
+  ],
+  'bounty.claim': [
+    (e, h) => [
+      h.c(e.data.characterId),
+      ` claims the ${e.data.amount}-gold bounty on `,
+      h.c(e.data.outlawId),
+      '.',
+    ],
+  ],
+  'outlaw.reform': [
+    (e, h) => [h.c(e.data.characterId), ' pays restitution and gives up the outlaw life.'],
   ],
   'trade.sell': [
     (e, h) => [
@@ -547,6 +781,19 @@ export function describeEvent(event: SimEvent, names: NameResolver): Segment[] {
     },
     who(combatant) {
       return combatant.kind === 'character' ? helpers.c(combatant.id) : theCreature(combatant.ref);
+    },
+    group(ids) {
+      return joinParts(ids.map((id) => [helpers.c(id)]));
+    },
+    foes(foes) {
+      const people = foes.flatMap((f) =>
+        f.kind === 'character' ? [[helpers.c(f.id)] as Part[]] : [],
+      );
+      const creatures = foes.flatMap((f) => (f.kind === 'creature' ? [f.ref] : []));
+      return joinParts([...people, ...(creatures.length > 0 ? [[creatureGroup(creatures)]] : [])]);
+    },
+    place(id) {
+      return helpers.l(id);
     },
     kindOf(id) {
       return names.location(id)?.kind;
@@ -584,6 +831,14 @@ export function describeEvent(event: SimEvent, names: NameResolver): Segment[] {
   // Sentences may open with "the skeleton"; capitalize whatever comes first.
   const [first, ...rest] = segments;
   return first ? [{ ...first, text: capitalize(first.text) }, ...rest] : [];
+}
+
+/** Joins phrases as "a, b and c". */
+function joinParts(parts: readonly (readonly Part[])[]): Part[] {
+  return parts.flatMap((part, i) => [
+    ...(i === 0 ? [] : i === parts.length - 1 ? [' and '] : [', ']),
+    ...part,
+  ]);
 }
 
 export function toPlainText(segments: readonly Segment[]): string {

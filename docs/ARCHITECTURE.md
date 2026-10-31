@@ -247,6 +247,19 @@ full-world scans in hot paths. Techniques, from day one onward:
 The worker runs the sim in time slices and yields between them, so pause and
 speed changes take effect immediately even in fast-forward.
 
+Two more pieces, added in Phase 5:
+
+- **Wake tokens.** Each character has a counter. Scheduling a wake-up stamps
+  it with the counter's new value, and a wake-up whose stamp is out of date
+  is ignored. When a character's plans are cut short (a leader takes them
+  along, outlaws ambush them), there is no need to dig the old wake-up out
+  of the queue.
+- **Whereabouts index.** Who is at each place, kept in step by routing every
+  move through one function. Meetings, ambushes and hunts look at the people
+  present instead of scanning everyone. Each place's list stays in order of
+  creation, however the index was built. That keeps the RNG's picks from it
+  the same after a save is loaded.
+
 ### 4.3 World state: plain data, ECS-lite
 
 All state is **plain, serializable data**: objects, arrays, and maps keyed by
@@ -369,7 +382,15 @@ dungeon, the number of trips, plus reward and danger as moving averages that
 weight recent trips more (learning rate 0.35). A place's _fear_ is its
 expected danger plus vivid near-death and flight memories there, so the fear
 fades as the memories do. Curious characters get a novelty bonus for places
-they haven't tried. Opinions of others arrive in Phase 5.
+they haven't tried. Episodic memories also include grief for a dead friend
+(180 days) and being wronged, robbed or attacked, by someone (120 days); the
+second adds to the fear of the place where it happened.
+
+Opinions (`src/sim/systems/social.ts`) hold affinity and trust from −1 to 1,
+familiarity from 0 to 1, when the two last met, a `friend` or `rival` bond
+once affinity crosses a threshold, and how many times this character has
+hunted the other in vain. Each character keeps at most 30. The one with the
+least familiarity plus strength of feeling (love or hate) is forgotten first.
 
 ### 4.7 Content as data
 
@@ -400,6 +421,18 @@ computed from species attitudes, personal morality, their relationship, and
 whether they share a language. That's what lets a human become a murderer,
 or a dwarf and an elf become friends against the odds, without special
 cases.
+
+As built (Phase 5), A's hostility toward B is
+
+```
+0.5 × cruelty − 0.4 × species attitude − 0.6 × affinity − 0.3 × communication
+```
+
+where cruelty is `1 − compassion`, at full weight for an outlaw and 0.3 for
+anyone else. An outlaw strikes only when it is non-negative. Fights have two
+sides, each any mix of characters and creatures, so delves (party against
+creatures), ambushes (travelers against outlaws) and hunts (hunters against
+an outlaw and their gang) share one combat system.
 
 ---
 

@@ -29,6 +29,16 @@ export function describeMotive(motive: Motive, names: NameResolver): string {
       return 'missing home';
     case 'loot':
       return 'with loot to sell';
+    case 'bounty': {
+      const outlaw = names.character(motive.outlawId);
+      return outlaw ? `for the bounty on ${outlaw.name}` : 'for a bounty';
+    }
+    case 'revenge': {
+      const foe = names.character(motive.characterId);
+      return foe ? `to avenge a friend on ${foe.name}` : 'for revenge';
+    }
+    case 'friends':
+      return 'with friends';
   }
 }
 
@@ -52,6 +62,8 @@ const GOAL_PHRASES: Record<Goal['kind'], string> = {
   home: 'Heading home',
   rest: 'Sleeping',
   wait: 'Biding time',
+  hunt: 'Hunting',
+  lurk: 'Lying in wait for travelers',
 };
 
 /** What a character is trying to do: "Off to delve in the Dungeon of Misery". */
@@ -64,6 +76,12 @@ export function describeGoal(goal: Goal, world: World): string {
     case 'travel':
     case 'home':
       return `${GOAL_PHRASES[goal.kind]} to${where}`;
+    case 'hunt': {
+      const quarry = goal.targetId ? world.characters.get(goal.targetId) : undefined;
+      return quarry
+        ? `Hunting ${quarry.givenName} ${quarry.familyName} in${where}`
+        : `Hunting in${where}`;
+    }
     default:
       return GOAL_PHRASES[goal.kind];
   }
@@ -90,6 +108,15 @@ export function describeMemory(memory: Memory, world: World): string {
       return `Burned by a backfiring ${spellName(memory.spell)}${at(memory.locationId)}`;
     case 'level':
       return `Reached level ${memory.level}`;
+    case 'grief': {
+      const friend = world.characters.get(memory.characterId);
+      return friend ? `Lost a friend, ${friend.givenName} ${friend.familyName}` : 'Lost a friend';
+    }
+    case 'wronged': {
+      const foe = world.characters.get(memory.characterId);
+      const who = foe ? `${foe.givenName} ${foe.familyName}` : 'someone';
+      return `Set upon by ${who}${at(memory.locationId)}`;
+    }
   }
 }
 

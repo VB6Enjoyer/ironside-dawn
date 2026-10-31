@@ -3,9 +3,20 @@ import { describe, expect, it } from 'vitest';
 import { CREATURES, type CreatureDef } from '../../content';
 import { createRng } from '../core/rng';
 import type { FighterState } from '../model';
-import { FLEE_DIFFICULTY, fightOutcome, fightRound, type FightOutcome } from './combat-core';
+import { CORNERED_PENALTY, FLEE_DIFFICULTY, fightRound, fightWinner } from './combat-core';
+
+type FightOutcome = 'won' | 'lost' | 'fled';
+
+/** The result for the adventurer at index 0, or null while the fight goes on. */
+function fightOutcome(fighters: readonly FighterState[]): FightOutcome | null {
+  const self = fighters[0]!;
+  if (self.out === 'dead') return 'lost';
+  if (self.out === 'fled') return 'fled';
+  return fightWinner(fighters) === 0 ? 'won' : null;
+}
 
 const fighter = (overrides: Partial<FighterState> = {}): FighterState => ({
+  side: 0,
   attack: 4,
   damage: '1d8',
   damageBonus: 0,
@@ -23,6 +34,7 @@ const fighter = (overrides: Partial<FighterState> = {}): FighterState => ({
 const foe = (def: CreatureDef, rng = createRng('foe')): FighterState => {
   const hp = rng.roll(def.hp);
   return fighter({
+    side: 1,
     attack: def.attack,
     damage: def.damage,
     defense: def.defense,
@@ -84,7 +96,7 @@ describe('fightRound', () => {
     for (let n = 0; n < 500; n++) {
       const fighters = [
         fighter({ hp: 3, maxHp: 28, fleeBelow: 0 }),
-        fighter({ hp: 2, stamina: null }),
+        fighter({ side: 1, hp: 2, stamina: null }),
       ];
       fightRound(rng, fighters);
       for (const f of fighters) {
@@ -96,7 +108,11 @@ describe('fightRound', () => {
 
   it('only lets each fighter act once per round', () => {
     const rng = createRng('once');
-    const fighters = [fighter(), fighter({ stamina: null }), fighter({ stamina: null })];
+    const fighters = [
+      fighter(),
+      fighter({ side: 1, stamina: null }),
+      fighter({ side: 1, stamina: null }),
+    ];
     const actions = fightRound(rng, fighters);
     const actors = actions.map((a) => (a.kind === 'attack' ? a.attacker : a.who));
     expect(new Set(actors).size).toBe(actors.length);
@@ -106,28 +122,28 @@ describe('fightRound', () => {
   it('spends stamina on attacks and never goes below zero', () => {
     const rng = createRng('stamina');
     const self = fighter({ stamina: 2, fleeBelow: 0, hp: 999, maxHp: 999 });
-    const fighters = [self, fighter({ hp: 999, maxHp: 999, stamina: null, fleeBelow: 0 })];
+    const fighters = [self, fighter({ side: 1, hp: 999, maxHp: 999, stamina: null, fleeBelow: 0 })];
     for (let round = 0; round < 5; round++) fightRound(rng, fighters);
     expect(self.stamina).toBe(0);
   });
 
   it('tries to flee below the threshold instead of attacking', () => {
     const rng = createRng('flee');
-    const fighters = [fighter({ hp: 5, fleeBelow: 0.5 }), fighter({ stamina: null })];
+    const fighters = [fighter({ hp: 5, fleeBelow: 0.5 }), fighter({ side: 1, stamina: null })];
     const actions = fightRound(rng, fighters);
     expect(actions.find((a) => a.kind === 'flee' || a.attacker === 0)?.kind).toBe('flee');
   });
 
   it('lets a quick fighter flee a slow one more often than the reverse', () => {
-    const rate = (self: number, enemy: number) => {
+    const rate = (self: number, enemy: number, cornered: 0 | null = null) => {
       const rng = createRng(`flee-${self}-${enemy}`);
       let fled = 0;
       for (let n = 0; n < 2000; n++) {
         const fighters = [
           fighter({ hp: 1, fleeBelow: 0.5, agility: self }),
-          fighter({ agility: enemy, stamina: null, attack: -99 }),
+          fighter({ side: 1, agility: enemy, stamina: null, attack: -99 }),
         ];
-        fightRound(rng, fighters);
+        fightRound(rng, fighters, { cornered });
         if (fighters[0]!.out === 'fled') fled++;
       }
       return fled / 2000;
@@ -135,15 +151,48 @@ describe('fightRound', () => {
     expect(rate(3, -2)).toBeGreaterThan(rate(-2, 3));
     // d20 + 0 >= FLEE_DIFFICULTY + 0 succeeds on 15 of 20 rolls with the current difficulty.
     expect(rate(0, 0)).toBeCloseTo((21 - FLEE_DIFFICULTY) / 20, 1);
+    // A cornered side has a harder time of it.
+    expect(rate(0, 0, 0)).toBeCloseTo((21 - FLEE_DIFFICULTY - CORNERED_PENALTY) / 20, 1);
   });
 });
 
-describe('fightOutcome', () => {
+describe('fightWinner', () => {
   it('reports the result from the adventurer side', () => {
-    expect(fightOutcome([fighter(), fighter({ out: 'dead' })])).toBe('won');
-    expect(fightOutcome([fighter(), fighter({ out: 'fled' })])).toBe('won');
-    expect(fightOutcome([fighter({ out: 'dead' }), fighter()])).toBe('lost');
-    expect(fightOutcome([fighter({ out: 'fled' }), fighter()])).toBe('fled');
-    expect(fightOutcome([fighter(), fighter({ out: 'dead' }), fighter()])).toBeNull();
+    const foe = (out: FighterState['out'] = null) => fighter({ side: 1, out });
+    expect(fightOutcome([fighter(), foe('dead')])).toBe('won');
+    expect(fightOutcome([fighter(), foe('fled')])).toBe('won');
+    expect(fightOutcome([fighter({ out: 'dead' }), foe()])).toBe('lost');
+    expect(fightOutcome([fighter({ out: 'fled' }), foe()])).toBe('fled');
+    expect(fightOutcome([fighter(), foe('dead'), foe()])).toBeNull();
+  });
+});
+
+describe('sides', () => {
+  it('lets several fighters on each side fight it out until one side is left', () => {
+    const rng = createRng('sides');
+    for (let n = 0; n < 200; n++) {
+      const fighters = [
+        fighter(),
+        fighter({ hp: 20, maxHp: 20 }),
+        fighter({ side: 1, stamina: null }),
+        fighter({ side: 1, stamina: null }),
+      ];
+      let rounds = 0;
+      while (fightWinner(fighters) === null && rounds++ < 100) {
+        for (const action of fightRound(rng, fighters)) {
+          if (action.kind === 'attack') {
+            expect(fighters[action.attacker]!.side).not.toBe(fighters[action.target]!.side);
+          }
+        }
+      }
+      expect(fightWinner(fighters)).not.toBeNull();
+    }
+  });
+
+  it('skips fighters who spent the round casting', () => {
+    const rng = createRng('idle');
+    const fighters = [fighter(), fighter({ side: 1, stamina: null })];
+    const actions = fightRound(rng, fighters, { idle: new Set([0]) });
+    expect(actions.every((a) => (a.kind === 'attack' ? a.attacker : a.who) !== 0)).toBe(true);
   });
 });

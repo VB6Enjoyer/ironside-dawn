@@ -1,5 +1,4 @@
 import { PASTIMES, type PastimeId } from '../../content';
-import { schedule } from '../core/scheduler';
 import { HOUR, nextTimeOfDay, timeOfDay } from '../core/time';
 import type { SimContext } from '../context';
 import type { Character, Goal, Location, Motive } from '../model';
@@ -10,7 +9,10 @@ import { weaponSkillOf } from './items';
 import { learnSpells } from './magic';
 import { markVisited, satisfy, updateDrives } from './mind';
 import { practice } from './progress';
+import { confrontQuarry, isWantedIn } from './outlaws';
+import { followersOf, gatherParty, releaseFollowers, socialize } from './social';
 import { finishLeg, startJourney } from './travel';
+import { wakeAt } from './wake';
 
 /**
  * What characters do between fights (ROADMAP.md Phase 4). Sleep at night is a
@@ -41,6 +43,7 @@ const PASTIME_GOALS: Record<PastimeId, Goal['kind']> = {
   scout: 'wait',
   forage: 'forage',
   hunt: 'forage',
+  lurk: 'lurk',
 };
 
 /** Called when a character's scheduled wake-up comes due. */
@@ -49,13 +52,20 @@ export function wakeCharacter(ctx: SimContext, character: Character): void {
   switch (activity.kind) {
     case 'dead':
     case 'fighting':
+    case 'accompanying':
       return;
-    case 'traveling':
-      if (finishLeg(ctx, character)) {
-        markVisited(character, character.locationId!);
-        decide(ctx, character);
+    case 'traveling': {
+      if (finishLeg(ctx, character) !== 'arrived') return;
+      const here = locationOf(ctx, character);
+      for (const c of [character, ...followersOf(ctx, character)]) markVisited(c, here.id);
+      const goal = character.goal;
+      if (goal?.kind === 'hunt' && goal.targetId) {
+        const quarry = ctx.world.characters.get(goal.targetId);
+        if (quarry && confrontQuarry(ctx, character, quarry, here)) return;
       }
+      decide(ctx, character);
       return;
+    }
     case 'delving':
       delveStep(ctx, character);
       return;
@@ -108,19 +118,25 @@ function act(
 ): boolean {
   switch (action.kind) {
     case 'sell':
+      releaseFollowers(ctx, character);
       character.goal = { kind: 'sell', locationId: location.id, why };
       sellLoot(ctx, character, location);
       return true;
     case 'convalesce':
+      releaseFollowers(ctx, character);
       character.goal = { kind: 'heal', locationId: location.id, why };
       convalesce(ctx, character, location, why);
       return true;
-    case 'pastime':
+    case 'pastime': {
+      releaseFollowers(ctx, character);
       character.goal = { kind: PASTIME_GOALS[action.pastime], locationId: location.id, why };
-      return startPastime(ctx, character, location, action.pastime, why);
+      const started = startPastime(ctx, character, location, action.pastime, why);
+      if (started && action.pastime === 'tavern') socialize(ctx, character, location);
+      return started;
+    }
     case 'delve':
       character.goal = { kind: 'delve', locationId: location.id, why };
-      enterDelve(ctx, character, location, why);
+      enterDelve(ctx, character, location, why, gatherParty(ctx, character, location));
       return true;
     case 'travel': {
       const kind: Goal['kind'] =
@@ -131,14 +147,23 @@ function act(
             : action.reason === 'home'
               ? 'home'
               : 'travel';
-      character.goal = { kind, locationId: action.to, why };
-      return startJourney(ctx, character, action.to, action.reason, why);
+      character.goal = action.target
+        ? { kind: 'hunt', locationId: action.to, why, targetId: action.target }
+        : { kind, locationId: action.to, why };
+      // The party comes along to delve or hunt; otherwise everyone goes their own way.
+      const together = action.reason === 'delve' || action.reason === 'hunt';
+      if (!together) releaseFollowers(ctx, character);
+      const companions = together ? gatherParty(ctx, character, location) : [];
+      return startJourney(ctx, character, action.to, action.reason, why, companions);
     }
   }
 }
 
 function rest(ctx: SimContext, character: Character, location: Location): void {
-  const paid = location.kind === 'town' && character.gold >= INN_PRICE;
+  releaseFollowers(ctx, character);
+  // Wanted outlaws find every inn door shut.
+  const paid =
+    location.kind === 'town' && character.gold >= INN_PRICE && !isWantedIn(character, location.id);
   if (paid) character.gold -= INN_PRICE;
   const now = ctx.world.time;
   const until = nextTimeOfDay(now, MORNING) + ctx.rng.behavior.int(0, MAX_LIE_IN);
@@ -274,8 +299,4 @@ function locationOf(ctx: SimContext, character: Character): Location {
 function isNight(time: number): boolean {
   const t = timeOfDay(time);
   return t >= NIGHT_STARTS || t < MORNING;
-}
-
-function wakeAt(ctx: SimContext, character: Character, at: number): void {
-  schedule(ctx.world.scheduler, at, { kind: 'character.wake', characterId: character.id });
 }
