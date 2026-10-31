@@ -1,6 +1,6 @@
 import { itemBase, type StatId } from '../../content';
 import { HOUR } from '../core/time';
-import type { Character, Encounter, FighterState } from '../model';
+import type { Character, Encounter, FighterState, Side } from '../model';
 import { WOUNDED_BELOW } from './combat-core';
 import { gearTotals } from './items';
 import { levelAttackBonus, levelDefenseBonus, skillBonus } from './progress';
@@ -90,14 +90,16 @@ export function adventurerFighter(
   character: Character,
   now: number,
   encounter: Encounter,
+  side: Side,
+  foesStanding: number,
 ): FighterState {
   const gear = gearTotals(character);
   const weapon = itemBase(character.equipment.weapon.base);
   const dizzy = isDizzy(character, now);
-  const quickened = encounter.quickened;
-  const foesStanding = encounter.foes.filter((f) => f.fighter.out === null).length;
+  const quickened = encounter.quickened[character.id];
   const weaponSkill = weapon.slot === 'weapon' ? skillBonus(character, weapon.skill) : 0;
   return {
+    side,
     attack:
       BASE_ATTACK +
       weaponSkill +
@@ -123,7 +125,7 @@ export function adventurerFighter(
     hp: character.hp,
     maxHp: character.maxHp,
     stamina: character.stamina,
-    ward: encounter.ward,
+    ward: encounter.wards[character.id] ?? 0,
     out: null,
   };
 }

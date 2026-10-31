@@ -31,10 +31,39 @@ sim.advance(sim.world.time + 365 * DAY);
 const names = worldNames(sim.world);
 const text = (e: SimEvent) => toPlainText(describeEvent(e, names));
 
+/** Event types too rare to count on in one year of one world, with sample data. */
+const where = 'witherwood' as LocationId;
+const RARE: Record<string, (a: CharacterId, b: CharacterId) => object> = {
+  'social.rival': (a, b) => ({ characterId: a, locationId: where, otherId: b }),
+  'party.leave': (a, b) => ({ characterId: a, locationId: where, leaderId: b, reason: 'quarrel' }),
+  'party.disband': (a) => ({ characterId: a, locationId: where, reason: 'outlaw' }),
+  'bounty.claim': (a, b) => ({ characterId: a, locationId: where, outlawId: b, amount: 85 }),
+  'outlaw.reform': (a) => ({ characterId: a, locationId: where }),
+};
+
 describe('describeEvent', () => {
-  it('sees every event type in a year of simulation', () => {
+  it('sees every event type in a year of simulation, short of the rare ones', () => {
     const seen = new Set(events.map((e) => e.type));
-    expect([...seen].sort()).toEqual(Object.keys(EVENT_IMPORTANCE).sort());
+    const expected = Object.keys(EVENT_IMPORTANCE).filter((t) => !(t in RARE));
+    expect([...seen].filter((t) => !(t in RARE)).sort()).toEqual(expected.sort());
+  });
+
+  it('writes a clean sentence for the rare events too', () => {
+    const [a, b] = [...sim.world.characters.keys()] as [CharacterId, CharacterId];
+    for (const [type, data] of Object.entries(RARE)) {
+      const event = {
+        id: 0,
+        t: 0,
+        type,
+        data: data(a, b),
+        importance: 0,
+        actors: [a, b],
+        locationId: null,
+      } as SimEvent;
+      const sentence = text(event);
+      expect(sentence, type).toMatch(/^[A-Z].*[.]$/);
+      expect(sentence, type).not.toMatch(/undefined|NaN|null|\[object|Someone|somewhere| {2}/i);
+    }
   });
 
   it('writes a clean sentence for every event', () => {

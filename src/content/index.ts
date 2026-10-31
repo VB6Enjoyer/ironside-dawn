@@ -58,3 +58,5 @@ export { SPELLS, spellDef } from './spells';
 export type { SpellCosts, SpellDef, SpellEffect, SpellId } from './spells';
 export { DEFAULT_TRAIT_MEAN, DEFAULT_TRAIT_SD, TRAIT_POLES, TRAITS } from './traits';
 export type { TraitId, Traits, TraitTendencies } from './traits';
+export { LANGUAGE_LEVELS, LANGUAGES } from './languages';
+export type { LanguageId } from './languages';

@@ -1,7 +1,8 @@
 import type { SchedulerState } from '../core/scheduler';
 import type { Character } from './character';
 import type { Encounter } from './encounter';
-import type { CharacterId, EncounterId, ItemId, LocationId, RouteId } from './ids';
+import type { CharacterId, EncounterId, ItemId, LocationId, PartyId, RouteId } from './ids';
+import type { Bounty, Party } from './social';
 import type { Legend } from './item';
 import type { Job } from './jobs';
 import type { Location, Route } from './location';
@@ -22,11 +23,15 @@ export interface World {
   readonly encounters: Map<EncounterId, Encounter>;
   /** Every legendary item ever found. */
   readonly legends: Map<ItemId, Legend>;
+  readonly parties: Map<PartyId, Party>;
+  /** Prices on outlaws' heads, by outlaw. */
+  readonly bounties: Map<CharacterId, Bounty>;
   readonly scheduler: SchedulerState<Job>;
   /** Full names in use, so new characters get distinct ones. */
   readonly takenNames: Set<string>;
   nextCharacterNumber: number;
   nextEncounterNumber: number;
   nextItemNumber: number;
+  nextPartyNumber: number;
   nextEventId: number;
 }

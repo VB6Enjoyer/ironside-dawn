@@ -167,6 +167,8 @@ function worldReport(
           return `${TRAP_NAMES[cause.trap]}s`;
         case 'magic':
           return `their own ${spellName(cause.spell)}`;
+        case 'character':
+          return 'other people';
       }
     }),
   );
@@ -210,6 +212,9 @@ function worldReport(
     '',
     'Personality and behavior (per adventurer-month, lowest third vs highest third)',
     ...habitRows(world, habits, row),
+    '',
+    'Bonds and crime',
+    ...bondRows(world, counts, row),
     '',
     'Magic',
     row('Casters alive', `${casters.length} (${living.filter((c) => c.gifted).length} gifted)`),
@@ -291,5 +296,44 @@ function habitRows(
     row('Delves by bravery', compare('bravery', habits.delves)),
     row('Delves by patience', compare('patience', habits.delves)),
     row('Taverns by sociability', compare('sociability', habits.taverns)),
+  ];
+}
+
+/** Friendships, parties, outlaws and the law. */
+function bondRows(
+  world: World,
+  counts: ReadonlyMap<string, number>,
+  row: (label: string, value: string | number) => string,
+): string[] {
+  const living = [...world.characters.values()].filter((c) => c.death === null);
+  let friendships = 0;
+  for (const c of living) {
+    for (const [id, opinion] of Object.entries(c.opinions)) {
+      const other = world.characters.get(id as CharacterId);
+      if (opinion?.bond === 'friend' && other && !other.death && c.id < other.id) friendships++;
+    }
+  }
+  const name = (c: { givenName: string; familyName: string }) => `${c.givenName} ${c.familyName}`;
+  const parties = [...world.parties.values()].map((p) =>
+    p.members.map((id) => name(world.characters.get(id)!)).join(', '),
+  );
+  const outlaws = living.filter((c) => c.outlaw);
+  const bounties = [...world.bounties.values()].map((b) => {
+    const outlaw = world.characters.get(b.outlawId)!;
+    return row(`  ${name(outlaw)}`, `${b.amount} gold${outlaw.death ? ' (dead)' : ''}`);
+  });
+  return [
+    row('Friendships alive', friendships),
+    row('Parties', parties.length),
+    ...parties.map((members) => `    ${members}`),
+    row('Outlaws at large', outlaws.length),
+    row('Bounties posted', ''),
+    ...(bounties.length > 0 ? bounties : ['    none']),
+    row('Robberies', counts.get('crime.robbery') ?? 0),
+    row(
+      'Murders',
+      [...world.characters.values()].filter((c) => c.death?.cause.kind === 'character').length,
+    ),
+    row('Bounties claimed', counts.get('bounty.claim') ?? 0),
   ];
 }

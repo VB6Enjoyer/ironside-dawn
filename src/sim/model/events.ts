@@ -1,4 +1,4 @@
-import type { PastimeId, SkillId, SpellId, StatId, TrapId } from '../../content';
+import type { LanguageId, PastimeId, SkillId, SpellId, StatId, TrapId } from '../../content';
 import type { DeathCause, LootItem } from './character';
 import type { CreatureRef } from './encounter';
 import type { CharacterId, EntityId, EventId, LocationId } from './ids';
@@ -30,6 +30,10 @@ interface CharacterAt {
 }
 
 type Body<T extends string, D> = { readonly type: T; readonly data: D };
+
+interface WithOther {
+  readonly otherId: CharacterId;
+}
 
 /** Decisions carry their reasons (ROADMAP.md Phase 4). */
 interface Decided {
@@ -65,14 +69,16 @@ export type EventBody =
         readonly destinationId: LocationId;
         /** Typical duration of the whole journey, in seconds. */
         readonly expectedDuration: number;
-        readonly reason: 'wander' | 'delve' | 'heal' | 'home';
+        readonly reason: 'wander' | 'delve' | 'heal' | 'home' | 'hunt';
         readonly why: readonly Motive[];
+        /** Party members traveling along. */
+        readonly companions: readonly CharacterId[];
       }
     >
   | Body<'travel.pass', CharacterAt & { readonly destinationId: LocationId }>
   | Body<'travel.arrive', CharacterAt>
   // Delves
-  | Body<'delve.enter', CharacterAt & Decided>
+  | Body<'delve.enter', CharacterAt & Decided & { readonly companions: readonly CharacterId[] }>
   | Body<'delve.quiet', CharacterAt & { readonly room: number }>
   | Body<
       'delve.treasure',
@@ -111,7 +117,15 @@ export type EventBody =
       }
     >
   // Combat
-  | Body<'combat.start', CharacterAt & { readonly foes: readonly CreatureRef[] }>
+  | Body<
+      'combat.start',
+      CharacterAt & {
+        /** The side that was attacked or went in: the party, or the travelers. */
+        readonly characterIds: readonly CharacterId[];
+        readonly foes: readonly Combatant[];
+        readonly kind: 'delve' | 'ambush' | 'hunt';
+      }
+    >
   | Body<
       'combat.attack',
       {
@@ -131,7 +145,8 @@ export type EventBody =
   | Body<
       'combat.victory',
       CharacterAt & {
-        readonly foes: readonly CreatureRef[];
+        readonly characterIds: readonly CharacterId[];
+        readonly foes: readonly Combatant[];
         readonly hp: number;
         readonly maxHp: number;
         readonly gold: number;
@@ -156,7 +171,7 @@ export type EventBody =
       CharacterAt & {
         readonly spell: SpellId;
         readonly outcome: 'success' | 'partial' | 'failure' | 'backlash';
-        readonly target: CreatureRef | null;
+        readonly target: Combatant | null;
         /** Damage dealt, hit points healed, or ward strength. 0 if nothing happened. */
         readonly amount: number;
         readonly paid: {
@@ -167,6 +182,55 @@ export type EventBody =
         };
       }
     >
+  // Bonds
+  | Body<'social.meet', CharacterAt & WithOther & { readonly understood: boolean }>
+  | Body<'social.friend', CharacterAt & WithOther>
+  | Body<'social.rival', CharacterAt & WithOther>
+  | Body<'social.quarrel', CharacterAt & WithOther>
+  | Body<'social.mourn', CharacterAt & { readonly deceasedId: CharacterId }>
+  | Body<
+      'social.rumor',
+      CharacterAt & WithOther & { readonly aboutId: LocationId; readonly warning: boolean }
+    >
+  | Body<
+      'character.language',
+      CharacterAt & { readonly language: LanguageId; readonly level: string }
+    >
+  // Parties (characterId is the leader unless said otherwise)
+  | Body<'party.form', CharacterAt & { readonly memberIds: readonly CharacterId[] }>
+  /** characterId joins leaderId's party. */
+  | Body<'party.join', CharacterAt & { readonly leaderId: CharacterId }>
+  /** characterId leaves leaderId's party. */
+  | Body<
+      'party.leave',
+      CharacterAt & { readonly leaderId: CharacterId; readonly reason: 'quarrel' | 'outlaw' }
+    >
+  | Body<'party.disband', CharacterAt & { readonly reason: 'death' | 'quarrel' | 'outlaw' }>
+  | Body<
+      'party.share',
+      CharacterAt & {
+        readonly gold: number;
+        readonly shares: readonly { readonly characterId: CharacterId; readonly gold: number }[];
+        readonly fair: boolean;
+      }
+    >
+  // Outlaws (characterId is the outlaw)
+  | Body<'outlaw.turn', CharacterAt>
+  | Body<
+      'outlaw.ambush',
+      CharacterAt & {
+        readonly outlawIds: readonly CharacterId[];
+        readonly victimIds: readonly CharacterId[];
+        /** Whether the victims could talk their way through, and chose to. */
+        readonly parley: 'surrendered' | 'refused' | 'misunderstood';
+      }
+    >
+  | Body<'crime.robbery', CharacterAt & { readonly victimId: CharacterId; readonly gold: number }>
+  /** locationId is the town posting it. */
+  | Body<'bounty.post', CharacterAt & { readonly amount: number }>
+  /** characterId is the hunter. */
+  | Body<'bounty.claim', CharacterAt & { readonly outlawId: CharacterId; readonly amount: number }>
+  | Body<'outlaw.reform', CharacterAt>
   // Trade
   | Body<
       'trade.sell',
@@ -217,5 +281,23 @@ export const EVENT_IMPORTANCE: Record<EventType, Importance> = {
   'item.legend': Importance.Notable,
   'magic.learn': Importance.Normal,
   'magic.cast': Importance.Normal,
+  'social.meet': Importance.Trivial,
+  'social.friend': Importance.Normal,
+  'social.rival': Importance.Normal,
+  'social.quarrel': Importance.Normal,
+  'social.mourn': Importance.Normal,
+  'social.rumor': Importance.Trivial,
+  'character.language': Importance.Normal,
+  'party.form': Importance.Normal,
+  'party.join': Importance.Normal,
+  'party.leave': Importance.Normal,
+  'party.disband': Importance.Normal,
+  'party.share': Importance.Normal,
+  'outlaw.turn': Importance.Notable,
+  'outlaw.ambush': Importance.Normal,
+  'crime.robbery': Importance.Notable,
+  'bounty.post': Importance.Normal,
+  'bounty.claim': Importance.Notable,
+  'outlaw.reform': Importance.Notable,
   'trade.sell': Importance.Normal,
 };

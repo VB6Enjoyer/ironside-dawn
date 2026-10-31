@@ -35,6 +35,8 @@ const HALF_LIFE_DAYS: Record<MemoryEvent['kind'], number> = {
   treasure: 180,
   backlash: 90,
   level: 60,
+  grief: 180,
+  wronged: 120,
 };
 
 export function rollTraits(rng: Rng, species: SpeciesId): Traits {
@@ -150,12 +152,12 @@ export function learnFromDelve(
 export function fearOf(character: Character, locationId: LocationId, now: number): number {
   let fear = character.expectations[locationId]?.danger ?? 0;
   for (const memory of character.memories) {
-    if (
-      (memory.kind === 'near-death' || memory.kind === 'fled') &&
-      memory.locationId === locationId
-    ) {
-      fear += vividness(memory, now) * (memory.kind === 'near-death' ? 0.6 : 0.3);
+    if (memory.kind !== 'near-death' && memory.kind !== 'fled' && memory.kind !== 'wronged') {
+      continue;
     }
+    if (memory.locationId !== locationId) continue;
+    const weight = memory.kind === 'near-death' ? 0.6 : memory.kind === 'fled' ? 0.3 : 0.4;
+    fear += vividness(memory, now) * weight;
   }
   return Math.min(1.5, fear);
 }

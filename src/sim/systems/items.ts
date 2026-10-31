@@ -24,7 +24,7 @@ import {
 } from '../../content';
 import type { Rng } from '../core/rng';
 import type { SimContext } from '../context';
-import type { Character, Item, ItemId, LocationId } from '../model';
+import type { Character, Equipment, Item, ItemId, LocationId } from '../model';
 import { remember, satisfy } from './mind';
 import { addDeed } from './progress';
 
@@ -104,13 +104,19 @@ export function itemEffects(item: Item): GearTotals {
   return totals;
 }
 
-/** What everything a character wears adds up to. */
-export function gearTotals(character: Character): GearTotals {
+/** Equipment is replaced, never changed in place, so its totals can be kept. */
+const totalsCache = new WeakMap<Equipment, Readonly<GearTotals>>();
+
+/** What everything a character wears adds up to. Shared: don't modify it. */
+export function gearTotals(character: Character): Readonly<GearTotals> {
+  const cached = totalsCache.get(character.equipment);
+  if (cached) return cached;
   const totals = emptyTotals();
   const { weapon, armor, trinket } = character.equipment;
   for (const item of [weapon, armor, trinket]) {
     if (item) addEffects(totals, itemEffects(item));
   }
+  totalsCache.set(character.equipment, totals);
   return totals;
 }
 

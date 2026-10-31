@@ -1,6 +1,7 @@
 import type {
   CreatureId,
   CultureId,
+  LanguageId,
   LootId,
   PastimeId,
   SkillId,
@@ -12,7 +13,8 @@ import type {
   Traits,
 } from '../../content';
 import type { CreatureRef } from './encounter';
-import type { CharacterId, EncounterId, ItemId, LocationId } from './ids';
+import type { CharacterId, EncounterId, ItemId, LocationId, PartyId } from './ids';
+import type { Opinion, Outlaw } from './social';
 import type { Equipment, Item } from './item';
 import type { Drives, Expectation, Goal, Memory } from './mind';
 
@@ -67,9 +69,20 @@ export interface Character {
   visited: LocationId[];
   goal: Goal | null;
 
+  /** What they think of those they have met. Capped. */
+  opinions: Partial<Record<CharacterId, Opinion>>;
+  /** Proficiency in each language, 0 to 100. The native tongue is 100. */
+  languages: Partial<Record<LanguageId, number>>;
+  partyId: PartyId | null;
+  outlaw: Outlaw | null;
+  /** How each town sees them, -1 (wanted) to 1 (celebrated). */
+  reputation: Partial<Record<LocationId, number>>;
+
   /** Where the character is, or null while on the road. */
   locationId: LocationId | null;
   activity: Activity;
+  /** Identifies the one scheduled wake-up still in force (see systems/wake.ts). */
+  wakeToken: number;
   death: Death | null;
 }
 
@@ -103,6 +116,7 @@ export interface Death {
 
 export type DeathCause =
   | { readonly kind: 'creature'; readonly creature: CreatureRef }
+  | { readonly kind: 'character'; readonly characterId: CharacterId }
   | { readonly kind: 'trap'; readonly trap: TrapId }
   | { readonly kind: 'magic'; readonly spell: SpellId };
 
@@ -145,12 +159,9 @@ export type Activity =
       readonly remaining: readonly LocationId[];
     }
   | ({ readonly kind: 'delving' } & DelveProgress)
-  | {
-      readonly kind: 'fighting';
-      readonly encounterId: EncounterId;
-      /** The delve to return to after the fight. */
-      readonly delve: DelveProgress;
-    }
+  | { readonly kind: 'fighting'; readonly encounterId: EncounterId }
+  /** Traveling or delving with a party, led by `leaderId`, who decides for all. */
+  | { readonly kind: 'accompanying'; readonly leaderId: CharacterId }
   | { readonly kind: 'dead' };
 
 export interface TravelLeg {

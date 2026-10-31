@@ -1,6 +1,7 @@
 import type { SimContext } from '../context';
 import type { Character, DeathCause } from '../model';
 import { carriedGear } from './items';
+import { mournDeath } from './social';
 
 /** Permanent death. The character stays in the world's records. */
 export function die(ctx: SimContext, character: Character, cause: DeathCause): void {
@@ -29,4 +30,5 @@ export function die(ctx: SimContext, character: Character, cause: DeathCause): v
     [character.id],
     locationId,
   );
+  mournDeath(ctx, character, cause.kind === 'character' ? cause.characterId : null);
 }

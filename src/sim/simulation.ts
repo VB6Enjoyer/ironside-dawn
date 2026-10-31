@@ -70,6 +70,8 @@ export function createSimulation(options: SimulationOptions): Simulation {
       ecology: root.fork('ecology'),
       magic: root.fork('magic'),
       items: root.fork('items'),
+      social: root.fork('social'),
+      outlaws: root.fork('outlaws'),
     },
     emit(body, actors, locationId) {
       const event = {
@@ -95,6 +97,7 @@ export function createSimulation(options: SimulationOptions): Simulation {
       case 'character.wake': {
         const character = world.characters.get(job.characterId);
         if (!character) throw new Error(`Unknown character ${job.characterId}`);
+        if (job.token !== character.wakeToken) return; // replaced by a later wake-up
         wakeCharacter(ctx, character);
         return;
       }

@@ -27,6 +27,8 @@ export function testContext(seed = 'test'): SimContext & { events: SimEvent[] } 
       ecology: fork('ecology'),
       magic: fork('magic'),
       items: fork('items'),
+      social: fork('social'),
+      outlaws: fork('outlaws'),
     },
     emit(body, actors, locationId) {
       const event = {

@@ -8,6 +8,7 @@ export type LocationId = Brand<string, 'LocationId'>;
 export type RouteId = Brand<string, 'RouteId'>;
 export type EncounterId = Brand<string, 'EncounterId'>;
 export type ItemId = Brand<string, 'ItemId'>;
+export type PartyId = Brand<string, 'PartyId'>;
 export type EntityId = CharacterId | LocationId;
 
 /** Event IDs are sequential integers, starting at 1. */

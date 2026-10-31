@@ -122,8 +122,8 @@ describe('a simulated season', () => {
     }
   });
 
-  it('keeps every journey consistent: depart, pass through, arrive where it was going', () => {
-    const journeys = new Map<CharacterId, { destination: LocationId; at: LocationId | null }>();
+  it('keeps every journey consistent: depart, pass through, arrive (or be ambushed) on the way', () => {
+    const journeys = new Map<CharacterId, LocationId>();
     const position = new Map<CharacterId, LocationId>();
     for (const e of events) {
       switch (e.type) {
@@ -131,17 +131,28 @@ describe('a simulated season', () => {
           position.set(e.data.characterId, e.data.homeId);
           break;
         case 'travel.depart':
-          expect(journeys.has(e.data.characterId)).toBe(false);
-          expect(position.get(e.data.characterId)).toBe(e.data.fromId);
-          journeys.set(e.data.characterId, { destination: e.data.destinationId, at: null });
+          for (const id of [e.data.characterId, ...e.data.companions]) {
+            expect(journeys.has(id)).toBe(false);
+            expect(position.get(id)).toBe(e.data.fromId);
+            journeys.set(id, e.data.destinationId);
+          }
           break;
         case 'travel.pass':
-          expect(journeys.get(e.data.characterId)?.destination).toBe(e.data.destinationId);
+          expect(journeys.get(e.data.characterId)).toBe(e.data.destinationId);
           break;
         case 'travel.arrive':
-          expect(journeys.get(e.data.characterId)?.destination).toBe(e.data.locationId);
-          journeys.delete(e.data.characterId);
-          position.set(e.data.characterId, e.data.locationId);
+          for (const id of e.actors as CharacterId[]) {
+            expect(journeys.get(id)).toBe(e.data.locationId);
+            journeys.delete(id);
+            position.set(id, e.data.locationId);
+          }
+          break;
+        case 'combat.start':
+          // An ambush ends a journey where it happens.
+          for (const id of e.actors as CharacterId[]) {
+            journeys.delete(id);
+            position.set(id, e.data.locationId);
+          }
           break;
         case 'character.pastime':
         case 'character.rest':
@@ -194,18 +205,22 @@ describe('a year of danger', () => {
     const fighting = new Set<CharacterId>();
     for (const e of events) {
       if (e.type === 'combat.start') {
-        expect(fighting.has(e.data.characterId)).toBe(false);
-        fighting.add(e.data.characterId);
+        for (const id of e.actors as CharacterId[]) {
+          expect(fighting.has(id)).toBe(false);
+          fighting.add(id);
+        }
       }
-      if (e.type === 'combat.victory' || e.type === 'combat.escape') {
-        expect(fighting.delete(e.data.characterId)).toBe(true);
+      if (e.type === 'combat.victory') {
+        for (const id of e.data.characterIds) expect(fighting.delete(id)).toBe(true);
       }
-      if (e.type === 'character.death' && e.data.cause.kind === 'creature') {
-        expect(fighting.delete(e.data.characterId)).toBe(true);
-      }
+      if (e.type === 'combat.escape') expect(fighting.delete(e.data.characterId)).toBe(true);
+      if (e.type === 'character.death') fighting.delete(e.data.characterId);
     }
     // Only fights still going at the end of the year remain open.
-    expect(fighting.size).toBe(sim.world.encounters.size);
+    const inFights = [...sim.world.encounters.values()].flatMap((enc) =>
+      enc.sides.flatMap((side) => side.characters.filter((id) => !enc.out[id])),
+    );
+    expect([...fighting].sort()).toEqual(inFights.sort());
   });
 
   it('keeps the dead dead', () => {
@@ -291,6 +306,32 @@ describe('a year of danger', () => {
         const dungeon = sim.world.locations.get(legend.lostAt!)!.dungeon!;
         expect(dungeon.lostItems.map((i) => i.id)).toContain(legend.item.id);
       }
+    }
+  });
+
+  it('keeps parties consistent: leaders in them, members pointing back, followers with their own leader', () => {
+    for (const party of sim.world.parties.values()) {
+      expect(party.members.length).toBeGreaterThanOrEqual(2);
+      expect(party.members.length).toBeLessThanOrEqual(4);
+      expect(party.members).toContain(party.leaderId);
+      for (const id of party.members) {
+        const member = sim.world.characters.get(id)!;
+        expect(member.partyId).toBe(party.id);
+        expect(member.death).toBeNull();
+      }
+    }
+    for (const c of characters) {
+      if (c.activity.kind !== 'accompanying') continue;
+      const party = sim.world.parties.get(c.partyId!)!;
+      expect(party.leaderId).toBe(c.activity.leaderId);
+    }
+  });
+
+  it('posts bounties only on outlaws who have done something', () => {
+    for (const bounty of sim.world.bounties.values()) {
+      expect(bounty.amount).toBeGreaterThan(0);
+      const outlaw = sim.world.characters.get(bounty.outlawId)!;
+      expect(outlaw.outlaw?.crimes ?? 0).toBeGreaterThan(0);
     }
   });
 

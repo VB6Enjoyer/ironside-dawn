@@ -3,6 +3,8 @@ import { DAY, HOUR, nextTimeOfDay } from '../core/time';
 import type { SimContext } from '../context';
 import { createCharacter, townPopulation, towns } from '../gen/people';
 import { isAlive } from './condition';
+import { considerCrime } from './outlaws';
+import { hearTownLanguages } from './social';
 
 /** The daily job runs in the morning, so newcomers arrive by day. */
 const DAILY_AT = 7 * HOUR;
@@ -43,7 +45,13 @@ export function daily(ctx: SimContext, targetPopulation: number): void {
   }
 
   let living = 0;
-  for (const character of ctx.world.characters.values()) if (isAlive(character)) living++;
+  for (const character of ctx.world.characters.values()) {
+    if (!isAlive(character)) continue;
+    living++;
+    considerCrime(ctx, character);
+    const here = character.locationId ? ctx.world.locations.get(character.locationId) : undefined;
+    if (here?.kind === 'town') hearTownLanguages(ctx, character, here);
+  }
   const shortage = (targetPopulation - living) / targetPopulation;
   if (shortage > 0 && rng.chance(Math.min(1, NEWCOMER_CHANCE * shortage * 4))) {
     const homes = towns(ctx).filter((t) => townPopulation(t) > 0);

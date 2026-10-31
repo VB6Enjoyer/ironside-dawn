@@ -50,11 +50,14 @@ export function createWorldState(seed: string, map: MapDef): World {
     routes,
     encounters: new Map(),
     legends: new Map(),
+    parties: new Map(),
+    bounties: new Map(),
     scheduler: createScheduler(),
     takenNames: new Set(),
     nextCharacterNumber: 1,
     nextEncounterNumber: 1,
     nextItemNumber: 1,
+    nextPartyNumber: 1,
     nextEventId: 1,
   };
 }

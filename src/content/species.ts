@@ -1,5 +1,6 @@
 import type { CultureId } from './cultures';
 import type { StatId } from './stats';
+import type { LanguageId } from './languages';
 import type { TraitTendencies } from './traits';
 import type { ArmorId, WeaponId } from './items';
 
@@ -20,6 +21,7 @@ export interface SpeciesDef {
   readonly giftChance: number;
   /** How the people's personalities lean (WORLD.md §3). */
   readonly traits: TraitTendencies;
+  readonly language: LanguageId;
 }
 
 export const SPECIES = {
@@ -33,6 +35,7 @@ export const SPECIES = {
     armor: { padded: 1, leather: 2, scale: 1 },
     giftChance: 0.05,
     traits: { sociability: { mean: 0.55 } },
+    language: 'common',
   },
   elf: {
     id: 'elf',
@@ -44,6 +47,7 @@ export const SPECIES = {
     armor: { padded: 1, leather: 3 },
     giftChance: 0.18,
     traits: { patience: { mean: 0.65 }, curiosity: { mean: 0.6 }, sociability: { mean: 0.42 } },
+    language: 'sylvan',
   },
   dwarf: {
     id: 'dwarf',
@@ -60,6 +64,7 @@ export const SPECIES = {
       bravery: { mean: 0.6 },
       sociability: { mean: 0.45 },
     },
+    language: 'deeptongue',
   },
 } as const satisfies Record<string, SpeciesDef>;
 

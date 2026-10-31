@@ -1,15 +1,17 @@
 import { creatureDef, TRAPS, type CreatureId, type RoomOutcome } from '../../content';
-import { schedule } from '../core/scheduler';
 import { MINUTE } from '../core/time';
 import type { SimContext } from '../context';
 import type { Character, DelveProgress, Dungeon, Item, Location, LootItem, Motive } from '../model';
-import { startFight } from './combat';
+import { startDelveFight } from './combat';
 import { isDizzy, modifier, retreatThreshold } from './condition';
 import { die } from './death';
 import { claimLegend, generateItem, takeGear } from './items';
 import { rollLootItem } from './loot';
 import { learnFromDelve, satisfy } from './mind';
+import { followersOf, releaseFollowers, shareSpoils } from './social';
 import { gainXp, practice, skillBonus } from './progress';
+import { wakeAt } from './wake';
+import { moveTo } from './whereabouts';
 
 /**
  * Delves: a dungeon explored one chamber at a time. Each chamber may hold a
@@ -53,6 +55,7 @@ export function enterDelve(
   character: Character,
   location: Location,
   why: readonly Motive[] = [],
+  companions: readonly Character[] = [],
 ): void {
   if (!location.dungeon) throw new Error(`${location.id} is not a dungeon`);
   character.activity = {
@@ -65,8 +68,16 @@ export function enterDelve(
     lowestHp: character.hp / character.maxHp,
   };
   ctx.emit(
-    { type: 'delve.enter', data: { characterId: character.id, locationId: location.id, why } },
-    [character.id],
+    {
+      type: 'delve.enter',
+      data: {
+        characterId: character.id,
+        locationId: location.id,
+        why,
+        companions: companions.map((c) => c.id),
+      },
+    },
+    [character.id, ...companions.map((c) => c.id)],
     location.id,
   );
   nextChamber(ctx, character);
@@ -75,10 +86,7 @@ export function enterDelve(
 /** Back to exploring after a won fight. */
 export function resumeDelve(ctx: SimContext, character: Character, progress: DelveProgress): void {
   character.activity = { kind: 'delving', ...progress };
-  schedule(ctx.world.scheduler, ctx.world.time + ctx.rng.delve.int(1, 3) * MINUTE, {
-    kind: 'character.wake',
-    characterId: character.id,
-  });
+  wakeAt(ctx, character, ctx.world.time + ctx.rng.delve.int(1, 3) * MINUTE);
 }
 
 /** Called when a delving character wakes: leave, or explore the next chamber. */
@@ -89,15 +97,18 @@ export function delveStep(ctx: SimContext, character: Character): void {
   const dungeon = location.dungeon!;
   const rng = ctx.rng.delve;
 
-  if (activity.room > 0 && shouldLeave(ctx, character, activity, dungeon)) {
+  const party = [character, ...followersOf(ctx, character)];
+  if (activity.room > 0 && party.some((m) => shouldLeave(ctx, m, activity, dungeon))) {
     exitDelve(ctx, character, activity, false);
     return;
   }
 
   const room = activity.room + 1;
   const progress: DelveProgress = { ...activity, room };
-  satisfy(character, 'purpose', PURPOSE_PER_CHAMBER);
-  character.stamina = Math.max(0, character.stamina - STAMINA_PER_CHAMBER);
+  for (const member of party) {
+    satisfy(member, 'purpose', PURPOSE_PER_CHAMBER);
+    member.stamina = Math.max(0, member.stamina - STAMINA_PER_CHAMBER);
+  }
 
   const outcome = rng.weighted(
     (Object.entries(dungeon.def.rooms) as [RoomOutcome, number][]).filter(([, w]) => w > 0),
@@ -108,13 +119,14 @@ export function delveStep(ctx: SimContext, character: Character): void {
       if (species) {
         const def = creatureDef(species);
         const available = dungeon.population[species] ?? 0;
-        const extra = Math.floor((room - 1) / GROUP_GROWTH_CHAMBERS);
+        // Deeper chambers, and bigger parties, draw bigger groups.
+        const extra = Math.floor((room - 1) / GROUP_GROWTH_CHAMBERS) + (party.length - 1);
         const count = rng.int(
           def.group[0],
           Math.max(def.group[0], Math.min(def.group[1] + extra, available)),
         );
         if (avoidFight(ctx, character, location, progress, species, count)) return;
-        startFight(ctx, character, location, progress, species, count);
+        startDelveFight(ctx, party, location, { leaderId: character.id, progress }, species, count);
         return;
       }
       quietChamber(ctx, character, location, progress);
@@ -139,13 +151,15 @@ export function exitDelve(
   progress: DelveProgress,
   fled: boolean,
 ): void {
+  const companions = followersOf(ctx, character);
   character.activity = { kind: 'idle' };
-  character.locationId = progress.locationId;
-  if (progress.room > 0)
-    gainXp(ctx, character, XP_PER_CHAMBER * progress.room, progress.locationId);
+  moveTo(ctx.world, character, progress.locationId);
   // What this trip taught them about the place, and the itch it scratched.
-  learnFromDelve(character, progress, fled, ctx.world.time);
-  satisfy(character, 'purpose', PURPOSE_PER_DELVE);
+  for (const member of [character, ...companions]) {
+    if (progress.room > 0) gainXp(ctx, member, XP_PER_CHAMBER * progress.room, progress.locationId);
+    learnFromDelve(member, progress, fled, ctx.world.time);
+    satisfy(member, 'purpose', PURPOSE_PER_DELVE);
+  }
   ctx.emit(
     {
       type: 'delve.exit',
@@ -158,13 +172,12 @@ export function exitDelve(
         fled,
       },
     },
-    [character.id],
+    [character.id, ...companions.map((c) => c.id)],
     progress.locationId,
   );
-  schedule(ctx.world.scheduler, ctx.world.time + MINUTE, {
-    kind: 'character.wake',
-    characterId: character.id,
-  });
+  shareSpoils(ctx, character, companions, progress);
+  releaseFollowers(ctx, character);
+  wakeAt(ctx, character, ctx.world.time + MINUTE);
 }
 
 function shouldLeave(
@@ -329,11 +342,13 @@ function treasureChamber(
 
 function trapChamber(
   ctx: SimContext,
-  character: Character,
+  leader: Character,
   location: Location,
   progress: DelveProgress,
 ) {
   const rng = ctx.rng.delve;
+  // Whoever goes first trips it.
+  const character = rng.pick([leader, ...followersOf(ctx, leader)]);
   const trap = rng.weighted(TRAPS.map((t) => [t, t.weight] as const));
   const difficulty = 10 + location.dungeon!.def.danger + trap.difficulty;
   const avoided =
@@ -364,27 +379,22 @@ function trapChamber(
     location.id,
   );
 
-  if (character.hp <= 0) die(ctx, character, { kind: 'trap', trap: trap.id });
-  else {
-    continueDelve(ctx, character, {
-      ...progress,
-      lowestHp: Math.min(progress.lowestHp, character.hp / character.maxHp),
-    });
+  if (character.hp <= 0) {
+    die(ctx, character, { kind: 'trap', trap: trap.id });
+    if (character === leader) return; // the delve dies with its leader; the rest are released
   }
+  continueDelve(ctx, leader, {
+    ...progress,
+    lowestHp: Math.min(progress.lowestHp, character.hp / character.maxHp),
+  });
 }
 
 function continueDelve(ctx: SimContext, character: Character, progress: DelveProgress): void {
   character.activity = { kind: 'delving', ...progress };
-  schedule(ctx.world.scheduler, ctx.world.time + ctx.rng.delve.int(...CHAMBER_MINUTES) * MINUTE, {
-    kind: 'character.wake',
-    characterId: character.id,
-  });
+  wakeAt(ctx, character, ctx.world.time + ctx.rng.delve.int(...CHAMBER_MINUTES) * MINUTE);
 }
 
 /** Next chamber right after entering, without the leave check. */
 function nextChamber(ctx: SimContext, character: Character): void {
-  schedule(ctx.world.scheduler, ctx.world.time + ctx.rng.delve.int(2, 6) * MINUTE, {
-    kind: 'character.wake',
-    characterId: character.id,
-  });
+  wakeAt(ctx, character, ctx.world.time + ctx.rng.delve.int(2, 6) * MINUTE);
 }
