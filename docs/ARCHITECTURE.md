@@ -226,12 +226,18 @@ full-world scans in hot paths. Techniques, from day one onward:
 3. **Silent detail.** Fights and delves are always resolved fully, so RNG use
    is identical either way. Fine-grained events (each blow, each room) are only
    _emitted_ when someone is watching that character or place. Emitting never
-   touches world RNG or state, so it can't change history. _(Planned for
-   Phase 6 with follow mode. Until then every blow is emitted as a trivial
-   event; detail events will need IDs that don't shift the main sequence.)_
+   touches world RNG or state, so it can't change history. _(As built in
+   Phase 6: the detail events are each blow, each flight and each quiet
+   chamber. An unwatched one is never built, but still takes its ID, so every
+   other event keeps the same ID whoever is watched. A test runs the same world
+   watching everyone, no one and one character, and compares. Other trivial
+   events (pastimes, nights' rest, passing through, meetings) are skipped the
+   same way unless the log is showing trivia, so at high speed and while
+   skipping ahead they cost nothing.)_
 4. **Retention by importance.** Unwatched trivial events are never stored.
    Normal events expire after a while. Notable and legendary events are kept
-   forever.
+   forever. _(As built: one ring per importance, 2,000 trivial, 20,000 normal,
+   100,000 notable, and every legendary event.)_
 5. **Display throttling.** The UI gets at most N events per batch above the
    current floor, and the rest becomes a digest line ("…and 3,412 minor
    happenings across the realm").
@@ -318,8 +324,14 @@ Consumers of the event stream:
   given event always reads the same way.
 - **Character memory** (in-sim): an actor in an event may record it.
 - **Statistics**: deaths by cause, gold flow, population.
-- **The chronicle**: important events (≥ notable) are kept forever. Trivial
-  ones expire from a ring buffer, so memory use stays flat over a long run.
+- **The chronicle**: important events (≥ notable) are kept for good. Trivial
+  and everyday ones expire, each importance from its own ring buffer, so
+  memory use stays flat over a long run and a flood of small events never
+  pushes out the chronicle.
+- **Seasonal samples**: at the start of every season the world records its
+  population by species, deaths by cause, levels, gold and crime, and every
+  living adventurer records their level, gold and kills. Charts are drawn from
+  these, not from the log.
 
 Events record what happened. Systems never read the log to decide anything;
 they read world state. This prevents feedback loops that are hard to debug.
@@ -442,6 +454,25 @@ an outlaw and their gang) share one combat system.
   `start()`, `pause()`, `setSpeed()`, `save()`, `load()`, `query(...)`. Phase 1
   may run it on the main thread behind the same interface, then switch to the
   worker before the population grows.
+
+  _As built (Phase 6, `src/host/`):_ the **engine** runs the clock, the log
+  floor, follow mode, fast-forward and the queries. It knows nothing about
+  workers: it takes messages and posts messages, so tests drive it in Node
+  with a hand-cranked timer. `worker.ts` wires it to the worker, and the
+  **remote host** on the main thread keeps a copy of what the UI shows all the
+  time (status, the log, every name and place) and turns requests into
+  promises. The protocol is about a dozen typed messages, written by hand
+  rather than with Comlink. Answers to requests are **world slices**, shaped
+  like the world (characters, parties, bounties by ID), so UI code reads them
+  as it read the world.
+
+- **Playback buffer**: at Real-time and Minute speeds the engine runs a
+  quarter of a real second ahead and lets events out when the shown clock
+  reaches them, sending updates 25 times a second, so blows land on time
+  rather than in bursts.
+- **Display throttling**: more than 250 new log entries in one update are
+  thinned, keeping the notable, the followed and the latest, and the rest
+  becomes a digest line ("…and 3,412 minor happenings across the realm").
 - The worker pushes **batched new events** and **small throttled snapshots**
   (clock, counts, the followed character) to the UI about **5–10 times per
   second**, no matter how fast the sim runs. The UI never re-renders per
@@ -460,6 +491,17 @@ an outlaw and their gang) share one combat system.
   first; switch to a binary format only if saves get large).
 - The save version is checked on load. Simple migrations are kept per version;
   until 1.0, an incompatible save is refused with a clear message.
+
+_As built (Phase 6):_ a save holds the world with its maps and sets encoded as
+tagged plain data, the state of every random stream, the population target,
+and the chronicle plus the 2,000 most recent everyday events. Loading it and
+carrying on gives exactly the history the world would have had without
+stopping; a test compares the two. A 500-adventurer world a year in is about
+3.5 MB of JSON, 0.7 MB gzipped. Saves live in two IndexedDB stores (a list and
+the data), so listing them is cheap. While a world runs it is autosaved once a
+minute and whenever the tab is hidden, one autosave per seed; opening a link to
+a world you've watched carries on from its autosave. Files are gzipped JSON
+where the browser can compress.
 
 ---
 

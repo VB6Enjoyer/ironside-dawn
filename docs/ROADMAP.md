@@ -455,43 +455,104 @@ compression work fully, and harden the technical base.
 
 **Observation tools**
 
-- [ ] **Follow mode**: pin a character and the log filters to them, with
+- [x] **Follow mode**: pin a character and the log filters to them, with
       their card always visible.
-- [ ] **Silent detail** (moved from Phase 2): blow-by-blow and chamber-by-
+- [x] **Silent detail** (moved from Phase 2): blow-by-blow and chamber-by-
       chamber events are only emitted for followed characters and watched
       places, without changing event IDs or history (`ARCHITECTURE.md` §4.2).
-- [ ] **Character profile page**: biography generated from life events,
+- [x] **Character profile page**: biography generated from life events,
       stats over time, gear, spells, relationships, memories, and a timeline.
-- [ ] **Location view**: who is here now, populations, recent events, and
+- [x] **Location view**: who is here now, populations, recent events, and
       dangers.
-- [ ] **Search and filters**: by character, location, species, event type, and
+- [x] **Search and filters**: by character, location, species, event type, and
       importance.
-- [ ] **Chronicle**: a curated history of notable and legendary events, by year.
-- [ ] **World statistics dashboard**: population by species, deaths by cause,
+- [x] **Chronicle**: a curated history of notable and legendary events, by year.
+- [x] **World statistics dashboard**: population by species, deaths by cause,
       level distribution, total gold, and crime, charted over time.
-- [ ] **Hall of Heroes / Graveyard / Most Wanted**.
+- [x] **Hall of Heroes / Graveyard / Most Wanted**.
 
 **Time compression** (`ARCHITECTURE.md` §4.2)
 
-- [ ] **Season** tier and **Fast-forward** ("skip N years") with a progress
+- [x] **Season** tier and **Fast-forward** ("skip N years") with a progress
       bar, pause and cancel, and a **digest** of what happened while skipping.
-- [ ] **Display throttling** with digest lines ("…and 3,412 minor happenings").
-- [ ] **Playback buffer** so Real-time and Minute tiers read smoothly.
+- [x] **Display throttling** with digest lines ("…and 3,412 minor happenings").
+- [x] **Playback buffer** so Real-time and Minute tiers read smoothly.
 
 **Hardening**
 
-- [ ] Move the simulation into a **Web Worker** (Comlink), with throttled
+- [x] Move the simulation into a **Web Worker** (Comlink), with throttled
       snapshots and on-demand `query()`.
-- [ ] **Save / load** to IndexedDB, plus export and import of save files.
-- [ ] "New world from seed" dialog. Seeds are shareable.
-- [ ] Event retention by importance (old trivial events expire; notable and
+- [x] **Save / load** to IndexedDB, plus export and import of save files.
+- [x] "New world from seed" dialog. Seeds are shareable.
+- [x] Event retention by importance (old trivial events expire; notable and
       higher are kept).
-- [ ] Hit the fast-forward performance target in `ARCHITECTURE.md` §8 with the
+- [x] Hit the fast-forward performance target in `ARCHITECTURE.md` §8 with the
       current population.
 
 **Exit criteria:** Watch one duel in real time, then skip ten years in a few
 minutes. Read the digest, save, reload tomorrow, pick an interesting survivor,
 and read their life story.
+
+**Status: done.** Notes from building it:
+
+- **The worker** (`src/host/`): an engine that runs the clock, the log
+  floor, follow mode, skips and the queries, a worker shell around it, and a
+  host on the main thread that mirrors what the UI always shows (status, the
+  log, every name and place) and asks for the rest. The messages are typed by
+  hand instead of using Comlink: there are only a dozen. The engine has no idea
+  it's in a worker, so its tests drive it in Node with a hand-cranked timer,
+  and one checks that driving it at every speed in turn gives exactly the
+  world a direct run does.
+- **Silent detail**: blows, flights and quiet chambers are only reported for
+  the followed character and the place being looked at, and other trivial
+  events only when the log would show them (a Trivial floor). They still take
+  their IDs, so nothing else changes; a test proves the world and every
+  other event come out the same whoever is watched.
+- **Follow mode**: "Follow" on a card logs everything that character does,
+  blow by blow, whatever the floor, and the log can be narrowed to them.
+- **Profiles**: a life story written from their record (origins and
+  character, career, legendary finds and spells, friends, rivals and grief,
+  crimes and bounties, and how they died), level and gold charts from
+  seasonal samples, and a timeline by year. The card sits alongside with the
+  rest: gear, skills, bonds, memories.
+- **Places**: who's there (outlaws lying in wait first), what lives in a
+  dungeon and how dangerous it is, legendary items lost there, who fell there,
+  and what happened lately.
+- **Search and filters**: find anyone who ever lived, or any place, by name;
+  filter the log by kind of event, place and people. Importance is the
+  Detail setting.
+- **Chronicle** by year, a **statistics** page (adventurers by people, deaths
+  by cause, levels, gold, crime and justice over time, and today's levels),
+  and the **Hall of Heroes, Most Wanted and Graveyard**. The charts are small
+  hand-made SVG with a hover crosshair, legends and a table view each.
+- **Time**: a Season speed, and skipping ahead a season, a year, 5, 10 or
+  25 years with a progress bar and a "Stop here". Afterwards a digest says
+  what changed (people, deaths, levels, legendary finds, crime) and lists
+  what will be remembered. While skipping, the log only takes notable events.
+- **Display throttling**: more than 250 entries in one update keeps the
+  notable, the followed and the latest; the rest becomes "…and 3,412 minor
+  happenings across the realm".
+- **Playback buffer**: at Real-time and Minute the engine runs a quarter of a
+  second ahead and releases events when the clock reaches them.
+- **Saves**: the world and every random stream's state, plus the chronicle.
+  Loading and carrying on gives the same history as never stopping (tested).
+  Saved in IndexedDB, autosaved every minute and when the tab is hidden;
+  opening the link to a world you watched carries on where you left it.
+  Exported as gzipped JSON and imported back. A "Worlds" dialog starts new
+  worlds from a seed and a size, and links are shareable.
+- **Retention**: separate rings per importance: 2,000 trivial, 20,000
+  everyday, 100,000 notable, and every legendary event.
+- **Bugs found on the way**: a follower whose leader turned outlaw or
+  quarrelled mid-journey was left idle on the road, and crashed the next
+  decision (they now finish the leg alone). A bounty claim listed the dead
+  outlaw among its actors.
+- **Performance**: 500 characters run 10 years in 277 s headless, under the
+  conditions of a fast-forward (no trivia, no detail), against the 5-minute
+  target and 299 s at the end of Phase 5. Getting there: trivia nobody will see aren't built; a
+  crowded tavern is a few strangers plus people you know, not the whole town;
+  opinions are forgotten in batches; a character weighs only the two most
+  tempting bounties; decisions keep the best three options as they go instead
+  of sorting all of them.
 
 ---
 

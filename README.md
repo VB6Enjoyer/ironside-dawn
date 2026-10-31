@@ -28,14 +28,14 @@ town's market, or watch a dungeon's population change over time.
 
 ## Status
 
-Phase 5 (Kin & Bad Blood) is done: adventurers meet at taverns, make friends
-and rivals, team up into parties that delve and split the spoils, mourn the
-fallen and hold grudges. Each people has its own tongue, learned by living
-among its speakers. The broke and the dishonorable turn outlaw and rob
-travelers on the road, and bounty hunters come after them. Before that,
-Phase 4 gave everyone personalities, drives and fading memories, and the log
-says why they did things. Click any name to open their character card. Phase
-6 (The Observatory) is next. The plan is in:
+Phase 6 (The Observatory) is done. The world runs in a Web Worker. Follow
+anyone and watch their fights blow by blow, read their life story, look in on
+any place, search the living and the dead, and browse the chronicle, the
+statistics and the halls of heroes, the fallen and the wanted. Skip ahead
+years at a time and read a digest of what happened. Worlds are saved as you
+watch and can be exported, imported and shared by seed. Phases 1 to 5 built
+the world itself: travel, dungeons, growth and magic, minds, bonds, languages
+and outlaws. Phase 7 (Markets) is next. The plan is in:
 
 - [`docs/ROADMAP.md`](docs/ROADMAP.md): the phased development plan, with exit
   criteria for each milestone.
@@ -71,7 +71,7 @@ npm run dev
 src/sim/      Simulation core. No DOM, no React, no Math.random (lint-enforced).
 src/content/  Data tables: species, creatures, items, names…
 src/text/     Turns events into prose. No DOM; shared by the UI and the CLI.
-src/host/     Runs the simulation for the UI: speed tiers, pause, log floor.
+src/host/     Runs the simulation in a Web Worker for the UI: speeds, skips, queries.
 src/ui/       React app.
 tools/        Headless tools, such as the sim CLI.
 docs/         Roadmap, world design and architecture.
