@@ -28,11 +28,14 @@ town's market, or watch a dungeon's population change over time.
 
 ## Status
 
-Phase 4 (Minds) is done: adventurers have personalities, drives and fading
-memories. They choose what to do by weighing what they want, learn which
-dungeons pay and which nearly killed them, and the log says why they did
-things. Click any name to open their character card. Phase 5 (Kin & Bad
-Blood) is next. The plan is in:
+Phase 5 (Kin & Bad Blood) is done: adventurers meet at taverns, make friends
+and rivals, team up into parties that delve and split the spoils, mourn the
+fallen and hold grudges. Each people has its own tongue, learned by living
+among its speakers. The broke and the dishonorable turn outlaw and rob
+travelers on the road, and bounty hunters come after them. Before that,
+Phase 4 gave everyone personalities, drives and fading memories, and the log
+says why they did things. Click any name to open their character card. Phase
+6 (The Observatory) is next. The plan is in:
 
 - [`docs/ROADMAP.md`](docs/ROADMAP.md): the phased development plan, with exit
   criteria for each milestone.
