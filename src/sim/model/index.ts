@@ -5,6 +5,7 @@ export type {
   DeathCause,
   Deed,
   DelveProgress,
+  LifeSample,
   LootItem,
   TimedStatus,
   TravelLeg,
@@ -25,6 +26,6 @@ export type {
 export type { Equipment, Item, Legend } from './item';
 export type { Job } from './jobs';
 export type { Dungeon, Location, Route } from './location';
-export type { World } from './world';
+export type { Tally, World, WorldSample } from './world';
 export type { DriveId, Drives, Expectation, Goal, Memory, MemoryEvent, Motive } from './mind';
 export type { Bounty, Opinion, Outlaw, Party } from './social';

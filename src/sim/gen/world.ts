@@ -59,6 +59,8 @@ export function createWorldState(seed: string, map: MapDef): World {
     nextItemNumber: 1,
     nextPartyNumber: 1,
     nextEventId: 1,
+    tally: { robberies: 0, murders: 0, bountiesClaimed: 0, legendsFound: 0 },
+    history: [],
   };
 }
 

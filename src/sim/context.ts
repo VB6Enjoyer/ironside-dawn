@@ -1,5 +1,5 @@
 import type { Rng } from './core/rng';
-import type { EntityId, EventBody, LocationId, SimEvent, World } from './model';
+import type { EntityId, EventBody, LocationId, World } from './model';
 
 /** What a system gets to work with while handling a job. */
 export interface SimContext {
@@ -18,5 +18,6 @@ export interface SimContext {
     readonly social: Rng;
     readonly outlaws: Rng;
   };
-  emit(body: EventBody, actors: readonly EntityId[], locationId: LocationId | null): SimEvent;
+  /** Reports an event. Detail events nobody is watching are skipped (see `Watch`). */
+  emit(body: EventBody, actors: readonly EntityId[], locationId: LocationId | null): void;
 }

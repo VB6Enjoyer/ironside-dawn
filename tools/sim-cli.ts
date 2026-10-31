@@ -102,7 +102,7 @@ function main(): number {
   const sim = createSimulation({
     seed,
     characterCount,
-    eventCapacity: 1,
+    retention: 1,
     onEvent(event) {
       hash.update(JSON.stringify(event));
       counts.set(event.type, (counts.get(event.type) ?? 0) + 1);

@@ -117,6 +117,7 @@ export function createCharacter(
     activity: { kind: 'idle' },
     wakeToken: 0,
     death: null,
+    history: [],
   };
   refreshMaxima(character);
   character.hp = character.maxHp;

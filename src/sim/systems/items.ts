@@ -300,6 +300,7 @@ export function claimLegend(
   if (!legend) {
     legend = { item, holder: null, lostAt: null, owners: [] };
     world.legends.set(item.id, legend);
+    world.tally.legendsFound++;
   }
   legend.holder = character.id;
   legend.lostAt = null;

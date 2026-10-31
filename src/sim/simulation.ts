@@ -1,14 +1,31 @@
 import { STARTER_MAP, type MapDef } from '../content';
-import { EventStore, type EventListener } from './core/event-store';
-import { createRng } from './core/rng';
+import { EventStore, type EventListener, type Retention } from './core/event-store';
+import { createRng, restoreRng, type Rng } from './core/rng';
 import { peekNext, popNext } from './core/scheduler';
 import type { SimContext } from './context';
 import { createWorldState, populate } from './gen/world';
-import { EVENT_IMPORTANCE, type Job, type SimEvent, type World } from './model';
+import {
+  EVENT_IMPORTANCE,
+  type CharacterId,
+  type EventType,
+  type Job,
+  type LocationId,
+  type SimEvent,
+  type World,
+} from './model';
 import { wakeCharacter } from './systems/behavior';
 import { beginSeason, scheduleNextSeason } from './systems/calendar';
 import { runRound } from './systems/combat';
 import { daily, scheduleDaily } from './systems/ecology';
+import { sampleHistory } from './systems/history';
+import {
+  checkSave,
+  decodeWorld,
+  encodeWorld,
+  SAVE_FORMAT,
+  SAVE_VERSION,
+  type WorldSave,
+} from './save';
 
 export interface SimulationOptions {
   readonly seed: string | number;
@@ -17,8 +34,13 @@ export interface SimulationOptions {
    * many are alive. Defaults to 20.
    */
   readonly characterCount?: number;
-  /** How many recent events to keep in memory. Defaults to 10,000. */
-  readonly eventCapacity?: number;
+  /**
+   * How many past events of each importance to keep in memory (a number:
+   * that many of each). Defaults to `DEFAULT_RETENTION`.
+   */
+  readonly retention?: number | Partial<Retention>;
+  /** Whose blow-by-blow detail to report. Defaults to everyone's. */
+  readonly watch?: Watch;
   /** Defaults to the hand-made starter map. */
   readonly map?: MapDef;
   /**
@@ -26,6 +48,11 @@ export interface SimulationOptions {
    * created. Use this rather than `events.subscribe()` to see the full history.
    */
   readonly onEvent?: EventListener;
+  /**
+   * Carry on a saved world instead of creating one. `seed`, `characterCount`
+   * and `map` are then taken from the save.
+   */
+  readonly restore?: WorldSave;
 }
 
 export interface AdvanceOptions {
@@ -49,31 +76,82 @@ export interface Simulation {
   readonly events: EventStore;
   /** Runs every job due up to and including `until`, then sets the clock to `until`. */
   advance(until: number, options?: AdvanceOptions): AdvanceResult;
+  /** A snapshot of the world to carry on later. Unaffected by what happens after. */
+  save(): WorldSave;
+  /** Changes whose blow-by-blow detail is reported. Never changes what happens. */
+  setWatch(watch: Watch): void;
 }
 
+/**
+ * Silent detail (ARCHITECTURE.md §4.2): blow-by-blow and room-by-room events
+ * are only reported for watched characters and places. Fights and delves run
+ * in full either way, and the unreported events still take their IDs, so
+ * history and every other event are the same whoever is watched.
+ */
+export type Watch =
+  | 'all'
+  | 'none'
+  | {
+      readonly characters: ReadonlySet<CharacterId>;
+      readonly locations: ReadonlySet<LocationId>;
+    };
+
+export const DETAIL_EVENTS: ReadonlySet<EventType> = new Set([
+  'combat.attack',
+  'combat.flee',
+  'delve.quiet',
+]);
+
+/** One random stream per subsystem (ARCHITECTURE.md §4.1). */
+const STREAMS = [
+  'behavior',
+  'travel',
+  'people',
+  'delve',
+  'combat',
+  'loot',
+  'ecology',
+  'magic',
+  'items',
+  'social',
+  'outlaws',
+] as const satisfies readonly (keyof SimContext['rng'])[];
+
 export function createSimulation(options: SimulationOptions): Simulation {
-  const root = createRng(options.seed);
-  const world = createWorldState(String(options.seed), options.map ?? STARTER_MAP);
-  const events = new EventStore(options.eventCapacity);
+  const restore = options.restore ? checkSave(options.restore) : null;
+  const world = restore
+    ? decodeWorld(restore.world)
+    : createWorldState(String(options.seed), options.map ?? STARTER_MAP);
+  const events = new EventStore(options.retention);
+  let watch: Watch = options.watch ?? 'all';
+  const watched = (actors: readonly string[], locationId: LocationId | null) => {
+    if (watch === 'all') return true;
+    if (watch === 'none') return false;
+    const { characters, locations } = watch;
+    return (
+      (locationId !== null && locations.has(locationId)) ||
+      actors.some((id) => characters.has(id as CharacterId))
+    );
+  };
   if (options.onEvent) events.subscribe(options.onEvent);
-  const targetPopulation = options.characterCount ?? 20;
+  const targetPopulation = restore?.characterCount ?? options.characterCount ?? 20;
+
+  const root = createRng(world.seed);
+  const rng = Object.fromEntries(
+    STREAMS.map((name) => {
+      const state = restore?.rng[name];
+      return [name, state ? restoreRng(state) : root.fork(name)];
+    }),
+  ) as Record<(typeof STREAMS)[number], Rng>;
 
   const ctx: SimContext = {
     world,
-    rng: {
-      behavior: root.fork('behavior'),
-      travel: root.fork('travel'),
-      people: root.fork('people'),
-      delve: root.fork('delve'),
-      combat: root.fork('combat'),
-      loot: root.fork('loot'),
-      ecology: root.fork('ecology'),
-      magic: root.fork('magic'),
-      items: root.fork('items'),
-      social: root.fork('social'),
-      outlaws: root.fork('outlaws'),
-    },
+    rng,
     emit(body, actors, locationId) {
+      if (DETAIL_EVENTS.has(body.type) && !watched(actors, locationId)) {
+        world.nextEventId++;
+        return;
+      }
       const event = {
         ...body,
         id: world.nextEventId++,
@@ -83,14 +161,16 @@ export function createSimulation(options: SimulationOptions): Simulation {
         locationId,
       } as SimEvent;
       events.append(event);
-      return event;
     },
   };
 
-  ctx.emit({ type: 'world.created', data: { seed: world.seed } }, [], null);
-  populate(ctx, targetPopulation);
-  scheduleNextSeason(ctx);
-  scheduleDaily(ctx);
+  if (!restore) {
+    ctx.emit({ type: 'world.created', data: { seed: world.seed } }, [], null);
+    populate(ctx, targetPopulation);
+    sampleHistory(world);
+    scheduleNextSeason(ctx);
+    scheduleDaily(ctx);
+  }
 
   function run(job: Job): void {
     switch (job.kind) {
@@ -136,6 +216,18 @@ export function createSimulation(options: SimulationOptions): Simulation {
         run(next.job);
         jobsRun++;
       }
+    },
+    save() {
+      return {
+        format: SAVE_FORMAT,
+        version: SAVE_VERSION,
+        characterCount: targetPopulation,
+        rng: Object.fromEntries(STREAMS.map((name) => [name, rng[name].getState()])),
+        world: encodeWorld(world),
+      };
+    },
+    setWatch(next) {
+      watch = next;
     },
   };
 }

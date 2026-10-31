@@ -84,7 +84,12 @@ export interface Character {
   /** Identifies the one scheduled wake-up still in force (see systems/wake.ts). */
   wakeToken: number;
   death: Death | null;
+  /** How they stood at the start of each season they lived through. */
+  history: LifeSample[];
 }
+
+/** [time, level, gold, kills], compact because there are many. */
+export type LifeSample = readonly [t: number, level: number, gold: number, kills: number];
 
 export type TimedStatus =
   | { readonly kind: 'dizzy'; readonly until: number }

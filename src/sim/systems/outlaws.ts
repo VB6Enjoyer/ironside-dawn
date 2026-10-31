@@ -143,6 +143,7 @@ export function ambush(ctx: SimContext, traveler: Character, location: Location)
         [leader.id, victim.id],
         location.id,
       );
+      ctx.world.tally.robberies++;
       registerCrime(ctx, leader, victim, 'robbery', location.id);
     }
     // A good haul: off to spend it before the alarm is raised.
@@ -163,6 +164,7 @@ export function onCharacterKilled(ctx: SimContext, victim: Character, killer: Ch
     const bounty = ctx.world.bounties.get(victim.id);
     if (!bounty) return;
     ctx.world.bounties.delete(victim.id);
+    ctx.world.tally.bountiesClaimed++;
     killer.gold += bounty.amount;
     killer.goldEarned += bounty.amount;
     killer.reputation[bounty.townId] = Math.min(1, (killer.reputation[bounty.townId] ?? 0) + 0.3);
@@ -181,7 +183,10 @@ export function onCharacterKilled(ctx: SimContext, victim: Character, killer: Ch
     );
     return;
   }
-  if (killer.outlaw) registerCrime(ctx, killer, victim, 'murder', locationId);
+  if (killer.outlaw) {
+    ctx.world.tally.murders++;
+    registerCrime(ctx, killer, victim, 'murder', locationId);
+  }
 }
 
 /** A crime is known: the outlaw's bounty grows, and every town thinks less of them. */
