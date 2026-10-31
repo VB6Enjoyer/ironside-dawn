@@ -54,7 +54,12 @@ describe('describeEvent', () => {
         id: i,
         t: 0,
         type: 'character.pastime',
-        data: { characterId: someone, locationId: 'concordale' as LocationId, pastime: pastime.id },
+        data: {
+          characterId: someone,
+          locationId: 'concordale' as LocationId,
+          pastime: pastime.id,
+          why: [],
+        },
         importance: 0,
         actors: [someone],
         locationId: null,

@@ -28,8 +28,29 @@ export function roadsFrom(world: World, from: LocationId): readonly RoadLink[] {
   return network.get(from) ?? [];
 }
 
+// Roads never change, so paths are worth remembering too.
+const pathCaches = new WeakMap<World, Map<LocationId, Map<LocationId, Path | null>>>();
+
 /** Fastest path by typical travel time (Dijkstra), or null if unreachable. */
 export function findPath(world: World, from: LocationId, to: LocationId): Path | null {
+  let byOrigin = pathCaches.get(world);
+  if (!byOrigin) {
+    byOrigin = new Map();
+    pathCaches.set(world, byOrigin);
+  }
+  let cache = byOrigin.get(from);
+  if (!cache) {
+    cache = new Map();
+    byOrigin.set(from, cache);
+  }
+  const cached = cache.get(to);
+  if (cached !== undefined) return cached;
+  const path = searchPath(world, from, to);
+  cache.set(to, path);
+  return path;
+}
+
+function searchPath(world: World, from: LocationId, to: LocationId): Path | null {
   if (from === to) return { stops: [], duration: 0 };
 
   const best = new Map<LocationId, number>([[from, 0]]);

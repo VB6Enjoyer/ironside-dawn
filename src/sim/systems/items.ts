@@ -25,6 +25,7 @@ import {
 import type { Rng } from '../core/rng';
 import type { SimContext } from '../context';
 import type { Character, Item, ItemId, LocationId } from '../model';
+import { remember, satisfy } from './mind';
 import { addDeed } from './progress';
 
 /**
@@ -298,6 +299,8 @@ export function claimLegend(
   legend.lostAt = null;
   legend.owners.push({ characterId: character.id, at: world.time });
   addDeed(character, { kind: 'legend', at: world.time, itemId: item.id, name: item.uniqueName! });
+  remember(character, world.time, { kind: 'treasure', locationId, itemName: item.uniqueName! }, 1);
+  satisfy(character, 'glory', 0.5);
   ctx.emit(
     {
       type: 'item.legend',

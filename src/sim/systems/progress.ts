@@ -2,6 +2,7 @@ import { SKILL_RANKS, SKILL_ROLE, SKILLS, type Role, type SkillId } from '../../
 import type { SimContext } from '../context';
 import type { Character, Deed, LocationId } from '../model';
 import { gearTotals } from './items';
+import { remember, satisfy } from './mind';
 
 /**
  * Growth (ROADMAP.md Phase 3): experience and levels, skills that improve with
@@ -12,6 +13,7 @@ export const BASE_HP = 18;
 export const HP_PER_LEVEL = 3;
 export const BASE_STAMINA = 6;
 const MAX_DEEDS = 30;
+const GLORY_PER_LEVEL = 0.25;
 /** Skill gains shrink as proficiency grows: (1 - skill/100) to this power. */
 const LEARNING_CURVE = 2;
 
@@ -31,6 +33,8 @@ export function gainXp(
     character.level++;
     refreshMaxima(character);
     addDeed(character, { kind: 'level', at: ctx.world.time, level: character.level });
+    remember(character, ctx.world.time, { kind: 'level', level: character.level }, 0.5);
+    satisfy(character, 'glory', GLORY_PER_LEVEL);
     ctx.emit(
       {
         type: 'character.levelup',

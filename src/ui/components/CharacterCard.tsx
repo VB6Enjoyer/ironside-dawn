@@ -1,19 +1,35 @@
-import { useEffect } from 'react';
+import { Fragment, useEffect } from 'react';
 
-import { creatureDef, SKILLS, STATS, type CreatureId, type StatId } from '../../content';
+import {
+  creatureDef,
+  SKILLS,
+  STATS,
+  TRAIT_POLES,
+  TRAITS,
+  type CreatureId,
+  type StatId,
+} from '../../content';
 import {
   conditionsOf,
+  fearOf,
   roleOf,
+  vividMemories,
+  vividness,
   statValue,
   xpForLevel,
   type Character,
+  type Expectation,
   type Item,
+  type LocationId,
   type CharacterId,
   type SimEvent,
   type World,
 } from '../../sim';
 import {
-  braveryWord,
+  describeGoal,
+  describeMemory,
+  describeWhy,
+  personalitySummary,
   anItem,
   describeActivity,
   describeDeed,
@@ -87,6 +103,12 @@ export function CharacterCard({ world, characterId, log, names, onSelect, onClos
         <Prose segments={describeActivity(character, world)} />
         {dead && character.death && <> · {formatTimestamp(character.death.at)}</>}
       </p>
+      {!dead && character.goal && (
+        <p className="card-goal">
+          {describeGoal(character.goal, world)}{' '}
+          <span className="aside">{describeWhy(character.goal.why, names)}</span>
+        </p>
+      )}
 
       {!dead && (
         <section className="card-section" aria-label="Condition">
@@ -106,6 +128,27 @@ export function CharacterCard({ world, characterId, log, names, onSelect, onClos
           <Conditions character={character} now={world.time} />
         </section>
       )}
+
+      <section className="card-section">
+        <h3>Personality</h3>
+        <p className="card-summary">{personalitySummary(character.traits)}</p>
+        <dl className="traits">
+          {TRAITS.map((trait) => (
+            <div key={trait}>
+              <dt>{TRAIT_POLES[trait][0]}</dt>
+              <dd>
+                <span className="trait-track">
+                  <span
+                    className="trait-marker"
+                    style={{ left: `${character.traits[trait] * 100}%` }}
+                  />
+                </span>
+              </dd>
+              <dt>{TRAIT_POLES[trait][1]}</dt>
+            </div>
+          ))}
+        </dl>
+      </section>
 
       <section className="card-section">
         <h3>Attributes</h3>
@@ -172,8 +215,6 @@ export function CharacterCard({ world, characterId, log, names, onSelect, onClos
 
       <section className="card-section">
         <dl className="facts">
-          <dt>Temper</dt>
-          <dd>{braveryWord(character.bravery)}</dd>
           <dt>Gold</dt>
           <dd>
             {formatCount(character.gold)}{' '}
@@ -193,6 +234,9 @@ export function CharacterCard({ world, characterId, log, names, onSelect, onClos
           </dd>
         </dl>
       </section>
+
+      <Memories character={character} world={world} />
+      <Places character={character} world={world} />
 
       {character.deeds.length > 0 && (
         <section className="card-section">
@@ -227,6 +271,56 @@ export function CharacterCard({ world, characterId, log, names, onSelect, onClos
         </section>
       )}
     </aside>
+  );
+}
+
+function Memories({ character, world }: { character: Character; world: World }) {
+  const memories = vividMemories(character, world.time, 5);
+  if (memories.length === 0) return null;
+  return (
+    <section className="card-section">
+      <h3>Remembers</h3>
+      <ul className="memories">
+        {memories.map((memory, i) => (
+          <li key={i} style={{ opacity: 0.45 + 0.55 * vividness(memory, world.time) }}>
+            {describeMemory(memory, world)}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+/** What each dungeon has been like for them: their favorite, and the one they fear. */
+function Places({ character, world }: { character: Character; world: World }) {
+  const entries = Object.entries(character.expectations) as [LocationId, Expectation][];
+  if (entries.length === 0) return null;
+  return (
+    <section className="card-section">
+      <h3>Dungeons, in their experience</h3>
+      <dl className="facts">
+        {entries
+          .sort((a, b) => b[1].reward - a[1].reward)
+          .map(([id, e]) => {
+            const place = world.locations.get(id);
+            const fear = fearOf(character, id, world.time);
+            return (
+              <Fragment key={id}>
+                <dt>{place?.name ?? id}</dt>
+                <dd>
+                  {e.trips} {e.trips === 1 ? 'trip' : 'trips'}, about {Math.round(e.reward)} gold
+                  each
+                  {fear >= 0.5 ? (
+                    <span className="muted"> · feared</span>
+                  ) : fear >= 0.25 ? (
+                    <span className="muted"> · wary of it</span>
+                  ) : null}
+                </dd>
+              </Fragment>
+            );
+          })}
+      </dl>
+    </section>
   );
 }
 

@@ -59,15 +59,6 @@ export function describeActivity(character: Character, world: World): Segment[] 
   }
 }
 
-/** A word for a bravery score from 0 to 1. */
-export function braveryWord(bravery: number): string {
-  if (bravery < 0.3) return 'timid';
-  if (bravery < 0.45) return 'cautious';
-  if (bravery < 0.65) return 'steady';
-  if (bravery < 0.85) return 'bold';
-  return 'fearless';
-}
-
 /** One line for a remembered deed: "Slew an enraged warg". */
 export function describeDeed(deed: Deed): string {
   switch (deed.kind) {

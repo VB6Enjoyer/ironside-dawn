@@ -7,7 +7,7 @@
 import { randomInt } from 'node:crypto';
 import { parseArgs } from 'node:util';
 
-import { creatureDef, type CreatureId } from '../src/content';
+import { creatureDef, type CreatureId, type TraitId } from '../src/content';
 import { roleOf } from '../src/sim/systems/progress';
 import {
   createSimulation,
@@ -85,6 +85,7 @@ function main(): number {
   const hash = new StreamHash();
   const counts = new Map<string, number>();
   const castOutcomes = new Map<string, number>();
+  const habits: Habits = { delves: new Map(), taverns: new Map() };
   let printed = 0;
 
   const started = performance.now();
@@ -105,6 +106,10 @@ function main(): number {
     onEvent(event) {
       hash.update(JSON.stringify(event));
       counts.set(event.type, (counts.get(event.type) ?? 0) + 1);
+      if (event.type === 'delve.enter') bump(habits.delves, event.data.characterId);
+      if (event.type === 'character.pastime' && event.data.pastime === 'tavern') {
+        bump(habits.taverns, event.data.characterId);
+      }
       if (event.type === 'magic.cast') {
         castOutcomes.set(event.data.outcome, (castOutcomes.get(event.data.outcome) ?? 0) + 1);
       }
@@ -130,7 +135,7 @@ function main(): number {
       `Wall time:   ${seconds.toFixed(2)}s (${Math.round(days / seconds)} days/s)`,
       `Event hash:  ${hash.digest()}`,
       '',
-      ...worldReport(sim.world, counts, castOutcomes),
+      ...worldReport(sim.world, counts, castOutcomes, habits),
     ].join('\n'),
   );
   return 0;
@@ -141,6 +146,7 @@ function worldReport(
   world: World,
   counts: ReadonlyMap<string, number>,
   castOutcomes: ReadonlyMap<string, number>,
+  habits: Habits,
 ): string[] {
   const characters = [...world.characters.values()];
   const living = characters.filter((c) => c.death === null);
@@ -202,6 +208,9 @@ function worldReport(
       ),
     ),
     '',
+    'Personality and behavior (per adventurer-month, lowest third vs highest third)',
+    ...habitRows(world, habits, row),
+    '',
     'Magic',
     row('Casters alive', `${casters.length} (${living.filter((c) => c.gifted).length} gifted)`),
     ...[...castOutcomes].sort((a, b) => b[1] - a[1]).map(([outcome, n]) => row(`  ${outcome}`, n)),
@@ -249,3 +258,38 @@ function fail(message: string): number {
 }
 
 process.exitCode = main();
+
+interface Habits {
+  readonly delves: Map<CharacterId, number>;
+  readonly taverns: Map<CharacterId, number>;
+}
+
+function bump(counts: Map<CharacterId, number>, id: CharacterId): void {
+  counts.set(id, (counts.get(id) ?? 0) + 1);
+}
+
+/** How traits show in behavior: the lowest third against the highest third of each trait. */
+function habitRows(
+  world: World,
+  habits: Habits,
+  row: (label: string, value: string | number) => string,
+): string[] {
+  const MONTH = 30 * DAY;
+  const lives = [...world.characters.values()]
+    .map((c) => ({ c, months: ((c.death?.at ?? world.time) - c.arrivedAt) / MONTH }))
+    .filter(({ months }) => months >= 1);
+  if (lives.length < 6) return ['  too few adventurers lived a month or more'];
+  const compare = (trait: TraitId, counts: Map<CharacterId, number>) => {
+    const sorted = [...lives].sort((a, b) => a.c.traits[trait] - b.c.traits[trait]);
+    const third = Math.floor(sorted.length / 3);
+    const rate = (group: typeof sorted) =>
+      group.reduce((sum, { c }) => sum + (counts.get(c.id) ?? 0), 0) /
+      group.reduce((sum, { months }) => sum + months, 0);
+    return `${rate(sorted.slice(0, third)).toFixed(1)} vs ${rate(sorted.slice(-third)).toFixed(1)}`;
+  };
+  return [
+    row('Delves by bravery', compare('bravery', habits.delves)),
+    row('Delves by patience', compare('patience', habits.delves)),
+    row('Taverns by sociability', compare('sociability', habits.taverns)),
+  ];
+}

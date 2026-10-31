@@ -5,6 +5,8 @@ import type { Character, Encounter, EventOfType, LocationId } from '../model';
 import { WOUNDED_BELOW } from './combat-core';
 import { isDizzy, isDrained, modifier } from './condition';
 import { die } from './death';
+import { averageRoll } from './items';
+import { remember } from './mind';
 import { addDeed, effectiveSkill, gainXp, practice } from './progress';
 
 /**
@@ -23,7 +25,7 @@ const DRAINED_BACKLASH = 2;
 const BACKLASH_DAMAGE = '1d6';
 /** Mastery shrinks costs down to this fraction. */
 const MIN_COST_FACTOR = 0.4;
-const ARCANA_PER_CAST = 0.6;
+const ARCANA_PER_CAST = 0.3;
 
 export function castingBonus(character: Character, now: number): number {
   return (
@@ -147,6 +149,9 @@ export function cast(
     locationId,
   );
 
+  if (outcome === 'backlash') {
+    remember(character, now, { kind: 'backlash', locationId, spell: spellId }, 0.7);
+  }
   const fatal = character.hp <= 0;
   if (fatal) die(ctx, character, { kind: 'magic', spell: spellId });
   return { outcome, amount, fatal };
@@ -179,10 +184,16 @@ export interface SpellChoice {
   readonly target: number | null;
 }
 
+/** What a plain swing of the weapon is worth, against which spells are weighed. */
+const SWING_VALUE = 0.25;
+const SPELL_NOISE = 0.1;
+
 /**
- * "Cast if the odds are good" (ROADMAP.md Phase 3), until Phase 4's utility
- * AI: heal when hurt, ward and quicken against a frightening fight, throw
- * bolts when likely to land. A brave character near death gambles on any spell.
+ * Utility choice of spell (ROADMAP.md Phase 4): each affordable spell is
+ * worth its odds times what it would do now (healing matters more the more
+ * hurt; wards and quickening against a frightening fight; bolts to finish the
+ * weak), minus its costs and the risk of backlash. The brave weigh that risk
+ * less. Cast if the best spell beats a plain swing.
  */
 export function chooseSpell(
   ctx: SimContext,
@@ -192,44 +203,47 @@ export function chooseSpell(
   if (character.spells.length === 0) return null;
   const rng = ctx.rng.magic;
   const now = ctx.world.time;
-  const known = character.spells.map(spellDef).filter((s) => affordable(character, s));
-  const odds = (spell: SpellDef) => successChance(character, spell, now);
-  const hpFraction = character.hp / character.maxHp;
   const standing = encounter.foes
     .map((f, i) => ({ f, i }))
     .filter(({ f }) => f.fighter.out === null);
   if (standing.length === 0) return null;
+
+  const hpFraction = character.hp / character.maxHp;
   const threat = standing.reduce((sum, { f }) => sum + creatureDef(f.ref.species).level, 0);
-  const weakest = standing.reduce((a, b) => (b.f.fighter.hp < a.f.fighter.hp ? b : a)).i;
-  const find = (kind: SpellDef['effect']['kind']) => known.find((s) => s.effect.kind === kind);
+  const weakest = standing.reduce((a, b) => (b.f.fighter.hp < a.f.fighter.hp ? b : a));
+  const riskWeight = 1.5 - character.traits.bravery;
+  const backlashOdds =
+    (1 + (isDizzy(character, now) ? 2 : 0) + (isDrained(character, now) ? 2 : 0)) / 20;
 
-  const heal = find('heal');
-  if (heal && hpFraction < 0.45 && odds(heal) >= 0.45)
-    return { spell: heal.id as SpellId, target: null };
-
-  if (encounter.round === 0 && threat >= 3) {
-    const ward = find('ward');
-    if (ward && encounter.ward === 0 && odds(ward) >= 0.5)
-      return { spell: ward.id as SpellId, target: null };
-    const quicken = find('quicken');
-    if (quicken && !encounter.quickened && odds(quicken) >= 0.5) {
-      return { spell: quicken.id as SpellId, target: null };
+  let best: { choice: SpellChoice; value: number } | null = null;
+  for (const spell of character.spells.map(spellDef)) {
+    if (!affordable(character, spell)) continue;
+    const odds = successChance(character, spell, now);
+    let benefit = 0;
+    let target: number | null = null;
+    switch (spell.effect.kind) {
+      case 'heal':
+        benefit = 2 * (1 - hpFraction) ** 2;
+        break;
+      case 'damage':
+        benefit = Math.min(1, averageRoll(spell.effect.dice) / Math.max(1, weakest.f.fighter.hp));
+        target = weakest.i;
+        break;
+      case 'ward':
+        benefit = encounter.ward === 0 ? 0.25 * threat * (encounter.round === 0 ? 1 : 0.5) : 0;
+        break;
+      case 'quicken':
+        benefit = encounter.quickened ? 0 : 0.2 * threat * (encounter.round === 0 ? 1 : 0.4);
+        break;
     }
+    const costs = costsFor(character, spell);
+    const cost =
+      (2 * costs.health) / Math.max(1, character.hp) +
+      (0.5 * costs.stamina) / Math.max(1, character.stamina) +
+      1.5 * backlashOdds;
+    const value = odds * benefit - cost * riskWeight + rng.gaussian(0, SPELL_NOISE);
+    if (!best || value > best.value)
+      best = { choice: { spell: spell.id as SpellId, target }, value };
   }
-
-  const bolt = find('damage');
-  if (bolt && odds(bolt) >= 0.55 && rng.chance(0.6))
-    return { spell: bolt.id as SpellId, target: weakest };
-
-  // The gamble: brave and nearly dead, cast whatever might turn it around.
-  if (hpFraction < 0.25 && character.bravery > 0.6) {
-    const desperate = heal ?? bolt;
-    if (desperate) {
-      return {
-        spell: desperate.id as SpellId,
-        target: desperate.effect.kind === 'damage' ? weakest : null,
-      };
-    }
-  }
-  return null;
+  return best && best.value > SWING_VALUE ? best.choice : null;
 }

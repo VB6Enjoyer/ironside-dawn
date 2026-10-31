@@ -10,6 +10,13 @@ export function Prose({
   onCharacter?: (id: CharacterId) => void;
 }) {
   return segments.map((segment, i) => {
+    if ('aside' in segment) {
+      return (
+        <span key={i} className="aside">
+          {segment.text}
+        </span>
+      );
+    }
     if (!('ref' in segment)) return segment.text;
     if (segment.ref.kind === 'character' && onCharacter) {
       const id = segment.ref.id;

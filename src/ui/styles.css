@@ -462,6 +462,71 @@ button.ref:hover {
   background: var(--accent);
 }
 
+.aside {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.card-goal {
+  margin: 4px 0 0;
+  font-size: 0.9rem;
+}
+
+.card-summary {
+  margin: 0 0 8px;
+}
+
+.traits {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 3px 8px;
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.traits div {
+  display: contents;
+}
+
+.traits dt:last-child {
+  text-align: right;
+}
+
+.traits dd {
+  display: flex;
+  align-items: center;
+  margin: 0;
+}
+
+.trait-track {
+  position: relative;
+  flex: 1;
+  height: 4px;
+  background: var(--panel-raised);
+  border-radius: 2px;
+}
+
+.trait-marker {
+  position: absolute;
+  top: -3px;
+  width: 10px;
+  height: 10px;
+  margin-left: -5px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.memories {
+  margin: 0;
+  padding-left: 1.1em;
+  font-size: 0.9rem;
+}
+
+.memories li + li {
+  margin-top: 3px;
+}
+
 .spells {
   margin: 8px 0 0;
   font-size: 0.9rem;

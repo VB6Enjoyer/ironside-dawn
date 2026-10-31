@@ -9,10 +9,12 @@ import type {
   StatId,
   Stats,
   TrapId,
+  Traits,
 } from '../../content';
 import type { CreatureRef } from './encounter';
 import type { CharacterId, EncounterId, ItemId, LocationId } from './ids';
 import type { Equipment, Item } from './item';
+import type { Drives, Expectation, Goal, Memory } from './mind';
 
 export interface Character {
   readonly id: CharacterId;
@@ -25,8 +27,8 @@ export interface Character {
   readonly arrivedAt: number;
 
   readonly stats: Stats;
-  /** 0 (timid) to 1 (fearless). The first trait; full personalities arrive in Phase 4. */
-  readonly bravery: number;
+  /** Personality, 0 to 1 each. Mostly fixed; bravery drifts with experience. */
+  traits: Traits;
   /** Born with the gift for magic (WORLD.md §4). */
   readonly gifted: boolean;
 
@@ -53,8 +55,17 @@ export interface Character {
   kills: Partial<Record<CreatureId, number>>;
   /** Lifetime gold from loot sold and coins found, for reports. */
   goldEarned: number;
-  /** After a trip, adventurers spend a few days in town before setting out again. */
-  homeUntil: number;
+
+  drives: Drives;
+  /** When drives were last brought up to date. */
+  drivesAt: number;
+  /** Fading episodic memories, most vivid kept. Capped. */
+  memories: Memory[];
+  /** What each dungeon has been like for them, by location. */
+  expectations: Partial<Record<LocationId, Expectation>>;
+  /** Places they have been. */
+  visited: LocationId[];
+  goal: Goal | null;
 
   /** Where the character is, or null while on the road. */
   locationId: LocationId | null;
@@ -101,6 +112,10 @@ export interface DelveProgress {
   readonly room: number;
   readonly goldFound: number;
   readonly itemsFound: number;
+  /** Value of items found, for learning what the place is worth. */
+  readonly valueFound: number;
+  /** The lowest fraction of hit points reached, for learning how dangerous it is. */
+  readonly lowestHp: number;
 }
 
 export type Activity =

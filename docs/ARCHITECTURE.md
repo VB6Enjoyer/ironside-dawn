@@ -330,6 +330,18 @@ and it is built from the "simple math and RNG" the project calls for. If the
 utility system becomes limiting, GOAP or HTN planning can be added later for
 multi-step plans such as "craft a sword", which needs ore, a forge, and skill.
 
+As built (`src/sim/systems/decide.ts`), each option's score is a sum of
+_terms_, each tied to a motive (a drive, a fond memory of a place, curiosity
+about somewhere new, home, loot to sell). Noise multiplies the total, the top
+three are kept, and one is picked with weight `score³`. The two strongest
+named terms become the decision's `why`, carried on the event and shown in the
+log: _"…bound for Gorefang Caves (restless; hungry for glory)."_ A dungeon's
+appeal is gated by restlessness, so glory or gold alone never sends a
+just-returned adventurer straight back in. Sleep at night stays a rule, not a
+choice. Spells in a fight are chosen the same way: each spell's odds × benefit,
+minus its costs and backlash risk weighted by `1.5 − bravery`, against the
+value of a plain swing.
+
 ### 4.6 Memory: three layers, all bounded
 
 1. **Episodic memory.** A short list of personal events, each with a
@@ -348,6 +360,16 @@ familiarity, lastSeen }`, updated by shared events (fought together,
 
 Every layer has a hard size cap with eviction of the least salient entries. A
 character's memory stays the same size whether they are 20 or 80.
+
+As built (`src/sim/systems/mind.ts`): up to 20 episodic memories (near-death,
+triumph, fled, treasure, backlash, level), each fading with its own half-life,
+from 45 days for fleeing to 180 for a legendary find. Permanent life events
+are the character's _deeds_. Learned expectations exist for delves: per
+dungeon, the number of trips, plus reward and danger as moving averages that
+weight recent trips more (learning rate 0.35). A place's _fear_ is its
+expected danger plus vivid near-death and flight memories there, so the fear
+fades as the memories do. Curious characters get a novelty bonus for places
+they haven't tried. Opinions of others arrive in Phase 5.
 
 ### 4.7 Content as data
 

@@ -290,29 +290,56 @@ graveyard that tells the rest.
 **Goal:** Characters stop being dice with legs. They have personalities,
 morals, drives, and memory, and they learn from experience.
 
-- [ ] **Personality traits** (rolled, slightly mutable): bravery, greed,
+- [x] **Personality traits** (rolled, slightly mutable): bravery, greed,
       curiosity, sociability, patience, plus **morality traits**
       (compassion ↔ cruelty, honor ↔ treachery). Species shift the
       distributions they are rolled from (`WORLD.md` §3).
-- [ ] **Drives/needs**: health, wealth, glory, rest, companionship, purpose.
+- [x] **Drives/needs**: health, wealth, glory, rest, companionship, purpose.
       They decay or rise over time and push behavior.
-- [ ] **Utility AI** (`ARCHITECTURE.md` §4.5): score candidate actions,
+- [x] **Utility AI** (`ARCHITECTURE.md` §4.5): score candidate actions,
       apply personality and noise, then do a weighted pick among the top
       options. It replaces the Phase 2 and 3 rules, including when to cast a
       spell given its risk.
-- [ ] **Memory layers** (`ARCHITECTURE.md` §4.6):
-  - [ ] Episodic memory with salience decay, plus permanent _life events_.
-  - [ ] Learned expectations per (activity, place), bandit-style. Characters
+- [x] **Memory layers** (`ARCHITECTURE.md` §4.6):
+  - [x] Episodic memory with salience decay, plus permanent _life events_.
+  - [x] Learned expectations per (activity, place), bandit-style. Characters
         come to prefer what has worked for them and avoid places that nearly
         killed them.
-- [ ] A `why` field on decision events, so the UI can show _"Rufus heads to
+- [x] A `why` field on decision events, so the UI can show _"Rufus heads to
       Gorefang Caves (likes: good loot there before; feeling brave)"_.
-- [ ] UI: character profile gets **Personality**, **Current goal**, **Recent
+- [x] UI: character profile gets **Personality**, **Current goal**, **Recent
       memories**, and **Preferences** sections.
 
 **Exit criteria:** Two characters with different personalities behave visibly
 differently in the same world, and you can read _why_ a character did what it
 did.
+
+**Status: done.** Notes from building it:
+
+- **Traits**: seven traits from 0 to 1, rolled per species (elves patient,
+  curious and a little aloof; dwarves honorable, greedy and bold). Bravery
+  drifts with experience: −0.03 after a near-death, −0.01 after fleeing,
+  +0.01 after besting something fearsome. Compassion and honor are rolled and
+  shown but only start to matter with outlaws in Phase 5.
+- **Drives**: glory, companionship and purpose (restlessness) build up daily at
+  rates set by traits, and deeds, taverns and delves satisfy them. Health and
+  wealth are read from hit points, stamina and gold. "Rest" is covered by
+  health and sleep. Purpose replaced Phase 2's fixed 2–6 days at home.
+- **Utility AI** replaces the Phase 2 and 3 rules for everything but sleep,
+  including spell choice. Tuning took several rounds, because a sum of small
+  drives sent everyone delving daily. Restlessness is now nonlinear and gates a
+  dungeon's whole appeal.
+- **Personality shows** (the CLI report measures it, lowest third against
+  highest third): the bold delve about 7.5 times a month against 5 for the
+  timid, the impatient 7 against 5 for the patient, and the gregarious visit
+  taverns about 31 times a month against 21 for the solitary. The bold also
+  die somewhat more often.
+- **Training** in town only raises a weapon skill to 45; beyond that, only real
+  fights teach. **Study** is only for the gifted or the unusually clever or
+  spiritual. A world has a few casters, mostly gifted.
+- **Performance**: decisions now weigh every destination, so the simulation is
+  about 3× slower than in Phase 3. 500 characters run 10 years in about
+  3.5 minutes, inside the 5-minute target. Paths are cached.
 
 ---
 

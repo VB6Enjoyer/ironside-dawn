@@ -294,6 +294,40 @@ describe('a year of danger', () => {
     }
   });
 
+  it('explains most decisions', () => {
+    const decisions = events.filter((e) => e.type === 'travel.depart' || e.type === 'delve.enter');
+    const explained = decisions.filter((e) => e.data.why.length > 0);
+    expect(explained.length / decisions.length).toBeGreaterThan(0.8);
+  });
+
+  it('keeps minds within bounds', () => {
+    for (const c of characters) {
+      for (const value of Object.values(c.traits)) expect(value).toBeGreaterThan(0);
+      for (const value of Object.values(c.traits)) expect(value).toBeLessThan(1);
+      for (const value of Object.values(c.drives)) expect(value).toBeGreaterThanOrEqual(0);
+      for (const value of Object.values(c.drives)) expect(value).toBeLessThanOrEqual(1);
+      expect(c.memories.length).toBeLessThanOrEqual(20);
+      for (const e of Object.values(c.expectations)) expect(e!.trips).toBeGreaterThan(0);
+    }
+  });
+
+  it('lets personality show: the bold delve more often than the timid', () => {
+    const delves = new Map<string, number>();
+    for (const e of events) {
+      if (e.type === 'delve.enter')
+        delves.set(e.data.characterId, (delves.get(e.data.characterId) ?? 0) + 1);
+    }
+    const lives = characters
+      .map((c) => ({ c, months: ((c.death?.at ?? sim.world.time) - c.arrivedAt) / (30 * DAY) }))
+      .filter(({ months }) => months >= 1)
+      .sort((a, b) => a.c.traits.bravery - b.c.traits.bravery);
+    const third = Math.floor(lives.length / 3);
+    const rate = (group: typeof lives) =>
+      group.reduce((sum, { c }) => sum + (delves.get(c.id) ?? 0), 0) /
+      group.reduce((sum, { months }) => sum + months, 0);
+    expect(rate(lives.slice(-third))).toBeGreaterThan(rate(lives.slice(0, third)));
+  });
+
   it('replaces the fallen with newcomers, never above the target population', () => {
     let living = 0;
     for (const e of events) {

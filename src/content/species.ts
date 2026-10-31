@@ -1,5 +1,6 @@
 import type { CultureId } from './cultures';
 import type { StatId } from './stats';
+import type { TraitTendencies } from './traits';
 import type { ArmorId, WeaponId } from './items';
 
 /** Peoples (WORLD.md §2): everything species-specific is data. */
@@ -17,6 +18,8 @@ export interface SpeciesDef {
   readonly armor: Partial<Record<ArmorId, number>>;
   /** Chance of being born with the gift for magic (WORLD.md §4). */
   readonly giftChance: number;
+  /** How the people's personalities lean (WORLD.md §3). */
+  readonly traits: TraitTendencies;
 }
 
 export const SPECIES = {
@@ -29,6 +32,7 @@ export const SPECIES = {
     weapons: { longsword: 3, shortsword: 2, spear: 2, mace: 2, axe: 1 },
     armor: { padded: 1, leather: 2, scale: 1 },
     giftChance: 0.05,
+    traits: { sociability: { mean: 0.55 } },
   },
   elf: {
     id: 'elf',
@@ -39,6 +43,7 @@ export const SPECIES = {
     weapons: { leafblade: 4, longsword: 2, spear: 1 },
     armor: { padded: 1, leather: 3 },
     giftChance: 0.18,
+    traits: { patience: { mean: 0.65 }, curiosity: { mean: 0.6 }, sociability: { mean: 0.42 } },
   },
   dwarf: {
     id: 'dwarf',
@@ -49,6 +54,12 @@ export const SPECIES = {
     weapons: { axe: 4, warhammer: 3, mace: 1 },
     armor: { leather: 1, scale: 2 },
     giftChance: 0.03,
+    traits: {
+      honor: { mean: 0.62 },
+      greed: { mean: 0.58 },
+      bravery: { mean: 0.6 },
+      sociability: { mean: 0.45 },
+    },
   },
 } as const satisfies Record<string, SpeciesDef>;
 

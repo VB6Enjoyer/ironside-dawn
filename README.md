@@ -28,10 +28,11 @@ town's market, or watch a dungeon's population change over time.
 
 ## Status
 
-Phase 3 (Growth & Sorcery) is done: adventurers level up, hone skills with
-use, find and wear gear (a few of them legendary, remembered by the world),
-and a gifted or studious few gamble with costly magic. Click any name in the
-log to open their character card. Phase 4 (Minds) is next. The plan is in:
+Phase 4 (Minds) is done: adventurers have personalities, drives and fading
+memories. They choose what to do by weighing what they want, learn which
+dungeons pay and which nearly killed them, and the log says why they did
+things. Click any name to open their character card. Phase 5 (Kin & Bad
+Blood) is next. The plan is in:
 
 - [`docs/ROADMAP.md`](docs/ROADMAP.md): the phased development plan, with exit
   criteria for each milestone.
