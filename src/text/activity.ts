@@ -1,5 +1,6 @@
 import type { PastimeId } from '../content';
-import type { Character, Deed, LocationId, World } from '../sim';
+import type { Character, Deed, LocationId } from '../sim';
+import type { NameResolver } from './names';
 import type { Segment } from './describe';
 import { SKILL_PHRASES, spellName } from './items';
 import { aCreature, article } from './words';
@@ -17,12 +18,12 @@ const PASTIME_PLACES: Record<PastimeId, string> = {
 };
 
 /** What a character is doing right now, for the character card. */
-export function describeActivity(character: Character, world: World): Segment[] {
+export function describeActivity(character: Character, names: NameResolver): Segment[] {
   const place = (id: LocationId | null): Segment => {
-    const location = id === null ? undefined : world.locations.get(id);
-    if (!location) return { text: 'the wilds' };
+    const location = id === null ? undefined : names.location(id);
+    if (!location || id === null) return { text: 'the wilds' };
     const text = location.article ? `${location.article} ${location.name}` : location.name;
-    return { text, ref: { kind: 'location', id: location.id } };
+    return { text, ref: { kind: 'location', id } };
   };
   const here = place(character.locationId);
   const activity = character.activity;
@@ -45,8 +46,7 @@ export function describeActivity(character: Character, world: World): Segment[] 
     case 'fighting':
       return [{ text: 'Fighting for their life in ' }, here];
     case 'accompanying': {
-      const leader = world.characters.get(activity.leaderId);
-      const name = leader ? `${leader.givenName} ${leader.familyName}` : 'their party';
+      const name = names.character(activity.leaderId)?.name ?? 'their party';
       return character.locationId
         ? [
             { text: `With ` },
@@ -69,8 +69,7 @@ export function describeActivity(character: Character, world: World): Segment[] 
         case 'magic':
           return [{ text: `Killed by a backfiring ${spellName(death.cause.spell)} in ` }, where];
         case 'character': {
-          const killer = world.characters.get(death.cause.characterId);
-          const name = killer ? `${killer.givenName} ${killer.familyName}` : 'someone';
+          const name = names.character(death.cause.characterId)?.name ?? 'someone';
           return [
             { text: 'Killed by ' },
             { text: name, ref: { kind: 'character', id: death.cause.characterId } },

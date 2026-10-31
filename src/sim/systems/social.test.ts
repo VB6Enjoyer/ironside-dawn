@@ -2,11 +2,13 @@ import { describe, expect, it } from 'vitest';
 
 import type { Character, LocationId } from '../model';
 import { testCharacter, testContext, town } from '../test-support';
+import { finishLeg, startJourney } from './travel';
 import {
   adjustOpinion,
   communication,
   hostility,
   learnLanguage,
+  gatherParty,
   leaveParty,
   mournDeath,
   partyOf,
@@ -57,7 +59,9 @@ describe('opinions', () => {
     const a = testCharacter(ctx);
     const others = Array.from({ length: 40 }, () => testCharacter(ctx));
     others.forEach((o, i) => adjustOpinion(a, o.id, { familiarity: i / 40 }, 0));
-    expect(Object.keys(a.opinions)).toHaveLength(30);
+    // Forgotten in a batch once a few too many pile up.
+    expect(Object.keys(a.opinions).length).toBeLessThanOrEqual(38);
+    expect(Object.keys(a.opinions).length).toBeGreaterThanOrEqual(30);
     expect(a.opinions[others[39]!.id]).toBeDefined();
     expect(a.opinions[others[1]!.id]).toBeUndefined();
   });
@@ -168,6 +172,21 @@ describe('parties', () => {
     leaveParty(ctx, leader, 'quarrel');
     expect(p.leaderId).toBe(member.id);
     expect(p.members).toEqual([member.id, third.id]);
+  });
+
+  it('lets a follower left on the road walk the rest of the way alone', () => {
+    const { ctx, leader, member } = party('road');
+    const company = gatherParty(ctx, leader, town(ctx));
+    expect(company).toEqual([member]);
+    startJourney(ctx, leader, 'saltmere' as LocationId, 'wander', [], company);
+    expect(member.locationId).toBeNull();
+    const leg = leader.activity.kind === 'traveling' ? leader.activity.leg : null;
+
+    leaveParty(ctx, leader, 'outlaw'); // turns outlaw halfway down the road
+    expect(member.activity).toMatchObject({ kind: 'traveling', leg, remaining: [] });
+    expect(member.locationId).toBeNull();
+    expect(finishLeg(ctx, member)).toBe('arrived');
+    expect(member.locationId).toBe(leg!.to);
   });
 });
 

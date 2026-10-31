@@ -59,6 +59,8 @@ const TOWN_COMFORT = 0.3;
 const STUDY_EFFORT = 0.1;
 /** Restlessness at which a dungeon's full appeal is felt. */
 const RESTLESS = 0.3;
+/** Bounties a character weighs at once: the most tempting. */
+const HUNTS_CONSIDERED = 2;
 /** Hours on the road that halve a destination's appeal. */
 const DISTANCE_HALVING_HOURS = 30;
 
@@ -67,15 +69,20 @@ export function decideAt(ctx: SimContext, character: Character, here: Location):
   if (options.length === 0) return null;
 
   const rng = ctx.rng.behavior;
-  const scored = options
-    .map((option) => {
-      const raw = option.terms.reduce((sum, t) => sum + t.value, 0);
-      // Uniform noise with the same spread as a gaussian of NOISE_SD, but cheaper.
-      const noise = (rng.next() - 0.5) * NOISE_SD * Math.sqrt(12);
-      return { option, score: Math.max(0.01, raw * (1 + noise)) };
-    })
-    .sort((a, b) => b.score - a.score)
-    .slice(0, SHORTLIST);
+  // The best few, kept in order as the options are scored (cheaper than sorting them all).
+  const scored: { option: Option; score: number }[] = [];
+  for (const option of options) {
+    let raw = 0;
+    for (const t of option.terms) raw += t.value;
+    // Uniform noise with the same spread as a gaussian of NOISE_SD, but cheaper.
+    const noise = (rng.next() - 0.5) * NOISE_SD * Math.sqrt(12);
+    const score = Math.max(0.01, raw * (1 + noise));
+    if (scored.length === SHORTLIST && score <= scored[SHORTLIST - 1]!.score) continue;
+    let i = Math.min(scored.length, SHORTLIST - 1);
+    while (i > 0 && scored[i - 1]!.score < score) i--;
+    scored.splice(i, 0, { option, score });
+    if (scored.length > SHORTLIST) scored.pop();
+  }
   const chosen = rng.weighted(scored.map((s) => [s, s.score ** SHARPNESS] as const));
 
   const why = chosen.option.terms
@@ -93,7 +100,7 @@ function optionsAt(ctx: SimContext, character: Character, here: Location): Optio
   const recovering = needsRecovery(character);
   const health = healthNeed(character);
   const wealth = wealthNeed(character);
-  const loot = sellable(character).length > 0;
+  const loot = character.pack.some(isSellable);
 
   switch (here.kind) {
     case 'town': {
@@ -131,7 +138,7 @@ function optionsAt(ctx: SimContext, character: Character, here: Location): Optio
       if (isFitToDelve(character, now)) {
         options.push({
           action: { kind: 'delve' },
-          terms: [...delveTerms(ctx, character, here.id), { value: 0.05, motive: null }],
+          terms: [...delveTerms(ctx, character, here.id, 1), { value: 0.05, motive: null }],
         });
       } else if (isDizzy(character, now) && !recovering) {
         // Only dizzy: wait outside for the head to clear.
@@ -186,9 +193,7 @@ function optionsAt(ctx: SimContext, character: Character, here: Location): Optio
       terms.push({ value: (1 + health) * nearness, motive: { kind: 'drive', drive: 'health' } });
       reason = 'heal';
     } else if (there.kind === 'dungeon') {
-      terms.push(
-        ...delveTerms(ctx, character, there.id).map((t) => ({ ...t, value: t.value * nearness })),
-      );
+      terms.push(...delveTerms(ctx, character, there.id, nearness));
       reason = 'delve';
     } else {
       if (there.id === character.homeId) {
@@ -233,7 +238,13 @@ function optionsAt(ctx: SimContext, character: Character, here: Location): Optio
  * Why delve somewhere: restlessness, glory and gold, how well it went before,
  * the pull of the unknown, against the fear of what happened there.
  */
-function delveTerms(ctx: SimContext, character: Character, place: LocationId): Term[] {
+function delveTerms(
+  ctx: SimContext,
+  character: Character,
+  place: LocationId,
+  /** Scales the whole appeal, for a dungeon some way off. */
+  nearness: number,
+): Term[] {
   const { traits, drives } = character;
   const expectation = character.expectations[place];
   const terms: Term[] = [
@@ -258,7 +269,10 @@ function delveTerms(ctx: SimContext, character: Character, place: LocationId): T
   // Glory and gold only call once restlessness has built up: nobody goes
   // straight back in for the sake of it.
   const eagerness = Math.min(1, drives.purpose / RESTLESS);
-  return terms.map((t) => (t.value > 0 ? { ...t, value: t.value * eagerness } : t));
+  return terms.map((t) => ({
+    motive: t.motive,
+    value: t.value * nearness * (t.value > 0 ? eagerness : 1),
+  }));
 }
 
 /**
@@ -310,7 +324,10 @@ function huntOptions(ctx: SimContext, character: Character, here: Location): Opt
       terms,
     });
   }
-  return options;
+  // However many outlaws are wanted, only the likeliest few cross anyone's mind.
+  if (options.length <= HUNTS_CONSIDERED) return options;
+  const appeal = (o: Option) => o.terms.reduce((sum, t) => sum + t.value, 0);
+  return options.sort((a, b) => appeal(b) - appeal(a)).slice(0, HUNTS_CONSIDERED);
 }
 
 function followersOrMembers(ctx: SimContext, character: Character): number {
@@ -350,14 +367,24 @@ function pastimeTerms(character: Character, pastime: PastimeId): Term[] {
   }
 }
 
-function pastimesAt(location: Location, character: Character): PastimeId[] {
-  return PASTIMES.filter(
-    (p) =>
-      p.kind === location.kind &&
-      p.id !== 'scout' &&
-      p.id !== 'lurk' &&
-      (!('academy' in p && p.academy) || (location.academy && canStudy(character))),
-  ).map((p) => p.id);
+/** The few possible lists of pastimes, worked out once each. */
+const pastimeLists = new Map<string, readonly PastimeId[]>();
+
+function pastimesAt(location: Location, character: Character): readonly PastimeId[] {
+  const study = location.academy && canStudy(character);
+  const key = `${location.kind}|${study}`;
+  let list = pastimeLists.get(key);
+  if (!list) {
+    list = PASTIMES.filter(
+      (p) =>
+        p.kind === location.kind &&
+        p.id !== 'scout' &&
+        p.id !== 'lurk' &&
+        (!('academy' in p && p.academy) || study),
+    ).map((p) => p.id);
+    pastimeLists.set(key, list);
+  }
+  return list;
 }
 
 /** Only the gifted, or the unusually clever or spiritual, take up the arcane. */
@@ -367,5 +394,9 @@ function canStudy(character: Character): boolean {
 
 /** Everything in the pack except legendary items, which adventurers keep. */
 export function sellable(character: Character): LootItem[] {
-  return character.pack.filter((p) => !('gear' in p) || p.gear.rarity !== 'legendary');
+  return character.pack.filter(isSellable);
+}
+
+function isSellable(item: LootItem): boolean {
+  return !('gear' in item) || item.gear.rarity !== 'legendary';
 }

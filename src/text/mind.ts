@@ -1,5 +1,5 @@
 import { TRAIT_POLES, TRAITS, type TraitId, type Traits } from '../content';
-import type { Goal, Memory, Motive, World } from '../sim';
+import type { Goal, LocationId, Memory, Motive } from '../sim';
 import type { NameResolver } from './names';
 import { aCreature, creatureGroup } from './words';
 import { spellName } from './items';
@@ -67,8 +67,8 @@ const GOAL_PHRASES: Record<Goal['kind'], string> = {
 };
 
 /** What a character is trying to do: "Off to delve in the Dungeon of Misery". */
-export function describeGoal(goal: Goal, world: World): string {
-  const place = goal.locationId ? world.locations.get(goal.locationId) : undefined;
+export function describeGoal(goal: Goal, names: NameResolver): string {
+  const place = goal.locationId ? names.location(goal.locationId) : undefined;
   const where = place ? ` ${place.article ? `${place.article} ` : ''}${place.name}` : '';
   switch (goal.kind) {
     case 'delve':
@@ -77,10 +77,8 @@ export function describeGoal(goal: Goal, world: World): string {
     case 'home':
       return `${GOAL_PHRASES[goal.kind]} to${where}`;
     case 'hunt': {
-      const quarry = goal.targetId ? world.characters.get(goal.targetId) : undefined;
-      return quarry
-        ? `Hunting ${quarry.givenName} ${quarry.familyName} in${where}`
-        : `Hunting in${where}`;
+      const quarry = goal.targetId ? names.character(goal.targetId) : undefined;
+      return quarry ? `Hunting ${quarry.name} in${where}` : `Hunting in${where}`;
     }
     default:
       return GOAL_PHRASES[goal.kind];
@@ -88,9 +86,9 @@ export function describeGoal(goal: Goal, world: World): string {
 }
 
 /** A remembered moment in a line: "Nearly died to a warg in Gorefang Caves". */
-export function describeMemory(memory: Memory, world: World): string {
-  const at = (id: string) => {
-    const place = world.locations.get(id as never);
+export function describeMemory(memory: Memory, names: NameResolver): string {
+  const at = (id: LocationId) => {
+    const place = names.location(id);
     return place ? ` in ${place.article ? `${place.article} ` : ''}${place.name}` : '';
   };
   switch (memory.kind) {
@@ -109,12 +107,11 @@ export function describeMemory(memory: Memory, world: World): string {
     case 'level':
       return `Reached level ${memory.level}`;
     case 'grief': {
-      const friend = world.characters.get(memory.characterId);
-      return friend ? `Lost a friend, ${friend.givenName} ${friend.familyName}` : 'Lost a friend';
+      const friend = names.character(memory.characterId);
+      return friend ? `Lost a friend, ${friend.name}` : 'Lost a friend';
     }
     case 'wronged': {
-      const foe = world.characters.get(memory.characterId);
-      const who = foe ? `${foe.givenName} ${foe.familyName}` : 'someone';
+      const who = names.character(memory.characterId)?.name ?? 'someone';
       return `Set upon by ${who}${at(memory.locationId)}`;
     }
   }

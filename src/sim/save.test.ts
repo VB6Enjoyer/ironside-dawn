@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { StreamHash } from './core/hash';
 import { DAY } from './core/time';
-import type { CharacterId, SimEvent } from './model';
+import { Importance, type CharacterId, type SimEvent } from './model';
 import { checkSave, decode, encode } from './save';
 import { createSimulation, DETAIL_EVENTS, type Watch } from './simulation';
 
@@ -67,8 +67,11 @@ describe('silent detail', () => {
   const all = run('all');
   const none = run('none');
   const someone = 'c3' as CharacterId;
-  const one = run({ characters: new Set([someone]), locations: new Set() });
-  const outline = (events: readonly SimEvent[]) => events.filter((e) => !DETAIL_EVENTS.has(e.type));
+  const one = run({ characters: new Set([someone]), locations: new Set(), trivia: false });
+  const trivia = run({ characters: new Set(), locations: new Set(), trivia: true });
+  // What every watcher is told: everything above the trivial.
+  const outline = (events: readonly SimEvent[]) =>
+    events.filter((e) => e.importance > Importance.Trivial);
 
   it('reports blow-by-blow detail only for those watched', () => {
     expect(all.events.some((e) => DETAIL_EVENTS.has(e.type))).toBe(true);
@@ -78,10 +81,22 @@ describe('silent detail', () => {
     expect(detail.every((e) => e.actors.includes(someone))).toBe(true);
   });
 
+  it('reports trivia only when asked, and detail only for those watched', () => {
+    expect(none.events.some((e) => e.importance === Importance.Trivial)).toBe(false);
+    const told = trivia.events.filter((e) => e.importance === Importance.Trivial);
+    expect(told.length).toBeGreaterThan(0);
+    expect(told.some((e) => DETAIL_EVENTS.has(e.type))).toBe(false);
+    expect(told.length).toBe(
+      all.events.filter((e) => e.importance === Importance.Trivial && !DETAIL_EVENTS.has(e.type))
+        .length,
+    );
+  });
+
   it('never changes what happens, or any other event', () => {
     expect(none.save).toBe(all.save);
     expect(one.save).toBe(all.save);
     expect(fingerprint(outline(none.events))).toBe(fingerprint(outline(all.events)));
     expect(fingerprint(outline(one.events))).toBe(fingerprint(outline(all.events)));
+    expect(trivia.save).toBe(all.save);
   });
 });

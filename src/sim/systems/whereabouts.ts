@@ -67,6 +67,11 @@ export function charactersAt(world: World, locationId: LocationId): Character[] 
   return ids ? ids.map((id) => world.characters.get(id)!) : [];
 }
 
+/** The IDs of everyone at a place, oldest first. Cheaper than `charactersAt`; don't modify it. */
+export function idsAt(world: World, locationId: LocationId): readonly CharacterId[] {
+  return indexOf(world).get(locationId) ?? [];
+}
+
 /** Adds a newly created character to the index. */
 export function arrive(world: World, character: Character): void {
   const index = indexes.get(world);

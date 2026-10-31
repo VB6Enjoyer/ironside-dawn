@@ -22,3 +22,4 @@ export type {
 } from './simulation';
 export { checkSave, SAVE_FORMAT, SAVE_VERSION } from './save';
 export type { WorldSave } from './save';
+export { worldSample } from './systems/history';

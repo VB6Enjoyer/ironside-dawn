@@ -6,6 +6,17 @@ import type { DeathCause, World, WorldSample } from '../model';
  * every living adventurer, at the start of each season.
  */
 export function sampleHistory(world: World): void {
+  for (const c of world.characters.values()) {
+    if (c.death) continue;
+    let kills = 0;
+    for (const n of Object.values(c.kills)) kills += n ?? 0;
+    c.history.push([world.time, c.level, c.gold, kills]);
+  }
+  world.history.push(worldSample(world));
+}
+
+/** The state of the world right now, as a sample. */
+export function worldSample(world: World): WorldSample {
   const population: Partial<Record<SpeciesId, number>> = {};
   const deaths: Partial<Record<DeathCause['kind'], number>> = {};
   let living = 0;
@@ -25,12 +36,9 @@ export function sampleHistory(world: World): void {
     maxLevel = Math.max(maxLevel, c.level);
     gold += c.gold;
     if (c.outlaw) outlaws++;
-    let kills = 0;
-    for (const n of Object.values(c.kills)) kills += n ?? 0;
-    c.history.push([world.time, c.level, c.gold, kills]);
   }
 
-  const sample: WorldSample = {
+  return {
     t: world.time,
     population,
     deaths,
@@ -41,5 +49,4 @@ export function sampleHistory(world: World): void {
     parties: world.parties.size,
     ...world.tally,
   };
-  world.history.push(sample);
 }

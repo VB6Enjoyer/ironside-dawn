@@ -1,22 +1,25 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
-import type { CharacterId, SimEvent } from '../../sim';
+import { isDigest, type LogEntry } from '../../host';
+import type { CharacterId } from '../../sim';
 import { describeEvent, formatTimestamp, type NameResolver } from '../../text';
-import { Prose } from './Prose';
+import { formatCount } from '../format';
+import { Prose, type ProseLinks } from './Prose';
 
 /** How close to the bottom still counts as "following the latest events". */
 const PIN_THRESHOLD_PX = 48;
 
-interface Props {
-  log: readonly SimEvent[];
+interface Props extends ProseLinks {
+  log: readonly LogEntry[];
   names: NameResolver;
   /** Rows involving this character are highlighted. */
   selected: CharacterId | null;
-  onSelectCharacter(id: CharacterId): void;
+  /** Shown when the log is empty. */
+  empty?: string;
 }
 
-export function EventLog({ log, names, selected, onSelectCharacter }: Props) {
+export function EventLog({ log, names, selected, empty, onCharacter, onLocation }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [pinned, setPinned] = useState(true);
   // Set by the user's own input. Scroll events without it come from layout
@@ -76,11 +79,30 @@ export function EventLog({ log, names, selected, onSelectCharacter }: Props) {
         tabIndex={0}
       >
         {log.length === 0 ? (
-          <p className="log-empty">Nothing worth noting yet at this level of detail.</p>
+          <p className="log-empty">
+            {empty ?? 'Nothing worth noting yet at this level of detail.'}
+          </p>
         ) : (
           <ol className="log-list" style={{ height: virtualizer.getTotalSize() }}>
             {virtualizer.getVirtualItems().map((item) => {
               const event = log[item.index]!;
+              if (isDigest(event)) {
+                return (
+                  <li
+                    key={item.key}
+                    data-index={item.index}
+                    ref={virtualizer.measureElement}
+                    className="log-row log-digest"
+                    style={{ transform: `translateY(${item.start}px)` }}
+                  >
+                    <time className="log-time">{formatTimestamp(event.t)}</time>
+                    <span className="log-text">
+                      …and {formatCount(event.count)} minor{' '}
+                      {event.count === 1 ? 'happening' : 'happenings'} across the realm.
+                    </span>
+                  </li>
+                );
+              }
               return (
                 <li
                   key={item.key}
@@ -93,7 +115,11 @@ export function EventLog({ log, names, selected, onSelectCharacter }: Props) {
                 >
                   <time className="log-time">{formatTimestamp(event.t)}</time>
                   <span className="log-text">
-                    <Prose segments={describeEvent(event, names)} onCharacter={onSelectCharacter} />
+                    <Prose
+                      segments={describeEvent(event, names)}
+                      onCharacter={onCharacter}
+                      onLocation={onLocation}
+                    />
                   </span>
                 </li>
               );

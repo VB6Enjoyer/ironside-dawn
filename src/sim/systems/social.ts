@@ -20,7 +20,7 @@ import type {
 import { isAlive, isFitToDelve, needsRecovery } from './condition';
 import { remember, satisfy } from './mind';
 import { cancelWake, wakeAt } from './wake';
-import { charactersAt, moveTo } from './whereabouts';
+import { idsAt, moveTo } from './whereabouts';
 
 /**
  * Bonds between characters (ROADMAP.md Phase 5): opinions, language, tavern
@@ -28,6 +28,10 @@ import { charactersAt, moveTo } from './whereabouts';
  */
 
 const MAX_OPINIONS = 30;
+/** Opinions may run this far over before the faintest are forgotten, all at once. */
+const OPINION_SLACK = 8;
+/** Strangers who catch a character's eye in a crowded tavern, besides anyone they know. */
+const STRANGERS_NOTICED = 12;
 const FRIEND_AFFINITY = 0.55;
 const FRIEND_FAMILIARITY = 0.5;
 const RIVAL_AFFINITY = -0.4;
@@ -66,18 +70,22 @@ export function adjustOpinion(
   return opinion;
 }
 
-/** Keeps the opinions that matter most: the strongest feelings and the best known. */
+/**
+ * Keeps the opinions that matter most: the strongest feelings and the best
+ * known. Done in batches, once there are a few too many, as it costs a sort.
+ */
 function forgetFaintest(character: Character, keep: CharacterId): void {
   const ids = Object.keys(character.opinions) as CharacterId[];
-  if (ids.length <= MAX_OPINIONS) return;
+  if (ids.length <= MAX_OPINIONS + OPINION_SLACK) return;
   const weight = (id: CharacterId) => {
     const o = character.opinions[id]!;
     return o.familiarity + Math.abs(o.affinity);
   };
-  const faintest = ids
+  const ranked = ids
     .filter((id) => id !== keep)
-    .reduce((a, b) => (weight(b) < weight(a) ? b : a));
-  delete character.opinions[faintest];
+    .map((id) => [id, weight(id)] as const)
+    .sort((a, b) => a[1] - b[1]);
+  for (const [id] of ranked.slice(0, ids.length - MAX_OPINIONS)) delete character.opinions[id];
 }
 
 export function isFriend(character: Character, otherId: CharacterId): boolean {
@@ -171,8 +179,20 @@ export function socialize(ctx: SimContext, character: Character, location: Locat
   const rng = ctx.rng.social;
   if (!rng.chance(0.35 + 0.5 * character.traits.sociability)) return;
 
+  // Anyone they know who is here, and a few strangers who catch their eye.
+  const world = ctx.world;
+  const here = idsAt(world, location.id);
+  const noticed = new Set<Character>();
+  for (const id in character.opinions) {
+    const other = world.characters.get(id as CharacterId);
+    if (other?.locationId === location.id) noticed.add(other);
+  }
+  for (let i = Math.min(STRANGERS_NOTICED, here.length); i > 0; i--) {
+    noticed.add(world.characters.get(here[rng.int(0, here.length - 1)]!)!);
+  }
+
   const candidates: [Character, number][] = [];
-  for (const other of charactersAt(ctx.world, location.id)) {
+  for (const other of noticed) {
     if (other.id === character.id || !isAlive(other)) continue;
     if (!available(other)) continue;
     const opinion = character.opinions[other.id];
@@ -516,17 +536,36 @@ export function gatherParty(ctx: SimContext, leader: Character, location: Locati
 /** A follower whose party is gone stops following and decides for themselves again. */
 function goOwnWay(ctx: SimContext, character: Character): void {
   if (character.activity.kind !== 'accompanying') return;
-  character.activity = { kind: 'idle' };
-  wakeAt(ctx, character, ctx.world.time + MINUTE);
+  standDown(ctx, character, ctx.world.characters.get(character.activity.leaderId));
 }
 
 /** Lets the leader's followers go back to deciding for themselves. */
 export function releaseFollowers(ctx: SimContext, leader: Character): void {
-  for (const follower of followersOf(ctx, leader)) {
-    follower.activity = { kind: 'idle' };
-    moveTo(ctx.world, follower, leader.locationId ?? follower.locationId);
-    wakeAt(ctx, follower, ctx.world.time + MINUTE);
+  for (const follower of followersOf(ctx, leader)) standDown(ctx, follower, leader);
+}
+
+/**
+ * A follower decides for themselves again. In a town or a dungeon they do so
+ * at once; caught on the road, they walk the rest of the leg alone first.
+ */
+function standDown(ctx: SimContext, follower: Character, leader: Character | undefined): void {
+  const lead = leader?.activity;
+  if (follower.locationId === null && lead?.kind === 'traveling') {
+    follower.activity = {
+      kind: 'traveling',
+      destinationId: lead.leg.to,
+      leg: lead.leg,
+      remaining: [],
+    };
+    wakeAt(ctx, follower, lead.leg.arrivesAt);
+    return;
   }
+  follower.activity = { kind: 'idle' };
+  // Nobody stops following anywhere but on a road with their leader; this is a safety net.
+  if (follower.locationId === null) {
+    moveTo(ctx.world, follower, leader?.locationId ?? follower.homeId);
+  }
+  wakeAt(ctx, follower, ctx.world.time + MINUTE);
 }
 
 /**

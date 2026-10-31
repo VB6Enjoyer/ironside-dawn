@@ -178,7 +178,8 @@ export function onCharacterKilled(ctx: SimContext, victim: Character, killer: Ch
           amount: bounty.amount,
         },
       },
-      [killer.id, victim.id],
+      // The outlaw is named in the data; the dead take no further part.
+      [killer.id],
       bounty.townId,
     );
     return;

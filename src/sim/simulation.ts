@@ -6,6 +6,7 @@ import type { SimContext } from './context';
 import { createWorldState, populate } from './gen/world';
 import {
   EVENT_IMPORTANCE,
+  Importance,
   type CharacterId,
   type EventType,
   type Job,
@@ -84,9 +85,10 @@ export interface Simulation {
 
 /**
  * Silent detail (ARCHITECTURE.md §4.2): blow-by-blow and room-by-room events
- * are only reported for watched characters and places. Fights and delves run
- * in full either way, and the unreported events still take their IDs, so
- * history and every other event are the same whoever is watched.
+ * are only reported for watched characters and places, and other trivial
+ * events (pastimes, nights' rest, passing through) only when asked for.
+ * Everything runs in full either way, and the unreported events still take
+ * their IDs, so history and every other event are the same whoever watches.
  */
 export type Watch =
   | 'all'
@@ -94,6 +96,8 @@ export type Watch =
   | {
       readonly characters: ReadonlySet<CharacterId>;
       readonly locations: ReadonlySet<LocationId>;
+      /** Report everyone's trivial events (but detail only for those watched). */
+      readonly trivia: boolean;
     };
 
 export const DETAIL_EVENTS: ReadonlySet<EventType> = new Set([
@@ -133,6 +137,12 @@ export function createSimulation(options: SimulationOptions): Simulation {
       actors.some((id) => characters.has(id as CharacterId))
     );
   };
+  const reported = (type: EventType, actors: readonly string[], locationId: LocationId | null) => {
+    if (watch === 'all') return true;
+    if (DETAIL_EVENTS.has(type)) return watched(actors, locationId);
+    if (EVENT_IMPORTANCE[type] !== Importance.Trivial) return true;
+    return watch !== 'none' && (watch.trivia || watched(actors, locationId));
+  };
   if (options.onEvent) events.subscribe(options.onEvent);
   const targetPopulation = restore?.characterCount ?? options.characterCount ?? 20;
 
@@ -148,7 +158,7 @@ export function createSimulation(options: SimulationOptions): Simulation {
     world,
     rng,
     emit(body, actors, locationId) {
-      if (DETAIL_EVENTS.has(body.type) && !watched(actors, locationId)) {
+      if (!reported(body.type, actors, locationId)) {
         world.nextEventId++;
         return;
       }
