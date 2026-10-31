@@ -2,12 +2,13 @@ import { creatureDef, TRAPS, type CreatureId, type RoomOutcome } from '../../con
 import { schedule } from '../core/scheduler';
 import { MINUTE } from '../core/time';
 import type { SimContext } from '../context';
-import type { Character, DelveProgress, Dungeon, Item, Location, LootItem } from '../model';
+import type { Character, DelveProgress, Dungeon, Item, Location, LootItem, Motive } from '../model';
 import { startFight } from './combat';
 import { isDizzy, modifier, retreatThreshold } from './condition';
 import { die } from './death';
 import { claimLegend, generateItem, takeGear } from './items';
 import { rollLootItem } from './loot';
+import { learnFromDelve, satisfy } from './mind';
 import { gainXp, practice, skillBonus } from './progress';
 
 /**
@@ -39,12 +40,20 @@ const COMFORT_DEPTH = 3;
 const XP_PER_TREASURE = 5;
 const XP_PER_AVOIDED_TRAP = 3;
 const XP_PER_CHAMBER = 2;
+/** Restlessness eased by a delve, and by each chamber explored. */
+const PURPOSE_PER_DELVE = 0.6;
+const PURPOSE_PER_CHAMBER = 0.05;
 /** Encounters with this much total creature level are frightening enough to try avoiding. */
 const AVOID_THREAT = 4;
 /** Slipping away succeeds on d20 + agility >= this + the strongest creature's level. */
 const STEALTH_DIFFICULTY = 8;
 
-export function enterDelve(ctx: SimContext, character: Character, location: Location): void {
+export function enterDelve(
+  ctx: SimContext,
+  character: Character,
+  location: Location,
+  why: readonly Motive[] = [],
+): void {
   if (!location.dungeon) throw new Error(`${location.id} is not a dungeon`);
   character.activity = {
     kind: 'delving',
@@ -52,9 +61,11 @@ export function enterDelve(ctx: SimContext, character: Character, location: Loca
     room: 0,
     goldFound: 0,
     itemsFound: 0,
+    valueFound: 0,
+    lowestHp: character.hp / character.maxHp,
   };
   ctx.emit(
-    { type: 'delve.enter', data: { characterId: character.id, locationId: location.id } },
+    { type: 'delve.enter', data: { characterId: character.id, locationId: location.id, why } },
     [character.id],
     location.id,
   );
@@ -85,6 +96,7 @@ export function delveStep(ctx: SimContext, character: Character): void {
 
   const room = activity.room + 1;
   const progress: DelveProgress = { ...activity, room };
+  satisfy(character, 'purpose', PURPOSE_PER_CHAMBER);
   character.stamina = Math.max(0, character.stamina - STAMINA_PER_CHAMBER);
 
   const outcome = rng.weighted(
@@ -131,6 +143,9 @@ export function exitDelve(
   character.locationId = progress.locationId;
   if (progress.room > 0)
     gainXp(ctx, character, XP_PER_CHAMBER * progress.room, progress.locationId);
+  // What this trip taught them about the place, and the itch it scratched.
+  learnFromDelve(character, progress, fled, ctx.world.time);
+  satisfy(character, 'purpose', PURPOSE_PER_DELVE);
   ctx.emit(
     {
       type: 'delve.exit',
@@ -163,8 +178,10 @@ function shouldLeave(
   if (character.stamina < character.maxStamina * 0.25) return true;
   if (isDizzy(character, ctx.world.time)) return true;
   // Deeper than their experience allows, the inexperienced turn back sooner.
-  if (progress.room >= COMFORT_DEPTH + character.level && ctx.rng.delve.chance(0.35)) return true;
-  return ctx.rng.delve.chance(BASE_LEAVE_CHANCE);
+  // The greedy push deeper; the impatient call it a day sooner.
+  const comfort = COMFORT_DEPTH + character.level + Math.round(2 * character.traits.greed);
+  if (progress.room >= comfort && ctx.rng.delve.chance(0.35)) return true;
+  return ctx.rng.delve.chance(BASE_LEAVE_CHANCE * (1.5 - character.traits.patience));
 }
 
 /**
@@ -183,7 +200,7 @@ function avoidFight(
   const level = creatureDef(species).level;
   if (level * count < AVOID_THREAT) return false;
   const rng = ctx.rng.delve;
-  if (!rng.chance(1 - 0.7 * character.bravery)) return false;
+  if (!rng.chance(1 - 0.7 * character.traits.bravery)) return false;
 
   const success =
     rng.int(1, 20) + modifier(character, 'agility') + skillBonus(character, 'stealth') >=
@@ -303,6 +320,10 @@ function treasureChamber(
     ...progress,
     goldFound: progress.goldFound + gold,
     itemsFound: progress.itemsFound + items.length + gear.length,
+    valueFound:
+      progress.valueFound +
+      items.reduce((sum, i) => sum + i.value, 0) +
+      gear.reduce((sum, g) => sum + g.value, 0),
   });
 }
 
@@ -344,7 +365,12 @@ function trapChamber(
   );
 
   if (character.hp <= 0) die(ctx, character, { kind: 'trap', trap: trap.id });
-  else continueDelve(ctx, character, progress);
+  else {
+    continueDelve(ctx, character, {
+      ...progress,
+      lowestHp: Math.min(progress.lowestHp, character.hp / character.maxHp),
+    });
+  }
 }
 
 function continueDelve(ctx: SimContext, character: Character, progress: DelveProgress): void {

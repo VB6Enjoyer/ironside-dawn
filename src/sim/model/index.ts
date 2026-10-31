@@ -25,3 +25,4 @@ export type { Equipment, Item, Legend } from './item';
 export type { Job } from './jobs';
 export type { Dungeon, Location, Route } from './location';
 export type { World } from './world';
+export type { DriveId, Drives, Expectation, Goal, Memory, MemoryEvent, Motive } from './mind';

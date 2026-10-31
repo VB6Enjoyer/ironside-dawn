@@ -1,6 +1,6 @@
 import { schedule } from '../core/scheduler';
 import type { SimContext } from '../context';
-import type { Character, EventOfType, LocationId } from '../model';
+import type { Character, EventOfType, LocationId, Motive } from '../model';
 import { findPath, roadsFrom } from './roads';
 
 export type TravelReason = EventOfType<'travel.depart'>['data']['reason'];
@@ -16,6 +16,7 @@ export function startJourney(
   character: Character,
   destinationId: LocationId,
   reason: TravelReason,
+  why: readonly Motive[] = [],
 ): boolean {
   const fromId = character.locationId;
   if (fromId === null) throw new Error(`${character.id} cannot depart while on the road`);
@@ -33,6 +34,7 @@ export function startJourney(
         destinationId,
         expectedDuration: path.duration,
         reason,
+        why,
       },
     },
     [character.id],

@@ -74,12 +74,12 @@ export function needsRecovery(character: Character): boolean {
 
 /** Below this fraction of hit points, a character tries to flee a fight. Braver ones hold on longer. */
 export function fleeThreshold(character: Character): number {
-  return 0.25 + 0.35 * (1 - character.bravery);
+  return 0.25 + 0.35 * (1 - character.traits.bravery);
 }
 
 /** Below this fraction of hit points, a character stops delving deeper. */
 export function retreatThreshold(character: Character): number {
-  return 0.45 + 0.3 * (1 - character.bravery);
+  return 0.45 + 0.3 * (1 - character.traits.bravery);
 }
 
 /** Each foe beyond the first makes a character this much quicker to flee. */

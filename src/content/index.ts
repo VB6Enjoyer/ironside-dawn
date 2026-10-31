@@ -56,3 +56,5 @@ export { SKILL_RANKS, SKILL_ROLE, SKILLS } from './skills';
 export type { Role, SkillId, WeaponSkill } from './skills';
 export { SPELLS, spellDef } from './spells';
 export type { SpellCosts, SpellDef, SpellEffect, SpellId } from './spells';
+export { DEFAULT_TRAIT_MEAN, DEFAULT_TRAIT_SD, TRAIT_POLES, TRAITS } from './traits';
+export type { TraitId, Traits, TraitTendencies } from './traits';

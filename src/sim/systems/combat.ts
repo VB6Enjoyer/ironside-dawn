@@ -12,12 +12,13 @@ import type {
   Location,
 } from '../model';
 import { adventurerFighter } from './condition';
-import { fightOutcome, fightRound } from './combat-core';
+import { fightOutcome, fightRound, type FightAction } from './combat-core';
 import { die } from './death';
 import { exitDelve, resumeDelve } from './delve';
 import { weaponSkillOf } from './items';
 import { rollLootItem } from './loot';
 import { cast, chooseSpell, type SpellChoice } from './magic';
+import { nudgeTrait, remember, satisfy } from './mind';
 import { addDeed, gainXp, practice } from './progress';
 
 /** Seconds between rounds: blows land a few seconds apart in real-time view. */
@@ -29,6 +30,9 @@ const XP_PER_CREATURE_LEVEL = 8;
 const WEAPON_PRACTICE = 0.1;
 /** Kills of creatures this strong (or with an affix) are remembered as deeds. */
 const MEMORABLE_LEVEL = 4;
+/** Below this fraction of hit points, surviving a fight is remembered as a near-death. */
+const NEAR_DEATH = 0.2;
+const GLORY_PER_KILL_LEVEL = 0.02;
 /** Each chamber deeper raises the chance of an affix by this fraction. */
 const AFFIX_DEPTH_BONUS = 0.15;
 
@@ -183,6 +187,7 @@ export function runRound(ctx: SimContext, encounter: Encounter): void {
       scheduleRound(ctx, encounter);
       return;
     case 'won':
+      rememberFight(ctx, character, encounter, 'won', killerOf(encounter, actions));
       win(ctx, character, encounter, activity.delve);
       return;
     case 'lost':
@@ -204,8 +209,51 @@ export function runRound(ctx: SimContext, encounter: Encounter): void {
         [character.id],
         encounter.locationId,
       );
-      exitDelve(ctx, character, activity.delve, true);
+      rememberFight(ctx, character, encounter, 'fled', killerOf(encounter, actions));
+      exitDelve(ctx, character, lowered(activity.delve, character), true);
       return;
+  }
+}
+
+/** The foe who last hurt the character this round, if any. */
+function killerOf(encounter: Encounter, actions: readonly FightAction[]): CreatureRef | null {
+  const hit = actions.findLast((a) => a.kind === 'attack' && a.target === 0 && a.hit);
+  return hit && hit.kind === 'attack' ? encounter.foes[hit.attacker - 1]!.ref : null;
+}
+
+function lowered(delve: DelveProgress, character: Character): DelveProgress {
+  return { ...delve, lowestHp: Math.min(delve.lowestHp, character.hp / character.maxHp) };
+}
+
+/**
+ * Fights leave marks: a close call is remembered and makes a character warier;
+ * besting something fearsome makes them bolder; fleeing stings.
+ */
+function rememberFight(
+  ctx: SimContext,
+  character: Character,
+  encounter: Encounter,
+  outcome: 'won' | 'fled',
+  lastHit: CreatureRef | null,
+): void {
+  const now = ctx.world.time;
+  const locationId = encounter.locationId;
+  if (character.hp < character.maxHp * NEAR_DEATH) {
+    remember(character, now, { kind: 'near-death', locationId, creature: lastHit }, 0.9);
+    nudgeTrait(character, 'bravery', -0.03);
+  }
+  if (outcome === 'fled') {
+    const creatures = encounter.foes.map((f) => f.ref);
+    remember(character, now, { kind: 'fled', locationId, creatures }, 0.6);
+    nudgeTrait(character, 'bravery', -0.01);
+    return;
+  }
+  const fearsome = encounter.foes.find(
+    (f) => creatureDef(f.ref.species).level >= MEMORABLE_LEVEL || f.ref.affix,
+  );
+  if (fearsome) {
+    remember(character, now, { kind: 'triumph', locationId, creature: fearsome.ref }, 0.7);
+    nudgeTrait(character, 'bravery', 0.01);
   }
 }
 
@@ -237,6 +285,7 @@ function slay(ctx: SimContext, character: Character, encounter: Encounter, foeIn
   );
   const xp = Math.round(def.level * XP_PER_CREATURE_LEVEL * (foe.ref.affix ? 1.5 : 1));
   gainXp(ctx, character, xp, encounter.locationId);
+  satisfy(character, 'glory', GLORY_PER_KILL_LEVEL * def.level);
 }
 
 /** Puts a cast spell's effect into the fight. */
@@ -295,9 +344,10 @@ function win(ctx: SimContext, character: Character, encounter: Encounter, delve:
     encounter.locationId,
   );
   resumeDelve(ctx, character, {
-    ...delve,
+    ...lowered(delve, character),
     goldFound: delve.goldFound + gold,
     itemsFound: delve.itemsFound + items.length,
+    valueFound: delve.valueFound + items.reduce((sum, i) => sum + i.value, 0),
   });
 }
 

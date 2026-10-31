@@ -15,6 +15,7 @@ import type { SimContext } from '../context';
 import type { Character, CharacterId, Location } from '../model';
 import { generateItem, starterWeapon } from '../systems/items';
 import { learnSpells } from '../systems/magic';
+import { initialDrives, rollTraits } from '../systems/mind';
 import { refreshMaxima } from '../systems/progress';
 import { generateName } from './names';
 
@@ -83,7 +84,7 @@ export function createCharacter(
     homeId: home.id,
     arrivedAt: world.time,
     stats,
-    bravery: Math.min(1, Math.max(0.05, rng.gaussian(0.55, 0.2))),
+    traits: rollTraits(rng, species),
     gifted,
     level: 1,
     xp: 0,
@@ -100,7 +101,12 @@ export function createCharacter(
     pack: [],
     kills: {},
     goldEarned: 0,
-    homeUntil: 0,
+    drives: initialDrives(rng),
+    drivesAt: world.time,
+    memories: [],
+    expectations: {},
+    visited: [home.id],
+    goal: null,
     locationId: home.id,
     activity: { kind: 'idle' },
     death: null,

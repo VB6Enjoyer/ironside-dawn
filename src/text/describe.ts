@@ -8,6 +8,7 @@ import {
 import type { CharacterId, Combatant, EventOfType, EventType, LocationId, SimEvent } from '../sim';
 import { describeDuration, seasonName } from './calendar';
 import { anItem, itemName, legendTitle, SKILL_PHRASES, spellName } from './items';
+import { describeWhy } from './mind';
 import { SPECIES_NAMES, type NameResolver } from './names';
 import {
   aCreature,
@@ -32,6 +33,8 @@ import {
 
 export type Segment =
   | { readonly text: string }
+  /** An aside, such as the reasons behind a decision, shown quieter. */
+  | { readonly text: string; readonly aside: true }
   | {
       readonly text: string;
       readonly ref: { readonly kind: 'character'; readonly id: CharacterId };
@@ -566,6 +569,18 @@ export function describeEvent(event: SimEvent, names: NameResolver): Segment[] {
   const segments = phrasing(event as never, helpers).map((part) =>
     typeof part === 'string' ? { text: part } : part,
   );
+  // Decisions explain themselves: "… toward Brindlemoor (restless; hungry for glory)."
+  const why = 'why' in event.data ? describeWhy(event.data.why, names) : '';
+  const last = segments.at(-1);
+  if (why && last && last.text.endsWith('.') && !('ref' in last)) {
+    segments.splice(
+      -1,
+      1,
+      { text: last.text.slice(0, -1) },
+      { text: ` ${why}`, aside: true },
+      { text: '.' },
+    );
+  }
   // Sentences may open with "the skeleton"; capitalize whatever comes first.
   const [first, ...rest] = segments;
   return first ? [{ ...first, text: capitalize(first.text) }, ...rest] : [];

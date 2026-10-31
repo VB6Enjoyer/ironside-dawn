@@ -11,5 +11,6 @@ export * from './model';
 export { createSimulation } from './simulation';
 export { conditionsOf, statValue } from './systems/condition';
 export { roleOf, xpForLevel } from './systems/progress';
+export { fearOf, vividMemories, vividness } from './systems/mind';
 export type { Condition } from './systems/condition';
 export type { AdvanceOptions, AdvanceResult, Simulation, SimulationOptions } from './simulation';

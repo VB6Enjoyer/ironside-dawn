@@ -3,6 +3,7 @@ import type { DeathCause, LootItem } from './character';
 import type { CreatureRef } from './encounter';
 import type { CharacterId, EntityId, EventId, LocationId } from './ids';
 import type { Item } from './item';
+import type { Motive } from './mind';
 
 /**
  * Structured events: the single source of truth for "what happened"
@@ -30,6 +31,11 @@ interface CharacterAt {
 
 type Body<T extends string, D> = { readonly type: T; readonly data: D };
 
+/** Decisions carry their reasons (ROADMAP.md Phase 4). */
+interface Decided {
+  readonly why: readonly Motive[];
+}
+
 export type EventBody =
   // World
   | Body<'world.created', { readonly seed: string }>
@@ -44,9 +50,9 @@ export type EventBody =
         readonly newcomer: boolean;
       }
     >
-  | Body<'character.pastime', CharacterAt & { readonly pastime: PastimeId }>
+  | Body<'character.pastime', CharacterAt & Decided & { readonly pastime: PastimeId }>
   | Body<'character.rest', CharacterAt & { readonly paid: boolean }>
-  | Body<'character.convalesce', CharacterAt>
+  | Body<'character.convalesce', CharacterAt & Decided>
   | Body<'character.levelup', CharacterAt & { readonly level: number }>
   | Body<'character.skill', CharacterAt & { readonly skill: SkillId; readonly rank: string }>
   | Body<'character.death', CharacterAt & { readonly cause: DeathCause; readonly kills: number }>
@@ -60,12 +66,13 @@ export type EventBody =
         /** Typical duration of the whole journey, in seconds. */
         readonly expectedDuration: number;
         readonly reason: 'wander' | 'delve' | 'heal' | 'home';
+        readonly why: readonly Motive[];
       }
     >
   | Body<'travel.pass', CharacterAt & { readonly destinationId: LocationId }>
   | Body<'travel.arrive', CharacterAt>
   // Delves
-  | Body<'delve.enter', CharacterAt>
+  | Body<'delve.enter', CharacterAt & Decided>
   | Body<'delve.quiet', CharacterAt & { readonly room: number }>
   | Body<
       'delve.treasure',
