@@ -5,7 +5,7 @@ import type { LootId } from './loot';
  * Creatures (WORLD.md §2): beasts and mindless things. Unlike characters they
  * have no mind or memory, just combat numbers and instincts.
  */
-export type CreatureFamily = 'beast' | 'undead' | 'demon';
+export type CreatureFamily = 'beast' | 'undead' | 'demon' | 'mortal';
 
 export interface CreatureDef {
   readonly id: string;
@@ -77,6 +77,32 @@ export const CREATURES = [
     id: 'hellhound', culture: 'generic', name: 'hellhound', plural: 'hellhounds', family: 'demon',
     level: 4, hp: '4d8+4', attack: 4, damage: '1d8+2', defense: 13, agility: 2, fleeBelow: 0.1,
     group: [1, 1], gold: null, drops: [{ loot: 'hellhound-fang', chance: 0.7 }],
+  },
+  {
+    id: 'dire-boar', culture: 'generic', name: 'dire boar', plural: 'dire boars', family: 'beast',
+    level: 3, hp: '3d8+2', attack: 3, damage: '1d8', defense: 11, agility: 0, fleeBelow: 0.2,
+    group: [1, 2], gold: null, drops: [{ loot: 'boar-tusk', chance: 0.6 }],
+  },
+  {
+    id: 'troll', culture: 'generic', name: 'troll', plural: 'trolls', family: 'beast',
+    level: 5, hp: '5d8+10', attack: 4, damage: '2d6+1', defense: 11, agility: -1, fleeBelow: 0.1,
+    group: [1, 1], gold: { dice: '3d6', chance: 0.4 }, drops: [{ loot: 'troll-hide', chance: 0.7 }],
+  },
+  {
+    id: 'ghoul', culture: 'generic', name: 'ghoul', plural: 'ghouls', family: 'undead',
+    level: 3, hp: '3d6+3', attack: 3, damage: '1d6+1', defense: 12, agility: 1, fleeBelow: 0,
+    group: [1, 3], gold: { dice: '1d6', chance: 0.3 }, drops: [{ loot: 'ghoul-claw', chance: 0.4 }],
+  },
+  {
+    id: 'wraith', culture: 'generic', name: 'wraith', plural: 'wraiths', family: 'undead',
+    level: 4, hp: '3d8', attack: 4, damage: '1d8+1', defense: 15, agility: 2, fleeBelow: 0,
+    group: [1, 1], gold: null, drops: [{ loot: 'wraith-essence', chance: 0.6 }],
+  },
+  // A lord's garrison: not found in dungeons, but on patrol and on the walls.
+  {
+    id: 'soldier', culture: 'generic', name: 'garrison soldier', plural: 'garrison soldiers', family: 'mortal',
+    level: 3, hp: '3d6+6', attack: 3, damage: '1d8', defense: 14, agility: 0, fleeBelow: 0.3,
+    group: [2, 4], gold: { dice: '1d6', chance: 0.5 }, drops: [],
   },
 ] as const satisfies readonly CreatureDef[];
 

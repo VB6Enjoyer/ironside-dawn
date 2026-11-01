@@ -7,6 +7,8 @@ export const LANGUAGES = {
   common: { name: 'Common' },
   sylvan: { name: 'Sylvan' },
   deeptongue: { name: 'Deeptongue' },
+  windspeech: { name: 'Windspeech' },
+  infernal: { name: 'Infernal' },
 } as const satisfies Record<string, { readonly name: string }>;
 
 export type LanguageId = keyof typeof LANGUAGES;

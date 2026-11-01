@@ -21,7 +21,7 @@ import { isAlive, isFitToDelve, needsRecovery } from './condition';
 import { remember, satisfy } from './mind';
 import { cancelWake, wakeAt } from './wake';
 import { sharePrices } from './merchants';
-import { idsAt, moveTo } from './whereabouts';
+import { charactersAt, idsAt, moveTo } from './whereabouts';
 
 /**
  * Bonds between characters (ROADMAP.md Phase 5): opinions, language, tavern
@@ -39,6 +39,8 @@ const RIVAL_AFFINITY = -0.4;
 /** Friends who trust each other this much will adventure together. */
 const PARTY_TRUST = 0.3;
 const MAX_PARTY = 4;
+/** A band raised against one of the dread can be bigger than a party. */
+export const CRUSADE_SIZE = 6;
 /** Affinity both ways at which friends may marry, and how well they must know each other. */
 const LOVE = 0.8;
 const LOVE_FAMILIARITY = 0.6;
@@ -536,6 +538,104 @@ function joinUp(ctx: SimContext, a: Character, b: Character, locationId: Locatio
     party.members,
     locationId,
   );
+}
+
+/**
+ * Someone setting out against one of the dread calls for companions: the
+ * brave and able in town, who don't hate them, rally to the cause and join
+ * their party (ROADMAP.md Phase 9).
+ */
+export function rallyAgainst(
+  ctx: SimContext,
+  leader: Character,
+  location: Location,
+  master: Character,
+): void {
+  const world = ctx.world;
+  const now = world.time;
+  const existing = partyOf(ctx, leader);
+  if (existing && existing.leaderId !== leader.id) return;
+  // Only those who could lead such a band call for one.
+  if (leader.level < master.level - 10) return;
+  const party: Party = existing ?? {
+    id: `p${world.nextPartyNumber}` as PartyId,
+    leaderId: leader.id,
+    members: [leader.id],
+    formedAt: now,
+  };
+  const joined: Character[] = [];
+  for (const head of willingRecruits(ctx, leader, location, master)) {
+    // A party's leader brings their party along, if there's room for all of them.
+    const theirs = head.partyId ? world.parties.get(head.partyId) : undefined;
+    const band = theirs
+      ? theirs.members.map((id) => world.characters.get(id)!).filter((c) => isAlive(c))
+      : [head];
+    if (party.members.length + band.length > CRUSADE_SIZE) continue;
+    if (theirs) world.parties.delete(theirs.id);
+    for (const recruit of band) {
+      adjustOpinion(recruit, leader.id, { affinity: 0.25, trust: 0.25, familiarity: 0.2 }, now);
+      adjustOpinion(leader, recruit.id, { affinity: 0.15, trust: 0.2, familiarity: 0.2 }, now);
+      const kind = recruit.activity.kind;
+      if (kind === 'resting' || kind === 'accompanying') recruit.activity = { kind: 'idle' };
+      party.members.push(recruit.id);
+      recruit.partyId = party.id;
+      joined.push(recruit);
+    }
+  }
+  if (joined.length === 0) return;
+  if (existing) {
+    for (const recruit of joined) {
+      ctx.emit(
+        {
+          type: 'party.join',
+          data: { characterId: recruit.id, leaderId: leader.id, locationId: location.id },
+        },
+        [recruit.id, leader.id],
+        location.id,
+      );
+    }
+    return;
+  }
+  world.nextPartyNumber++;
+  world.parties.set(party.id, party);
+  leader.partyId = party.id;
+  ctx.emit(
+    {
+      type: 'party.form',
+      data: { characterId: leader.id, locationId: location.id, memberIds: party.members },
+    },
+    party.members,
+    location.id,
+  );
+}
+
+/** Who in town would answer a call against `master`, strongest first. */
+export function willingRecruits(
+  ctx: SimContext,
+  leader: Character,
+  location: Location,
+  master: Character,
+): Character[] {
+  if (location.kind !== 'town') return [];
+  // The more lives it has claimed, the more answer the call.
+  const floor = master.level - (master.slain >= 10 ? 25 : 18);
+  return charactersAt(ctx.world, location.id)
+    .filter(
+      (c) =>
+        c !== leader &&
+        c.calling === 'adventurer' &&
+        !c.outlaw &&
+        // Free, or leading a party of their own, which comes too.
+        (!c.partyId || ctx.world.parties.get(c.partyId)?.leaderId === c.id) &&
+        c.partyId !== leader.partyId &&
+        c.level >= floor &&
+        isAlive(c) &&
+        (available(c) || c.activity.kind === 'resting') &&
+        c.traits.bravery >= 0.3 &&
+        (c.opinions[leader.id]?.affinity ?? 0) > -0.2 &&
+        communication(c, leader) >= UNDERSTOOD,
+    )
+    .sort((a, b) => b.level - a.level);
 }
 
 /** Leaves the party; a party of one is no party, and a leaderless one picks the next. */

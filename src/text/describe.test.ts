@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { PASTIMES } from '../content';
+import { PASTIMES, STARTER_MAP } from '../content';
 import {
   createSimulation,
   DAY,
@@ -26,7 +26,8 @@ import {
 } from './words';
 
 const events: SimEvent[] = [];
-const sim = createSimulation({ seed: 'epic', onEvent: (e) => events.push(e) });
+// The starter map, whose places the samples below name; the other worlds are generated.
+const sim = createSimulation({ seed: 'epic', map: STARTER_MAP, onEvent: (e) => events.push(e) });
 sim.advance(sim.world.time + 365 * DAY);
 /** Two more worlds, so the coverage check doesn't hang on one world's luck. */
 const moreTypes = new Set<string>();
@@ -72,6 +73,25 @@ const RARE: Record<string, (a: CharacterId, b: CharacterId) => object> = {
   }),
   'legend.hero': (a) => ({ characterId: a, locationId: where, renown: 52 }),
   'social.tale': (a, b) => ({ characterId: a, otherId: b, heroId: b, locationId: 'concordale' }),
+  'raid.repelled': (a, b) => ({
+    characterId: a,
+    characterIds: [a, b],
+    locationId: 'concordale',
+    leaderId: null,
+  }),
+  'patrol.clear': () => ({
+    locationId: where,
+    fortressId: 'concordale',
+    creature: 'wolf',
+    count: 3,
+  }),
+  'dread.fall': (a, b) => ({
+    characterId: a,
+    locationId: 'dungeon-of-misery',
+    slayerIds: [b],
+    slain: 12,
+    since: 0,
+  }),
   'character.avenger': (a, b) => ({
     characterId: a,
     locationId: 'concordale',

@@ -11,12 +11,14 @@ import type {
   Encounter,
   EncounterId,
   FighterState,
+  Herd,
   Location,
   Side,
 } from '../model';
 import { fightRound, fightWinner, type FightAction } from './combat-core';
 import { adventurerFighter } from './condition';
 import { die } from './death';
+import { dreadFell, dreadKilled } from './dread';
 import { exitDelve, resumeDelve } from './delve';
 import { weaponSkillOf } from './items';
 import { mint } from './ledger';
@@ -24,6 +26,7 @@ import { rollLootItem } from './loot';
 import { cast, chooseSpell, type SpellChoice } from './magic';
 import { nudgeTrait, remember, satisfy } from './mind';
 import { onCharacterKilled } from './outlaws';
+import { endRaid } from './raids';
 import { adjustOpinion, partyOf } from './social';
 import { addDeed, gainXp, practice } from './progress';
 import { cancelWake, wakeAt } from './wake';
@@ -65,51 +68,91 @@ export function startDelveFight(
   delve: { readonly leaderId: CharacterId; readonly progress: DelveProgress },
   species: CreatureId,
   count: number,
+  /** One of the dread, met in its lair with `species` at its side. */
+  master: Character | null = null,
 ): void {
-  const rng = ctx.rng.combat;
-  const def = creatureDef(species);
   // Deeper chambers hold stranger, stronger things.
   const room = delve.progress.room;
   const affixChance = Math.min(0.5, AFFIX_CHANCE * (1 + AFFIX_DEPTH_BONUS * (room - 1)));
-  const rolled = Array.from({ length: count }, () => {
-    const affix = rng.chance(affixChance)
-      ? rng.weighted(AFFIXES.map((a) => [a, a.weight] as const))
-      : null;
-    const hp = Math.max(1, Math.round(rng.roll(def.hp) * (affix?.hpMultiplier ?? 1)));
-    const fighter: FighterState = {
-      side: 1,
-      attack: def.attack + (affix?.attack ?? 0),
-      damage: def.damage,
-      damageBonus: affix?.damageBonus ?? 0,
-      defense: def.defense + (affix?.defense ?? 0),
-      agility: def.agility + (affix?.agility ?? 0),
-      fleeBelow: def.fleeBelow,
-      hp,
-      maxHp: hp,
-      stamina: null,
-      ward: 0,
-      out: null,
-    };
-    return { affix: affix?.id ?? null, fighter };
+  startCreatureFight(
+    ctx,
+    'delve',
+    party,
+    location,
+    [{ species, count }],
+    { locationId: location.id, pool: 'dungeon' },
+    { delve, affixChance, leaders: master ? [master] : [] },
+  );
+}
+
+/** Creatures of one kind, so many of them. */
+export interface Horde {
+  readonly species: CreatureId;
+  readonly count: number;
+}
+
+/**
+ * Characters against creatures (and maybe the dread who leads them): a delve,
+ * beasts on the road, a raid on a town, a lord's patrol.
+ */
+export function startCreatureFight(
+  ctx: SimContext,
+  kind: 'delve' | 'waylay' | 'raid' | 'patrol',
+  sideZero: readonly Character[],
+  location: Location,
+  hordes: readonly Horde[],
+  herd: Herd | null,
+  options: {
+    readonly delve?: Encounter['delve'];
+    readonly affixChance?: number;
+    readonly leaders?: readonly Character[];
+  } = {},
+): void {
+  const rng = ctx.rng.combat;
+  const affixChance = options.affixChance ?? AFFIX_CHANCE;
+  const rolled = hordes.flatMap(({ species, count }) => {
+    const def = creatureDef(species);
+    return Array.from({ length: count }, () => {
+      const affix = rng.chance(affixChance)
+        ? rng.weighted(AFFIXES.map((a) => [a, a.weight] as const))
+        : null;
+      const hp = Math.max(1, Math.round(rng.roll(def.hp) * (affix?.hpMultiplier ?? 1)));
+      const fighter: FighterState = {
+        side: 1,
+        attack: def.attack + (affix?.attack ?? 0),
+        damage: def.damage,
+        damageBonus: affix?.damageBonus ?? 0,
+        defense: def.defense + (affix?.defense ?? 0),
+        agility: def.agility + (affix?.agility ?? 0),
+        fleeBelow: def.fleeBelow,
+        hp,
+        maxHp: hp,
+        stamina: null,
+        ward: 0,
+        out: null,
+      };
+      return { species, affix: affix?.id ?? null, fighter };
+    });
   });
   // Ordinals tell apart foes that would otherwise share a name ("the second skeleton").
-  const creatures = rolled.map(({ affix, fighter }, i) => {
-    const twins = rolled.filter((r) => r.affix === affix);
-    const ordinal =
-      twins.length > 1 ? rolled.slice(0, i + 1).filter((r) => r.affix === affix).length : 0;
+  const creatures = rolled.map(({ species, affix, fighter }, i) => {
+    const same = (r: (typeof rolled)[number]) => r.species === species && r.affix === affix;
+    const twins = rolled.filter(same).length;
+    const ordinal = twins > 1 ? rolled.slice(0, i + 1).filter(same).length : 0;
     const ref: CreatureRef = { species, affix, ordinal };
     return { ref, fighter };
   });
 
   const encounter = createEncounter(
     ctx,
-    'delve',
+    kind,
     location,
     [
-      { characters: party.map((c) => c.id), creatures: [] },
-      { characters: [], creatures },
+      { characters: sideZero.map((c) => c.id), creatures: [] },
+      { characters: (options.leaders ?? []).map((c) => c.id), creatures },
     ],
-    delve,
+    options.delve ?? null,
+    herd,
   );
   begin(ctx, encounter);
 }
@@ -135,6 +178,7 @@ function createEncounter(
   location: Location,
   sides: Encounter['sides'],
   delve: Encounter['delve'] = null,
+  herd: Herd | null = null,
 ): Encounter {
   return {
     id: `e${ctx.world.nextEncounterNumber++}` as EncounterId,
@@ -148,6 +192,7 @@ function createEncounter(
     wards: {},
     delve,
     spoils: { gold: 0, items: [] },
+    herd,
   };
 }
 
@@ -293,7 +338,7 @@ export function runRound(ctx: SimContext, encounter: Encounter): void {
           type: 'combat.flee',
           data: { who: combatantOf(encounter, slot), success: action.success },
         },
-        actors,
+        actors.filter((id) => encounter.out[id] !== 'dead'),
         encounter.locationId,
       );
       if (action.success && slot.kind === 'character') {
@@ -368,7 +413,7 @@ function reportAttack(
         targetMaxHp: fighters[action.target]!.maxHp,
       },
     },
-    actors,
+    actors.filter((id) => encounter.out[id] !== 'dead'),
     encounter.locationId,
   );
   if (attacker.kind === 'character') {
@@ -390,16 +435,29 @@ function reportAttack(
     const ref = encounter.sides[attacker.side].creatures[attacker.index]!.ref;
     die(ctx, victim, { kind: 'creature', creature: ref });
   } else {
-    killCharacter(ctx, victim, world.characters.get(attacker.id)!);
+    killCharacter(ctx, victim, world.characters.get(attacker.id)!, encounter);
   }
 }
 
 /** One character kills another: the killer takes their purse, and the law takes note. */
-function killCharacter(ctx: SimContext, victim: Character, killer: Character): void {
+function killCharacter(
+  ctx: SimContext,
+  victim: Character,
+  killer: Character,
+  encounter: Encounter,
+): void {
   killer.gold += victim.gold;
   victim.gold = 0;
+  killer.slain++;
+  // Those who stood with the killer share in destroying one of the dread.
+  const side = encounter.sides.find((s) => s.characters.includes(killer.id));
+  const slayers = (side?.characters ?? [])
+    .filter((id) => encounter.out[id] !== 'dead')
+    .map((id) => ctx.world.characters.get(id)!);
   die(ctx, victim, { kind: 'character', characterId: killer.id });
   onCharacterKilled(ctx, victim, killer);
+  if (killer.calling === 'dread') dreadKilled(ctx, killer, victim, encounter.locationId);
+  if (victim.calling === 'dread') dreadFell(ctx, victim, slayers, encounter.locationId);
 }
 
 function slay(
@@ -413,8 +471,7 @@ function slay(
   const species = foe.ref.species;
   const def = creatureDef(species);
 
-  const dungeon = ctx.world.locations.get(encounter.locationId)?.dungeon;
-  if (dungeon) dungeon.population[species] = Math.max(0, (dungeon.population[species] ?? 0) - 1);
+  thinHerd(ctx, encounter, species);
   killer.kills[species] = (killer.kills[species] ?? 0) + 1;
   if (def.level >= MEMORABLE_LEVEL || foe.ref.affix) {
     addDeed(killer, { kind: 'slay', at: ctx.world.time, creature: foe.ref });
@@ -442,6 +499,22 @@ function slay(
     gainXp(ctx, c, id === killer.id ? xp : Math.round(xp * PARTY_XP_SHARE), encounter.locationId);
   }
   satisfy(killer, 'glory', GLORY_PER_KILL_LEVEL * def.level);
+}
+
+/** One fewer of the creatures where they came from. */
+function thinHerd(ctx: SimContext, encounter: Encounter, species: CreatureId): void {
+  const herd = encounter.herd;
+  const place = herd ? ctx.world.locations.get(herd.locationId) : undefined;
+  if (!herd || !place) return;
+  if (herd.pool === 'garrison') {
+    if (place.fortress) place.fortress.garrison = Math.max(0, place.fortress.garrison - 1);
+    return;
+  }
+  const pool = herd.pool === 'dungeon' ? place.dungeon?.population : place.roaming;
+  if (!pool) return;
+  const left = Math.max(0, (pool[species] ?? 0) - 1);
+  if (left > 0 || herd.pool === 'dungeon') pool[species] = left;
+  else delete pool[species];
 }
 
 /** Puts a cast spell's effect into the fight. */
@@ -474,7 +547,7 @@ function applySpell(
         victim.hp = Math.max(0, victim.hp - amount);
         if (victim.hp === 0) {
           encounter.out[victim.id] = 'dead';
-          killCharacter(ctx, victim, caster);
+          killCharacter(ctx, victim, caster, encounter);
         }
       }
       return;
@@ -557,6 +630,10 @@ function end(ctx: SimContext, encounter: Encounter, winner: Side | null): void {
       };
     }
 
+    // The dread in its lair, if it lives, goes back to brooding.
+    for (const id of encounter.sides[1].characters) {
+      if (alive(id)) settleAfterFight(ctx, world.characters.get(id)!);
+    }
     const leaderStanding = standing.some((c) => c.id === leaderId);
     for (const id of encounter.sides[0].characters) {
       if (!alive(id)) continue;
@@ -580,16 +657,27 @@ function end(ctx: SimContext, encounter: Encounter, winner: Side | null): void {
     return;
   }
 
-  // Ambushes and hunts: survivors pick up their lives where they are. A hunt,
+  // Everywhere else, survivors pick up their lives where they are. A hunt,
   // won or not, scratches the same itch as a delve.
   for (const id of everyoneIn(encounter)) {
     if (!alive(id)) continue;
     const c = world.characters.get(id)!;
     if (encounter.kind === 'hunt') satisfy(c, 'purpose', 0.6);
+    if (settleAfterFight(ctx, c)) continue;
     c.activity = { kind: 'idle' };
     moveTo(world, c, encounter.locationId);
     wakeAt(ctx, c, now + MINUTE);
   }
+  // Beaten creatures leave what they carried to the winners.
+  const { gold, items } = encounter.spoils;
+  const keeper = winner === 0 ? standingOn(0).map((id) => world.characters.get(id)!)[0] : undefined;
+  if (keeper && (gold > 0 || items.length > 0)) {
+    keeper.gold += gold;
+    keeper.goldEarned += gold;
+    mint(world, 'treasure', gold);
+    keeper.pack.push(...items);
+  }
+  if (encounter.kind === 'raid') endRaid(ctx, encounter, winner);
   if (winner !== null) {
     const winners = standingOn(winner).map((id) => world.characters.get(id)!);
     const foes = encounter.sides[winner === 0 ? 1 : 0].characters.map((id): Combatant => ({
@@ -605,17 +693,46 @@ function end(ctx: SimContext, encounter: Encounter, winner: Side | null): void {
             characterId: first.id,
             characterIds: winners.map((c) => c.id),
             locationId: encounter.locationId,
-            foes,
+            foes: [
+              ...foes,
+              ...encounter.sides[winner === 0 ? 1 : 0].creatures.map((c): Combatant => ({
+                kind: 'creature',
+                ref: c.ref,
+              })),
+            ],
             hp: first.hp,
             maxHp: first.maxHp,
-            gold: 0,
-            items: [],
+            gold: winner === 0 ? gold : 0,
+            items: winner === 0 ? items : [],
           },
         },
         winners.map((c) => c.id),
         encounter.locationId,
       );
     }
+  }
+}
+
+/**
+ * Those who don't decide moment to moment go back to their lives: townsfolk
+ * and lords to living, the dread to their lairs. Returns false for everyone
+ * else, who decide what next.
+ */
+function settleAfterFight(ctx: SimContext, c: Character): boolean {
+  switch (c.calling) {
+    case 'townsfolk':
+    case 'child':
+    case 'lord':
+      c.activity = { kind: 'living' };
+      cancelWake(c);
+      return true;
+    case 'dread':
+      c.activity = { kind: 'living' };
+      cancelWake(c);
+      moveTo(ctx.world, c, c.homeId);
+      return true;
+    default:
+      return false;
   }
 }
 

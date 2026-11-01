@@ -8,6 +8,7 @@ export type {
   LocationDef,
   LocationKind,
   MapDef,
+  RegionDef,
   RoomOutcome,
   RouteDef,
 } from './locations';
@@ -15,8 +16,8 @@ export { LOOT, lootDef } from './loot';
 export type { LootDef, LootId } from './loot';
 export { PASTIMES } from './pastimes';
 export type { PastimeDef, PastimeId } from './pastimes';
-export { SPECIES } from './species';
-export type { SpeciesDef, SpeciesId } from './species';
+export { isDread, PEOPLES, SPECIES } from './species';
+export type { PeopleId, SpeciesDef, SpeciesId } from './species';
 export { STARTER_MAP } from './starter-map';
 export { STATS } from './stats';
 export type { StatId, Stats } from './stats';
@@ -80,3 +81,7 @@ export type {
   ShockDef,
   ShockId,
 } from './economy';
+export { BIOMES, biomeDef, HOMELANDS, WEATHERS } from './biomes';
+export type { BiomeDef, BiomeId, NameParts, WeatherId } from './biomes';
+export { DUNGEON_TEMPLATES } from './dungeons';
+export type { DungeonTemplate, DungeonTemplateId } from './dungeons';

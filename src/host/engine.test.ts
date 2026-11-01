@@ -59,7 +59,8 @@ describe('engine', () => {
     const { host } = setup();
     const snapshot = host.getSnapshot();
     expect(snapshot.ready).toBe(true);
-    expect(snapshot.livingCount).toBe(20 + merchantsFor(20));
+    // Adventurers and merchants, and the lords and dread of a generated world.
+    expect(snapshot.livingCount).toBeGreaterThanOrEqual(20 + merchantsFor(20));
     expect(host.places.size).toBeGreaterThan(3);
     const someone = snapshot.log.find((e) => !isDigest(e) && e.type === 'character.introduced');
     expect(

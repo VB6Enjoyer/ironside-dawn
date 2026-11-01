@@ -10,6 +10,9 @@ export interface CultureDef {
   /** Family names are built as prefix + suffix ("Ash" + "ford"). */
   readonly familyNamePrefixes: readonly string[];
   readonly familyNameSuffixes: readonly string[];
+  /** Town names, built the same way ("Concord" + "dale"). */
+  readonly townPrefixes?: readonly string[];
+  readonly townSuffixes?: readonly string[];
 }
 
 export const CULTURES = {
@@ -37,6 +40,17 @@ export const CULTURES = {
       'brook', 'by', 'croft', 'field', 'ford', 'gate', 'hill', 'holm', 'ley', 'more',
       'stead', 'ton', 'well', 'wick', 'wood',
     ],
+    // prettier-ignore
+    townPrefixes: [
+      'Concord', 'Brindle', 'Salt', 'Ash', 'Elder', 'Wey', 'Mill', 'Kings', 'Raven', 'Thorn',
+      'Hollow', 'Lark', 'Fern', 'Stour', 'Ox', 'Marl', 'Cran', 'Har', 'Pen', 'Ember',
+      'Wren', 'Barrow', 'Holly', 'Copper', 'Sedge', 'Bell', 'Hay', 'Rush',
+    ],
+    // prettier-ignore
+    townSuffixes: [
+      'dale', 'moor', 'mere', 'ford', 'bury', 'wick', 'ton', 'ham', 'stead', 'bridge',
+      'field', 'haven', 'wold', 'minster', 'cross',
+    ],
   },
   sylvan: {
     id: 'sylvan',
@@ -55,6 +69,12 @@ export const CULTURES = {
     familyNameSuffixes: [
       'whisper', 'bough', 'song', 'shade', 'glade', 'bloom', 'brook', 'veil', 'wing',
     ],
+    // prettier-ignore
+    townPrefixes: [
+      'Aelin', 'Cael', 'Ith', 'Lor', 'Sil', 'Thal', 'Ylen', 'Myr', 'Nae', 'Faer', 'Elen', 'Quel',
+    ],
+    // prettier-ignore
+    townSuffixes: ['dor', 'wyn', 'thil', 'lond', 'mere', 'glade', 'iel', 'ost', 'ara', 'eth'],
   },
   deephold: {
     id: 'deephold',
@@ -72,6 +92,67 @@ export const CULTURES = {
     // prettier-ignore
     familyNameSuffixes: [
       'beard', 'hammer', 'fist', 'delve', 'forge', 'helm', 'shield', 'brow', 'vein', 'mantle',
+    ],
+    // prettier-ignore
+    townPrefixes: [
+      'Kar', 'Khaz', 'Dur', 'Grim', 'Thrag', 'Bar', 'Iron', 'Stone', 'Ember', 'Deep',
+      'Hammer', 'Anvil', 'Mor', 'Bal',
+    ],
+    // prettier-ignore
+    townSuffixes: ['hold', 'deep', 'delve', 'mount', 'hall', 'gate', 'forge', 'dun', 'heim'],
+  },
+  steppe: {
+    id: 'steppe',
+    name: 'Steppe (centaur)',
+    // prettier-ignore
+    givenNames: [
+      'Arkhan', 'Bayar', 'Chagra', 'Daran', 'Erdene', 'Gerel', 'Hulan', 'Khasar', 'Altan',
+      'Mergen', 'Naran', 'Oyun', 'Saran', 'Temur', 'Tolui', 'Yesun', 'Borte', 'Jochi',
+    ],
+    // prettier-ignore
+    familyNamePrefixes: [
+      'Wind', 'Storm', 'Swift', 'Grass', 'Thunder', 'Sky', 'Dust', 'Far', 'Red', 'Sun',
+    ],
+    // prettier-ignore
+    familyNameSuffixes: [
+      'runner', 'mane', 'hoof', 'strider', 'caller', 'chaser', 'watcher', 'song', 'herd',
+    ],
+    // prettier-ignore
+    townPrefixes: [
+      'Wind', 'Grass', 'Thunder', 'Hoof', 'Sky', 'Dust', 'Long', 'Red', 'Wild', 'Horn', 'Sun',
+    ],
+    // prettier-ignore
+    townSuffixes: ['moot', 'run', 'camp', 'meet', 'reach', 'ring', 'ford', 'stand'],
+  },
+  // The dread: a name, and an epithet in place of a family name ("Morvath the Pale").
+  grave: {
+    id: 'grave',
+    name: 'The grave (undead)',
+    // prettier-ignore
+    givenNames: [
+      'Morvath', 'Vexmora', 'Szarith', 'Ulmorrow', 'Kethrax', 'Nhalgor', 'Velsith', 'Orduun',
+      'Isparra', 'Thessaly', 'Malgrave', 'Corvane',
+    ],
+    familyNamePrefixes: ['the '],
+    // prettier-ignore
+    familyNameSuffixes: [
+      'Pale', 'Hollow', 'Undying', 'Withered', 'Grey', 'Silent', 'Bone King', 'Hollow Queen',
+      'Eyeless', 'Unburied', 'Lantern-eyed', 'Grave-born',
+    ],
+  },
+  infernal: {
+    id: 'infernal',
+    name: 'Infernal (demon)',
+    // prettier-ignore
+    givenNames: [
+      'Azhrael', 'Baalzeth', 'Gorrumoth', 'Ixtaroth', 'Kharneth', 'Molgarax', 'Sathrek',
+      'Valgorath', 'Zerukai', 'Ulgrimm',
+    ],
+    familyNamePrefixes: ['the '],
+    // prettier-ignore
+    familyNameSuffixes: [
+      'Burning', 'Flayer', 'Horned', 'Ash Lord', 'Devourer', 'Many-mouthed', 'Red', 'Smoldering',
+      'Breaker', 'Chain-bearer',
     ],
   },
 } as const satisfies Record<string, CultureDef>;

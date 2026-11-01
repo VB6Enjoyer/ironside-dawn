@@ -39,4 +39,8 @@ export const SPECIES_NAMES: Record<
   human: { singular: 'human', plural: 'humans' },
   elf: { singular: 'elf', plural: 'elves' },
   dwarf: { singular: 'dwarf', plural: 'dwarves' },
+  centaur: { singular: 'centaur', plural: 'centaurs' },
+  lich: { singular: 'lich', plural: 'liches' },
+  revenant: { singular: 'revenant', plural: 'revenants' },
+  demon: { singular: 'demon', plural: 'demons' },
 };

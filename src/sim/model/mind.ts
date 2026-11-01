@@ -78,6 +78,8 @@ export type Motive =
   | { readonly kind: 'loot' }
   | { readonly kind: 'bounty'; readonly outlawId: CharacterId }
   | { readonly kind: 'revenge'; readonly characterId: CharacterId }
+  /** To bring down one of the dread in its lair. */
+  | { readonly kind: 'dread'; readonly characterId: CharacterId }
   | { readonly kind: 'friends' }
   /** A merchant's run: buy here, sell there. */
   | { readonly kind: 'profit' }

@@ -98,6 +98,10 @@ export function adventurerFighter(
   const dizzy = isDizzy(character, now);
   const quickened = encounter.quickened[character.id];
   const weaponSkill = weapon.slot === 'weapon' ? skillBonus(character, weapon.skill) : 0;
+  // The dread strike with more than steel, and never run from their own lairs.
+  const dread = character.calling === 'dread';
+  const might = dread ? 2 + Math.floor(character.level / 3) : 0;
+  const menace = dread ? Math.floor(character.level / 5) : 0;
   return {
     side,
     attack:
@@ -106,22 +110,26 @@ export function adventurerFighter(
       levelAttackBonus(character) +
       Math.max(modifier(character, 'might'), modifier(character, 'agility')) +
       gear.attack +
+      menace +
       (quickened?.attack ?? 0) -
       (dizzy ? DIZZY_ATTACK_PENALTY : 0),
     damage: weapon.slot === 'weapon' ? weapon.damage : '1d3',
-    damageBonus: modifier(character, 'might') + gear.damage,
+    damageBonus: modifier(character, 'might') + gear.damage + might,
     defense:
       BASE_DEFENSE +
       modifier(character, 'agility') +
       levelDefenseBonus(character) +
       gear.defense +
+      menace +
       (quickened?.defense ?? 0) -
       (dizzy ? DIZZY_DEFENSE_PENALTY : 0),
     agility: modifier(character, 'agility'),
-    fleeBelow: Math.min(
-      MAX_FLEE_THRESHOLD,
-      fleeThreshold(character) + OUTNUMBERED_FLEE_BONUS * Math.max(0, foesStanding - 1),
-    ),
+    fleeBelow: dread
+      ? 0
+      : Math.min(
+          MAX_FLEE_THRESHOLD,
+          fleeThreshold(character) + OUTNUMBERED_FLEE_BONUS * Math.max(0, foesStanding - 1),
+        ),
     hp: character.hp,
     maxHp: character.maxHp,
     stamina: character.stamina,

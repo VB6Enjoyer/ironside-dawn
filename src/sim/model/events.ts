@@ -1,4 +1,5 @@
 import type {
+  CreatureId,
   Goods,
   LanguageId,
   PastimeId,
@@ -7,10 +8,11 @@ import type {
   SpellId,
   StatId,
   TrapId,
+  WeatherId,
 } from '../../content';
 import type { DeathCause, LootItem, Occupation } from './character';
 import type { CreatureRef } from './encounter';
-import type { CharacterId, EntityId, EventId, LocationId } from './ids';
+import type { CharacterId, EntityId, EventId, LocationId, RegionId } from './ids';
 import type { Item } from './item';
 import type { Motive } from './mind';
 
@@ -132,7 +134,7 @@ export type EventBody =
         /** The side that was attacked or went in: the party, or the travelers. */
         readonly characterIds: readonly CharacterId[];
         readonly foes: readonly Combatant[];
-        readonly kind: 'delve' | 'ambush' | 'hunt';
+        readonly kind: 'delve' | 'ambush' | 'hunt' | 'waylay' | 'raid' | 'patrol';
       }
     >
   | Body<
@@ -316,6 +318,69 @@ export type EventBody =
       'character.avenger',
       CharacterAt & { readonly forId: CharacterId; readonly againstId: CharacterId }
     >
+  // A living world
+  /** Hard weather sets in over a region. */
+  | Body<
+      'weather.turn',
+      { readonly regionId: RegionId; readonly region: string; readonly weather: WeatherId }
+    >
+  /** Creatures crowded out of `locationId` move to `toId`: into another dungeon, or loose on the roads. */
+  | Body<
+      'creature.migrate',
+      {
+        readonly locationId: LocationId;
+        readonly toId: LocationId;
+        readonly creature: CreatureId;
+        readonly count: number;
+        readonly roaming: boolean;
+      }
+    >
+  /** Raiders overrun a town nobody could defend. `leaderId`, one of the dread, led them. */
+  | Body<
+      'raid.sack',
+      {
+        readonly locationId: LocationId;
+        readonly creature: CreatureId | null;
+        readonly count: number;
+        readonly leaderId: CharacterId | null;
+        readonly lost: number;
+        readonly gold: number;
+      }
+    >
+  /** The defenders of a town drive the raiders off. */
+  | Body<
+      'raid.repelled',
+      CharacterAt & {
+        readonly characterIds: readonly CharacterId[];
+        readonly leaderId: CharacterId | null;
+      }
+    >
+  /** A lord's patrol clears creatures from a road in their lands. */
+  | Body<
+      'patrol.clear',
+      {
+        readonly locationId: LocationId;
+        readonly fortressId: LocationId;
+        readonly creature: CreatureId;
+        readonly count: number;
+      }
+    >
+  /** Someone takes the seat of a fortress. */
+  | Body<
+      'lord.seat',
+      CharacterAt & { readonly how: 'founded' | 'inherited' | 'claimed' | 'appointed' }
+    >
+  /** One of the dread makes its lair in a dungeon. */
+  | Body<'dread.rise', CharacterAt>
+  /** One of the dread is destroyed, by `slayerIds`, after killing `slain` people. */
+  | Body<
+      'dread.fall',
+      CharacterAt & {
+        readonly slayerIds: readonly CharacterId[];
+        readonly slain: number;
+        readonly since: number;
+      }
+    >
   /** A trouble begins: in a town, or on the road between `locationId` and `otherId`. */
   | Body<
       'market.shock',
@@ -412,5 +477,13 @@ export const EVENT_IMPORTANCE: Record<EventType, Importance> = {
   'social.tale': Importance.Trivial,
   'character.avenger': Importance.Notable,
   'market.shock': Importance.Notable,
+  'weather.turn': Importance.Normal,
+  'creature.migrate': Importance.Normal,
+  'raid.sack': Importance.Notable,
+  'raid.repelled': Importance.Notable,
+  'patrol.clear': Importance.Normal,
+  'lord.seat': Importance.Notable,
+  'dread.rise': Importance.Notable,
+  'dread.fall': Importance.Legendary,
   'market.recover': Importance.Normal,
 };

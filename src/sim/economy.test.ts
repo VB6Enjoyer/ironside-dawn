@@ -47,7 +47,7 @@ describe('a year of trade', () => {
       expect(market.history.food!.length).toBe(360);
     }
     const last = sim.world.history.at(-1)!;
-    expect(Object.keys(last.prices)).toHaveLength(3);
+    expect(Object.keys(last.prices)).toHaveLength(sim.world.markets.size);
     expect(last.money).toBeGreaterThan(0);
   });
 

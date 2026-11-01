@@ -25,7 +25,15 @@ import type { PriceNote } from './market';
  * townsfolk (the retired, and those who never took up the sword) live and
  * work in town, and children grow up there.
  */
-export type Calling = 'adventurer' | 'merchant' | 'townsfolk' | 'child';
+export type Calling =
+  | 'adventurer'
+  | 'merchant'
+  | 'townsfolk'
+  | 'child'
+  /** Holds a fortress and the lands around it, with a garrison. */
+  | 'lord'
+  /** One of the dread: a lich, revenant or demon lord in its lair. */
+  | 'dread';
 
 /** Townsfolk's work, mostly taken up on retiring. */
 export type Occupation = 'innkeeper' | 'smith' | 'trainer' | 'farmer' | 'clerk';
@@ -78,6 +86,8 @@ export interface Character {
   /** Loot carried, waiting to be sold. */
   pack: LootItem[];
   kills: Partial<Record<CreatureId, number>>;
+  /** People they have killed. */
+  slain: number;
   /** Lifetime gold from loot sold and coins found, for reports. */
   goldEarned: number;
 
@@ -143,7 +153,14 @@ export type Deed =
   | { readonly kind: 'legend'; readonly at: number; readonly itemId: ItemId; readonly name: string }
   | { readonly kind: 'slay'; readonly at: number; readonly creature: CreatureRef }
   | { readonly kind: 'spell'; readonly at: number; readonly spell: SpellId }
-  | { readonly kind: 'rank'; readonly at: number; readonly skill: SkillId; readonly rank: string };
+  | { readonly kind: 'rank'; readonly at: number; readonly skill: SkillId; readonly rank: string }
+  /** Helped destroy one of the dread. */
+  | {
+      readonly kind: 'vanquish';
+      readonly at: number;
+      readonly characterId: CharacterId;
+      readonly name: string;
+    };
 
 export interface Death {
   readonly at: number;

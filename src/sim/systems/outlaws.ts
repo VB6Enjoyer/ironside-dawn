@@ -222,6 +222,8 @@ export function onCharacterKilled(ctx: SimContext, victim: Character, killer: Ch
     registerCrime(ctx, killer, victim, 'murder', locationId);
     if (!victim.outlaw) raiseAvenger(ctx, victim, killer);
   }
+  // Those the dread kill may leave someone sworn to destroy it.
+  if (killer.calling === 'dread') raiseAvenger(ctx, victim, killer);
 }
 
 /** Chance that a murder moves a commoner of the victim's town to take up the sword. */

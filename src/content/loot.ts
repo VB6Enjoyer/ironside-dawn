@@ -31,6 +31,10 @@ export const LOOT = [
   { id: 'grave-ring', culture: 'generic', name: 'grave ring', plural: 'grave rings', value: 14 },
   { id: 'imp-horn', culture: 'generic', name: 'imp horn', plural: 'imp horns', value: 20, good: 'reagents', units: 1.5 },
   { id: 'hellhound-fang', culture: 'generic', name: 'hellhound fang', plural: 'hellhound fangs', value: 60, good: 'reagents', units: 5 },
+  { id: 'boar-tusk', culture: 'generic', name: 'boar tusk', plural: 'boar tusks', value: 18, good: 'hides', units: 2 },
+  { id: 'troll-hide', culture: 'generic', name: 'troll hide', plural: 'troll hides', value: 55, good: 'hides', units: 6 },
+  { id: 'ghoul-claw', culture: 'generic', name: 'ghoul claw', plural: 'ghoul claws', value: 14, good: 'reagents', units: 1 },
+  { id: 'wraith-essence', culture: 'generic', name: 'phial of wraith essence', plural: 'phials of wraith essence', value: 50, good: 'reagents', units: 4 },
   // Treasure
   { id: 'silver-ring', culture: 'generic', name: 'silver ring', plural: 'silver rings', value: 15 },
   { id: 'gilded-goblet', culture: 'generic', name: 'gilded goblet', plural: 'gilded goblets', value: 30 },

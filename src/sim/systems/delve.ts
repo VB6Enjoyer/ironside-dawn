@@ -5,6 +5,7 @@ import type { Character, DelveProgress, Dungeon, Item, Location, LootItem, Motiv
 import { startDelveFight } from './combat';
 import { isDizzy, modifier, retreatThreshold } from './condition';
 import { die } from './death';
+import { escortOf, masterAt } from './dread';
 import { claimLegend, generateItem, takeGear } from './items';
 import { mint } from './ledger';
 import { rollLootItem } from './loot';
@@ -111,6 +112,22 @@ export function delveStep(ctx: SimContext, character: Character): void {
     member.stamina = Math.max(0, member.stamina - STAMINA_PER_CHAMBER);
   }
 
+  // The deepest chamber is the lair of the dungeon's master, if it has one.
+  const master = room >= dungeon.def.depth ? masterAt(ctx, location) : null;
+  if (master) {
+    const escort = escortOf(location);
+    startDelveFight(
+      ctx,
+      party,
+      location,
+      { leaderId: character.id, progress },
+      escort?.species ?? 'skeleton',
+      escort?.count ?? 0,
+      master,
+    );
+    return;
+  }
+
   const outcome = rng.weighted(
     (Object.entries(dungeon.def.rooms) as [RoomOutcome, number][]).filter(([, w]) => w > 0),
   );
@@ -188,14 +205,50 @@ function shouldLeave(
   dungeon: Dungeon,
 ): boolean {
   if (progress.room >= dungeon.def.depth) return true;
+  // The next chamber is a master's lair: only those who fancy their chances go on.
+  if (progress.room + 1 >= dungeon.def.depth && dungeon.masterId) {
+    const master = ctx.world.characters.get(dungeon.masterId)!;
+    if (!master.death && !dareLair(ctx, character, master)) return true;
+  }
   if (character.hp < character.maxHp * retreatThreshold(character)) return true;
   if (character.stamina < character.maxStamina * 0.25) return true;
   if (isDizzy(character, ctx.world.time)) return true;
+  // Out to destroy the master, they press on to the lair while they can.
+  if (dungeon.masterId && onCrusade(ctx, character, dungeon.masterId)) return false;
   // Deeper than their experience allows, the inexperienced turn back sooner.
   // The greedy push deeper; the impatient call it a day sooner.
   const comfort = COMFORT_DEPTH + character.level + Math.round(2 * character.traits.greed);
   if (progress.room >= comfort && ctx.rng.delve.chance(0.35)) return true;
   return ctx.rng.delve.chance(BASE_LEAVE_CHANCE * (1.5 - character.traits.patience));
+}
+
+/** Whether the character, or their party's leader, came here to destroy the master. */
+function onCrusade(ctx: SimContext, character: Character, masterId: Character['id']): boolean {
+  const lead =
+    character.activity.kind === 'accompanying'
+      ? ctx.world.characters.get(character.activity.leaderId)
+      : character;
+  if (!lead) return false;
+  // A band of three or more came for one reason only.
+  if (followersOf(ctx, lead).length >= 2) return true;
+  return Boolean(lead.goal?.why.some((m) => m.kind === 'dread' && m.characterId === masterId));
+}
+
+/**
+ * Whether to go on into a master's lair: the stronger the party against it,
+ * and the braver and hungrier for glory the character, the likelier.
+ */
+function dareLair(ctx: SimContext, character: Character, master: Character): boolean {
+  const party = 1 + followersOf(ctx, character).length;
+  const odds = lairOdds(character.level, party, master.level);
+  const nerve = 0.3 + 0.5 * character.traits.bravery + 0.2 * character.drives.glory;
+  return odds * nerve > 0.4 && ctx.rng.delve.chance(0.5 + 0.5 * odds);
+}
+
+/** Rough odds, 0 to 1, of a party led by someone of `level` against a master of `masterLevel`. */
+export function lairOdds(level: number, party: number, masterLevel: number): number {
+  // A lone hero needs to far outmatch it; companions count for a lot.
+  return Math.max(0, Math.min(1, (level + 10 * (party - 1) - masterLevel - 10) / 20 + 0.5));
 }
 
 /**

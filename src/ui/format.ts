@@ -41,6 +41,10 @@ export function callingTitle(c: Character): string {
       return 'Merchant';
     case 'child':
       return 'Child';
+    case 'lord':
+      return `Lord, level ${c.level}`;
+    case 'dread':
+      return `Dread ${c.species}, level ${c.level}`;
     case 'townsfolk': {
       const trade = c.occupation ? OCCUPATION_TITLES[c.occupation] : 'Townsfolk';
       // Those who once adventured have earned some levels on the way.

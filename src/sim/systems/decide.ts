@@ -7,7 +7,10 @@ import { fearOf, hasVisited, healthNeed, wealthNeed } from './mind';
 import { isWantedIn } from './outlaws';
 import { roleOf } from './progress';
 import { canTrade, wantsToShop } from './shopping';
-import { findPath } from './roads';
+import { lairOdds } from './delve';
+import { mustersOf } from './dread';
+import { CRUSADE_SIZE, willingRecruits } from './social';
+import { findPath, nearbyPlaces } from './roads';
 import type { TravelReason } from './travel';
 
 /**
@@ -188,11 +191,10 @@ function optionsAt(ctx: SimContext, character: Character, here: Location): Optio
     }
   }
 
-  // Journeys elsewhere.
-  for (const there of ctx.world.locations.values()) {
-    if (there.id === here.id) continue;
-    const hours = (findPath(ctx.world, here.id, there.id)?.duration ?? Infinity) / HOUR;
-    if (!Number.isFinite(hours)) continue;
+  // Journeys elsewhere: anywhere within the nearest few places, and home.
+  for (const { id, duration } of journeysFrom(ctx, character, here)) {
+    const there = ctx.world.locations.get(id)!;
+    const hours = duration / HOUR;
     const nearness = 1 / (1 + hours / DISTANCE_HALVING_HOURS);
     const terms: Term[] = [];
     let reason: TravelReason = 'wander';
@@ -228,6 +230,20 @@ function optionsAt(ctx: SimContext, character: Character, here: Location): Optio
       if (there.kind === 'town' && isWantedIn(character, there.id)) {
         terms.push({ value: -0.3, motive: null });
       }
+      // A band is mustering there against one of the dread: the able answer the call.
+      if (there.kind === 'town' && !character.outlaw) {
+        for (const muster of mustersOf(ctx.world)) {
+          if (muster.townId !== there.id || character.level < muster.master.level - 20) continue;
+          terms.push({
+            value:
+              Math.min(1, drives.purpose / RESTLESS) *
+              nearness *
+              (0.15 + 0.3 * traits.honor + 0.3 * traits.bravery) *
+              Math.min(1, muster.master.slain / 20 + 0.5),
+            motive: { kind: 'dread', characterId: muster.master.id },
+          });
+        }
+      }
       if (!hasVisited(character, there.id)) {
         terms.push({
           value: 0.3 * traits.curiosity * nearness,
@@ -242,6 +258,26 @@ function optionsAt(ctx: SimContext, character: Character, here: Location): Optio
     options.push(...huntOptions(ctx, character, here));
   }
   return options;
+}
+
+/** How many of the nearest places anyone weighs going to, besides home. */
+const HORIZON = 12;
+
+/**
+ * The places worth weighing a journey to: the nearest dozen, and home. On a
+ * large map, nobody plans a trip to the far side of the world on a whim.
+ */
+function journeysFrom(
+  ctx: SimContext,
+  character: Character,
+  here: Location,
+): readonly { readonly id: LocationId; readonly duration: number }[] {
+  const near = nearbyPlaces(ctx.world, here.id);
+  if (near.length <= HORIZON) return near;
+  const within = near.slice(0, HORIZON);
+  if (character.homeId === here.id || within.some((p) => p.id === character.homeId)) return within;
+  const home = near.find((p) => p.id === character.homeId);
+  return home ? [...within, home] : within;
 }
 
 /**
@@ -276,6 +312,26 @@ function delveTerms(
   }
   const fear = fearOf(character, place, ctx.world.time);
   if (fear > 0) terms.push({ value: -0.8 * fear * (1.2 - traits.bravery), motive: null });
+  // One of the dread lairs there: a call to the brave who stand a chance, a
+  // dread to everyone else.
+  const masterId = ctx.world.locations.get(place)?.dungeon?.masterId;
+  const master = masterId ? ctx.world.characters.get(masterId) : undefined;
+  if (master && !master.death && character.level >= master.level - 8) {
+    // In town, they'd raise a band from whoever would answer the call.
+    const here = ctx.world.locations.get(character.locationId ?? character.homeId)!;
+    const band = Math.min(
+      CRUSADE_SIZE,
+      1 + followersOrMembers(ctx, character) + willingRecruits(ctx, character, here, master).length,
+    );
+    const odds = lairOdds(character.level, band, master.level);
+    const infamy = Math.min(1, master.slain / 10);
+    terms.push({
+      value:
+        odds * (0.5 * drives.glory * traits.bravery + 0.3 * infamy * traits.honor + 0.2 * odds),
+      motive: { kind: 'dread', characterId: master.id },
+    });
+    terms.push({ value: -0.4 * (1 - odds) * (1.2 - traits.bravery), motive: null });
+  }
   // Glory and gold only call once restlessness has built up: nobody goes
   // straight back in for the sake of it.
   const eagerness = Math.min(1, drives.purpose / RESTLESS);

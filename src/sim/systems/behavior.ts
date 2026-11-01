@@ -20,7 +20,7 @@ import { markVisited, satisfy, updateDrives } from './mind';
 import { practice } from './progress';
 import { confrontQuarry, isWantedIn } from './outlaws';
 import { carouse, lodging, visitMarket } from './shopping';
-import { followersOf, gatherParty, releaseFollowers, socialize } from './social';
+import { followersOf, gatherParty, rallyAgainst, releaseFollowers, socialize } from './social';
 import { bestOutlet, hasCargo, notePrices, planRun, setOut, staleTown, unload } from './merchants';
 import { findPath } from './roads';
 import { finishLeg, startJourney } from './travel';
@@ -252,6 +252,12 @@ function act(
       character.goal = action.target
         ? { kind: 'hunt', locationId: action.to, why, targetId: action.target }
         : { kind, locationId: action.to, why };
+      // Setting out to delve where one of the dread lairs, they call for companions first.
+      const masterId = ctx.world.locations.get(action.to)?.dungeon?.masterId;
+      const master = masterId ? ctx.world.characters.get(masterId) : undefined;
+      if (master && !master.death && action.reason === 'delve' && location.kind === 'town') {
+        rallyAgainst(ctx, character, location, master);
+      }
       // The party comes along to delve or hunt; otherwise everyone goes their own way.
       const together = action.reason === 'delve' || action.reason === 'hunt';
       if (!together) releaseFollowers(ctx, character);

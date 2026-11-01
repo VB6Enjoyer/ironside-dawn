@@ -4,6 +4,7 @@ import {
   LANGUAGES,
   type CreatureId,
   type ItemBaseId,
+  type LocationKind,
   type PastimeId,
   type WeaponId,
 } from '../content';
@@ -71,7 +72,7 @@ interface Helpers {
   foes(foes: readonly Combatant[]): Part[];
   /** A town's name, for bounty notices. */
   place(id: LocationId): Segment;
-  kindOf(id: LocationId): 'town' | 'dungeon' | 'wilderness' | undefined;
+  kindOf(id: LocationId): LocationKind | undefined;
   /** "a human", "an elf". */
   aSpecies(id: CharacterId): string;
   weaponOf(id: CharacterId): ItemBaseId | undefined;
@@ -140,7 +141,18 @@ const CREATURE_VERBS: Record<CreatureId, readonly string[]> = {
   zombie: ['claws at', 'pummels'],
   'infernal-imp': ['claws', 'scorches'],
   hellhound: ['bites', 'sears'],
+  'dire-boar': ['gores', 'tramples'],
+  troll: ['pounds', 'smashes'],
+  ghoul: ['claws at', 'bites'],
+  wraith: ['chills', 'drains'],
+  soldier: ['cuts', 'thrusts at'],
 };
+
+/** "a troll", "six wolves". */
+function herd(creature: CreatureId, count: number): string {
+  const def = creatureDef(creature);
+  return count === 1 ? `${article(def.name)} ${def.name}` : `${countWord(count)} ${def.plural}`;
+}
 
 function attackVerb(h: Helpers, attacker: Combatant): string {
   if (attacker.kind === 'creature') return h.pick(CREATURE_VERBS[attacker.ref.species]);
@@ -471,6 +483,33 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
           return [
             ...us,
             many ? ' corner ' : ' corners ',
+            ...them,
+            ' in ',
+            h.l(e.data.locationId),
+            '.',
+          ];
+        case 'waylay':
+          return [
+            ...us,
+            many ? ' are set upon by ' : ' is set upon by ',
+            ...them,
+            ' roaming ',
+            h.l(e.data.locationId),
+            '.',
+          ];
+        case 'raid':
+          return [
+            ...them,
+            ' fall upon ',
+            h.l(e.data.locationId),
+            '! ',
+            ...us,
+            many ? ' stand to defend it.' : ' stands to defend it.',
+          ];
+        case 'patrol':
+          return [
+            ...us,
+            many ? ' are run to ground by ' : ' is run to ground by ',
             ...them,
             ' in ',
             h.l(e.data.locationId),
@@ -988,6 +1027,136 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
       ' on ',
       h.c(e.data.againstId),
       '.',
+    ],
+  ],
+  'weather.turn': [
+    (e) => {
+      const region = e.data.region;
+      switch (e.data.weather) {
+        case 'snow':
+          return ['Snow falls across ', region, '; the roads grow slow and cold.'];
+        case 'storm':
+          return ['Storms lash ', region, '.'];
+        case 'heat':
+          return ['A scorching heat settles over ', region, '.'];
+        case 'rain':
+          return ['Rain sweeps over ', region, '.'];
+        case 'fair':
+          return ['The skies clear over ', region, '.'];
+      }
+    },
+  ],
+  'creature.migrate': [
+    (e, h) => {
+      const band = herd(e.data.creature, e.data.count);
+      return e.data.roaming
+        ? [
+            capitalize(band),
+            ' spill out of ',
+            h.l(e.data.locationId),
+            ' and roam ',
+            h.l(e.data.toId),
+            '.',
+          ]
+        : [
+            capitalize(band),
+            ' leave the crowded ',
+            h.l(e.data.locationId),
+            ' for ',
+            h.l(e.data.toId),
+            '.',
+          ];
+    },
+  ],
+  'raid.sack': [
+    (e, h) => {
+      const toll = e.data.lost > 0 ? `; ${e.data.lost} of its folk are lost` : '';
+      const raiders =
+        e.data.creature && e.data.count > 0 ? herd(e.data.creature, e.data.count) : 'raiders';
+      if (e.data.count === 0 && e.data.leaderId) {
+        return [
+          h.c(e.data.leaderId),
+          ' falls on ',
+          h.l(e.data.locationId),
+          ` alone and plunders its stores${toll}.`,
+        ];
+      }
+      const led: Part[] = e.data.leaderId ? [', led by ', h.c(e.data.leaderId), ','] : [];
+      return [
+        capitalize(raiders),
+        ...led,
+        e.data.count === 1 ? ' overruns ' : ' overrun ',
+        h.l(e.data.locationId),
+        e.data.count === 1 ? ` and plunders its stores${toll}.` : ` and plunder its stores${toll}.`,
+      ];
+    },
+  ],
+  'raid.repelled': [
+    (e, h) => {
+      const many = e.data.characterIds.length > 1;
+      return [
+        ...h.group(e.data.characterIds),
+        many ? ' drive the raiders from ' : ' drives the raiders from ',
+        h.l(e.data.locationId),
+        ...(e.data.leaderId ? [' and send ', h.c(e.data.leaderId), ' back to its lair'] : []),
+        '.',
+      ];
+    },
+  ],
+  'patrol.clear': [
+    (e, h) => [
+      'Soldiers from ',
+      h.l(e.data.fortressId),
+      ' cut down ',
+      herd(e.data.creature, e.data.count),
+      ' roaming ',
+      h.l(e.data.locationId),
+      '.',
+    ],
+  ],
+  'lord.seat': [
+    (e, h) => {
+      const who = h.c(e.data.characterId);
+      const where = h.l(e.data.locationId);
+      switch (e.data.how) {
+        case 'founded':
+          return [who, ' holds ', where, ' and the lands around it.'];
+        case 'inherited':
+          return [who, ' inherits the seat of ', where, '.'];
+        case 'claimed':
+          return [who, ' lays down the sword and takes up the lordship of ', where, '.'];
+        case 'appointed':
+          return [who, ' is raised to the empty seat of ', where, '.'];
+      }
+    },
+  ],
+  'dread.rise': [
+    (e, h) => [
+      h.c(e.data.characterId),
+      ', ',
+      h.aSpecies(e.data.characterId),
+      ', makes its lair in ',
+      h.l(e.data.locationId),
+      '.',
+    ],
+    (e, h) => [
+      'Something stirs in the deeps of ',
+      h.l(e.data.locationId),
+      ': ',
+      h.c(e.data.characterId),
+      ', ',
+      h.aSpecies(e.data.characterId),
+      ', has come.',
+    ],
+  ],
+  'dread.fall': [
+    (e, h) => [
+      ...h.group(e.data.slayerIds),
+      e.data.slayerIds.length > 1 ? ' destroy ' : ' destroys ',
+      h.c(e.data.characterId),
+      ' in ',
+      h.l(e.data.locationId),
+      e.data.slain > 0 ? `, ending a terror that claimed ${countWord(e.data.slain)} lives.` : '.',
     ],
   ],
   'market.shock': [

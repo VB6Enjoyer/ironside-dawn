@@ -9,7 +9,7 @@ import type { World } from './model';
 
 export const SAVE_FORMAT = 'ironside-dawn/world';
 /** Bump when the world's shape changes in a way old saves can't be read as. */
-export const SAVE_VERSION = 3;
+export const SAVE_VERSION = 4;
 
 export interface WorldSave {
   readonly format: typeof SAVE_FORMAT;

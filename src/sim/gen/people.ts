@@ -60,6 +60,8 @@ export function createCharacter(ctx: SimContext, home: Location, arrival: Arriva
   const rng = ctx.rng.people;
   const parents = arrival.parents;
   const calling: Calling = parents ? 'child' : (arrival.calling ?? 'adventurer');
+  // Children, lords and the dread live in the daily round, not deciding moment to moment.
+  const settled = calling === 'child' || calling === 'lord' || calling === 'dread';
 
   let species: SpeciesId;
   if (parents) {
@@ -162,9 +164,12 @@ export function createCharacter(ctx: SimContext, home: Location, arrival: Arriva
         ? stake(rng.roll('2d6'))
         : calling === 'child'
           ? 0
-          : rng.roll(STARTING_GOLD),
+          : calling === 'lord' || calling === 'dread'
+            ? rng.int(200, 600)
+            : rng.roll(STARTING_GOLD),
     pack: [],
     kills: {},
+    slain: 0,
     goldEarned: 0,
     drives: initialDrives(rng),
     drivesAt: world.time,
@@ -178,7 +183,7 @@ export function createCharacter(ctx: SimContext, home: Location, arrival: Arriva
     outlaw: null,
     reputation: {},
     locationId: home.id,
-    activity: calling === 'child' ? { kind: 'living' } : { kind: 'idle' },
+    activity: settled ? { kind: 'living' } : { kind: 'idle' },
     wakeToken: 0,
     death: null,
     history: [],
@@ -211,6 +216,8 @@ export function createCharacter(ctx: SimContext, home: Location, arrival: Arriva
     );
     return character;
   }
+  // Lords and the dread are announced as they take their seats and lairs.
+  if (settled) return character;
   ctx.emit(
     {
       type: 'character.introduced',

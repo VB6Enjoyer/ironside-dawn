@@ -16,7 +16,12 @@ import { formatCount } from '../format';
 import { Prose, type ProseLinks } from '../components/Prose';
 import { useQuery } from '../useHost';
 
-const KIND_NAMES = { town: 'Town', dungeon: 'Dungeon', wilderness: 'Wilderness' } as const;
+const KIND_NAMES = {
+  town: 'Town',
+  dungeon: 'Dungeon',
+  wilderness: 'Wilderness',
+  fortress: 'Fortress',
+} as const;
 const DANGER = ['', 'tame', 'uneasy', 'dangerous', 'deadly', 'murderous'];
 
 export const placeName = (p: PlaceEntry | undefined) =>

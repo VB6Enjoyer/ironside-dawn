@@ -116,5 +116,7 @@ export function describeDeed(deed: Deed): string {
       return `Learned ${spellName(deed.spell)}`;
     case 'rank':
       return `Became ${article(deed.rank)} ${deed.rank} ${SKILL_PHRASES[deed.skill]}`;
+    case 'vanquish':
+      return `Helped destroy ${deed.name}`;
   }
 }

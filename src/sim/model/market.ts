@@ -79,7 +79,9 @@ export type MoneySink =
   /** Tithes and wages paid out of the towns. */
   | 'upkeep'
   /** Purses taken away by those who moved on. */
-  | 'departed';
+  | 'departed'
+  /** Plundered by raiding creatures and lost. */
+  | 'raid';
 
 /** Every coin made or destroyed, so a run's report can catch inflation (ROADMAP.md Phase 7). */
 export interface Ledger {

@@ -1,4 +1,4 @@
-import { STARTER_MAP } from '../content';
+import { STARTER_MAP, type MapDef } from '../content';
 import { createRng } from './core/rng';
 import type { SimContext } from './context';
 import { createCharacter } from './gen/people';
@@ -9,9 +9,12 @@ import type { Character, Location, LocationId, SimEvent } from './model';
  * A bare simulation context for unit tests: the starter map, no characters,
  * nothing scheduled to run. Events are collected in `events`.
  */
-export function testContext(seed = 'test'): SimContext & { events: SimEvent[] } {
+export function testContext(
+  seed = 'test',
+  map: MapDef = STARTER_MAP,
+): SimContext & { events: SimEvent[] } {
   const root = createRng(seed);
-  const world = createWorldState(seed, STARTER_MAP);
+  const world = createWorldState(seed, map);
   const events: SimEvent[] = [];
   const fork = (label: string) => root.fork(label);
   return {
@@ -46,8 +49,13 @@ export function testContext(seed = 'test'): SimContext & { events: SimEvent[] } 
   };
 }
 
-export function town(ctx: SimContext, id = 'concordale'): Location {
-  return ctx.world.locations.get(id as LocationId)!;
+export function town(ctx: SimContext, id?: string): Location {
+  if (id) return ctx.world.locations.get(id as LocationId)!;
+  // Concordale on the starter map; the first town of a generated one.
+  return (
+    ctx.world.locations.get('concordale' as LocationId) ??
+    [...ctx.world.locations.values()].find((l) => l.kind === 'town')!
+  );
 }
 
 /** A fresh adventurer in Concordale. */

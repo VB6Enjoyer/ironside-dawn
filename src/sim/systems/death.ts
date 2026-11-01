@@ -2,6 +2,7 @@ import type { SimContext } from '../context';
 import type { Character, DeathCause, Item, LocationId } from '../model';
 import { carriedGear, takeGear } from './items';
 import { burn } from './ledger';
+import { lordDied } from './lords';
 import { mournDeath } from './social';
 
 /** Renown below which nobody is a legend, however few have died. */
@@ -51,6 +52,8 @@ export function die(ctx: SimContext, character: Character, cause: DeathCause): v
   character.cargoPaid = 0;
   // A dead outlaw's bounty lapses; one killed by someone is settled in onCharacterKilled.
   if (cause.kind !== 'character') world.bounties.delete(character.id);
+
+  if (character.calling === 'lord') lordDied(ctx, character);
 
   const kills = Object.values(character.kills).reduce((sum, n) => sum + n, 0);
   ctx.emit(
@@ -125,14 +128,15 @@ function bequeath(
  * veterans grow.
  */
 function isLegendary(ctx: SimContext, character: Character): boolean {
-  if (character.calling === 'merchant' || character.calling === 'child') return false;
+  const calling = character.calling;
+  if (calling === 'merchant' || calling === 'child' || calling === 'dread') return false;
   const renown = renownOf(character);
   if (renown < LEGENDARY_RENOWN) return false;
   let outshone = 0;
   let others = 0;
   for (const c of ctx.world.characters.values()) {
     if (c === character || !c.death || c.death.cause.kind === 'departed') continue;
-    if (c.calling === 'merchant' || c.calling === 'child') continue;
+    if (c.calling === 'merchant' || c.calling === 'child' || c.calling === 'dread') continue;
     others++;
     if (renownOf(c) < renown) outshone++;
   }
@@ -144,5 +148,6 @@ export function renownOf(c: Character): number {
   const kills = Object.values(c.kills).reduce((sum, n) => sum + n, 0);
   const legends = c.deeds.filter((d) => d.kind === 'legend').length;
   const slain = c.deeds.filter((d) => d.kind === 'slay').length;
-  return Math.round(c.level + legends * 6 + slain * 2 + kills / 200);
+  const vanquished = c.deeds.filter((d) => d.kind === 'vanquish').length;
+  return Math.round(c.level + legends * 6 + slain * 2 + vanquished * 15 + kills / 200);
 }

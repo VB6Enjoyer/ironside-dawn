@@ -186,6 +186,7 @@ const SINKS: Record<MoneySink, string> = {
   upkeep: 'tithes and wages paid out of the towns',
   dead: 'lost with the dead',
   departed: 'taken away by those who moved on',
+  raid: 'plundered by raiders',
 };
 
 /** Where the money came from, and where it went (ROADMAP.md Phase 7). */

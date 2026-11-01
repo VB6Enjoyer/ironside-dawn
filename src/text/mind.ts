@@ -43,6 +43,10 @@ export function describeMotive(motive: Motive, names: NameResolver): string {
     }
     case 'friends':
       return 'with friends';
+    case 'dread': {
+      const foe = names.character(motive.characterId);
+      return foe ? `to destroy ${foe.name}` : 'to face what lairs there';
+    }
   }
 }
 

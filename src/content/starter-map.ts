@@ -26,9 +26,13 @@ const COMMON_TREASURE: DungeonDef['treasure'] = [
  * forge, so its iron comes over the Ironpass or through the Witherwood.
  */
 export const STARTER_MAP: MapDef = {
+  width: 50,
+  height: 44,
   locations: [
     {
       id: 'concordale',
+      x: 16,
+      y: 14,
       name: 'Concordale',
       kind: 'town',
       culture: 'generic',
@@ -47,6 +51,8 @@ export const STARTER_MAP: MapDef = {
     },
     {
       id: 'brindlemoor',
+      x: 34,
+      y: 14,
       name: 'Brindlemoor',
       kind: 'town',
       culture: 'generic',
@@ -65,6 +71,8 @@ export const STARTER_MAP: MapDef = {
     },
     {
       id: 'saltmere',
+      x: 34,
+      y: 34,
       name: 'Saltmere',
       kind: 'town',
       culture: 'generic',
@@ -76,6 +84,8 @@ export const STARTER_MAP: MapDef = {
     },
     {
       id: 'dungeon-of-misery',
+      x: 12,
+      y: 38,
       name: 'Dungeon of Misery',
       article: 'the',
       kind: 'dungeon',
@@ -96,6 +106,8 @@ export const STARTER_MAP: MapDef = {
     },
     {
       id: 'gorefang-caves',
+      x: 34,
+      y: 4,
       name: 'Gorefang Caves',
       kind: 'dungeon',
       culture: 'generic',
@@ -116,6 +128,8 @@ export const STARTER_MAP: MapDef = {
     },
     {
       id: 'witherwood',
+      x: 16,
+      y: 27,
       name: 'Witherwood',
       article: 'the',
       kind: 'wilderness',
@@ -123,6 +137,8 @@ export const STARTER_MAP: MapDef = {
     },
     {
       id: 'ironpass',
+      x: 40,
+      y: 24,
       name: 'Ironpass',
       article: 'the',
       kind: 'wilderness',

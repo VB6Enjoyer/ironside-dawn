@@ -1,9 +1,12 @@
+import { SPECIES, type SpeciesDef } from '../../content';
 import type { SimContext } from '../context';
 import type { Character, EventOfType, LocationId, Motive } from '../model';
 import { ambush } from './outlaws';
 import { findPath, roadsFrom } from './roads';
 import { followersOf } from './social';
 import { wakeAt } from './wake';
+import { travelFactor } from './weather';
+import { waylay } from './wilds';
 import { moveTo } from './whereabouts';
 
 export type TravelReason = EventOfType<'travel.depart'>['data']['reason'];
@@ -63,7 +66,8 @@ export function finishLeg(
   const here = activity.leg.to;
   const companions = followersOf(ctx, character);
   for (const c of [character, ...companions]) moveTo(ctx.world, c, here);
-  if (ambush(ctx, character, ctx.world.locations.get(here)!)) return 'ambushed';
+  const place = ctx.world.locations.get(here)!;
+  if (ambush(ctx, character, place) || waylay(ctx, character, place)) return 'ambushed';
 
   const [nextStop, ...remaining] = activity.remaining;
   if (nextStop === undefined) {
@@ -92,6 +96,15 @@ export function finishLeg(
   return 'passing';
 }
 
+/** Whoever travels with the character sets the pace for all. */
+function slowestPace(ctx: SimContext, character: Character): number {
+  let pace = Infinity;
+  for (const c of [character, ...followersOf(ctx, character)]) {
+    pace = Math.min(pace, (SPECIES[c.species] as SpeciesDef).travelSpeed ?? 1);
+  }
+  return pace;
+}
+
 function beginLeg(
   ctx: SimContext,
   character: Character,
@@ -104,10 +117,14 @@ function beginLeg(
   const link = roadsFrom(ctx.world, from, true).find((road) => road.to === to);
   if (!link) throw new Error(`No road from ${from} to ${to}`);
 
-  const factor = Math.min(
-    LEG_DURATION_MAX,
-    Math.max(LEG_DURATION_MIN, ctx.rng.travel.gaussian(1, LEG_DURATION_SD)),
-  );
+  // Hard weather slows the going; centaurs outrun anyone on foot.
+  const factor =
+    (Math.min(
+      LEG_DURATION_MAX,
+      Math.max(LEG_DURATION_MIN, ctx.rng.travel.gaussian(1, LEG_DURATION_SD)),
+    ) *
+      travelFactor(ctx.world, ctx.world.locations.get(to)!)) /
+    slowestPace(ctx, character);
   const departedAt = ctx.world.time;
   const arrivesAt = departedAt + Math.round(link.route.duration * factor);
 

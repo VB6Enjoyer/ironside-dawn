@@ -8,6 +8,7 @@ import { isAlive } from './condition';
 import { die, LEGENDARY_RENOWN, renownOf } from './death';
 import { remember } from './mind';
 import { refreshMaxima, roleOf } from './progress';
+import { CLAIM_RENOWN, emptySeatNear, takeSeat } from './lords';
 import { adjustOpinion, leaveParty, socialize } from './social';
 import { cancelWake, wakeAt } from './wake';
 
@@ -158,6 +159,12 @@ function retire(
   merchantRoom: boolean,
 ): void {
   const rng = ctx.rng.people;
+  // A renowned hero may claim an empty fortress nearby instead.
+  const seat = renownOf(c) >= CLAIM_RENOWN ? emptySeatNear(ctx, town) : null;
+  if (seat) {
+    takeSeat(ctx, c, seat, 'claimed');
+    return;
+  }
   if (c.partyId) leaveParty(ctx, c, 'retire');
   const merchant = merchantRoom && c.gold >= 500 && c.traits.greed >= 0.6 && rng.chance(0.5);
   c.homeId = town.id;

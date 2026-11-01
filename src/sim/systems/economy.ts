@@ -4,6 +4,7 @@ import type { SimContext } from '../context';
 import type { Location, Shock } from '../model';
 import { marketDay } from './market';
 import { roadsChanged } from './roads';
+import { harvestFactor } from './weather';
 
 /**
  * The economy's day (ROADMAP.md Phase 7): troubles come and go, then every
@@ -19,7 +20,9 @@ export function economyDay(ctx: SimContext): void {
 }
 
 function outputMultiplier(ctx: SimContext, town: Location, profession: ProfessionId): number {
-  let multiplier = 1;
+  // Fields follow the seasons; on the starter map, which has no weather, they don't.
+  let multiplier =
+    profession === 'farmers' && ctx.world.regions.size > 0 ? harvestFactor(ctx.world, town) : 1;
   for (const shock of ctx.world.shocks) {
     if (shock.locationId !== town.id) continue;
     const def = shockDef(shock.id);

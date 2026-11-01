@@ -7,7 +7,11 @@ import type { SpeciesId } from '../../content';
 import type { Calling } from '../model';
 import { isAlive } from './condition';
 import { economyDay } from './economy';
+import { dreadDay } from './dread';
 import { lifecycleDay } from './lifecycle';
+import { lordsDay } from './lords';
+import { weatherDay } from './weather';
+import { wildsDay } from './wilds';
 import { considerCrime } from './outlaws';
 import { hearTownLanguages } from './social';
 
@@ -32,18 +36,10 @@ export function daily(ctx: SimContext, targetPopulation: number): void {
   const rng = ctx.rng.ecology;
   economyDay(ctx);
 
+  weatherDay(ctx);
+  wildsDay(ctx);
+
   for (const location of ctx.world.locations.values()) {
-    const dungeon = location.dungeon;
-    if (dungeon) {
-      for (const { creature, max, regrowthPerDay } of dungeon.def.inhabitants) {
-        const count = dungeon.population[creature] ?? 0;
-        if (count >= max) continue;
-        dungeon.population[creature] = Math.min(
-          max,
-          count + stochasticRound(rng.next(), regrowthPerDay),
-        );
-      }
-    }
     // Commoners grow, more slowly as the town fills up.
     for (const [species, count] of Object.entries(location.population) as [SpeciesId, number][]) {
       const room = location.capacity[species] ?? count;
@@ -53,6 +49,8 @@ export function daily(ctx: SimContext, targetPopulation: number): void {
   }
 
   lifecycleDay(ctx, targetPopulation);
+  lordsDay(ctx);
+  dreadDay(ctx);
 
   let living = 0;
   let merchants = 0;

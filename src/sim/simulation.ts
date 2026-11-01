@@ -1,8 +1,9 @@
-import { STARTER_MAP, type MapDef } from '../content';
+import type { MapDef } from '../content';
 import { EventStore, type EventListener, type Retention } from './core/event-store';
 import { createRng, restoreRng, type Rng } from './core/rng';
 import { peekNext, popNext } from './core/scheduler';
 import type { SimContext } from './context';
+import { generateMap, sizeFor, type WorldSize } from './gen/geography';
 import { createWorldState, populate } from './gen/world';
 import {
   EVENT_IMPORTANCE,
@@ -15,6 +16,8 @@ import {
   type World,
 } from './model';
 import { wakeCharacter } from './systems/behavior';
+import { raiseInitialDread } from './systems/dread';
+import { seatLords } from './systems/lords';
 import { beginSeason, scheduleNextSeason } from './systems/calendar';
 import { runRound } from './systems/combat';
 import { daily, scheduleDaily } from './systems/ecology';
@@ -42,8 +45,10 @@ export interface SimulationOptions {
   readonly retention?: number | Partial<Retention>;
   /** Whose blow-by-blow detail to report. Defaults to everyone's. */
   readonly watch?: Watch;
-  /** Defaults to the hand-made starter map. */
+  /** A hand-made map to use. By default the world is generated from the seed. */
   readonly map?: MapDef;
+  /** How big a world to generate. Defaults to one that suits `characterCount`. */
+  readonly worldSize?: WorldSize;
   /**
    * Called for every event, including those emitted while the world is
    * created. Use this rather than `events.subscribe()` to see the full history.
@@ -106,6 +111,8 @@ export const DETAIL_EVENTS: ReadonlySet<EventType> = new Set([
   'delve.quiet',
 ]);
 
+const DEFAULT_ADVENTURERS = 20;
+
 /** One random stream per subsystem (ARCHITECTURE.md §4.1). */
 const STREAMS = [
   'behavior',
@@ -126,7 +133,14 @@ export function createSimulation(options: SimulationOptions): Simulation {
   const restore = options.restore ? checkSave(options.restore) : null;
   const world = restore
     ? decodeWorld(restore.world)
-    : createWorldState(String(options.seed), options.map ?? STARTER_MAP);
+    : createWorldState(
+        String(options.seed),
+        options.map ??
+          generateMap(
+            String(options.seed),
+            options.worldSize ?? sizeFor(options.characterCount ?? DEFAULT_ADVENTURERS),
+          ),
+      );
   const events = new EventStore(options.retention);
   let watch: Watch = options.watch ?? 'all';
   const watched = (actors: readonly string[], locationId: LocationId | null) => {
@@ -145,7 +159,7 @@ export function createSimulation(options: SimulationOptions): Simulation {
     return watch !== 'none' && (watch.trivia || watched(actors, locationId));
   };
   if (options.onEvent) events.subscribe(options.onEvent);
-  const targetPopulation = restore?.characterCount ?? options.characterCount ?? 20;
+  const targetPopulation = restore?.characterCount ?? options.characterCount ?? DEFAULT_ADVENTURERS;
 
   const root = createRng(world.seed);
   const rng = Object.fromEntries(
@@ -178,6 +192,8 @@ export function createSimulation(options: SimulationOptions): Simulation {
   if (!restore) {
     ctx.emit({ type: 'world.created', data: { seed: world.seed } }, [], null);
     populate(ctx, targetPopulation);
+    seatLords(ctx);
+    raiseInitialDread(ctx);
     sampleHistory(world);
     scheduleNextSeason(ctx);
     scheduleDaily(ctx);

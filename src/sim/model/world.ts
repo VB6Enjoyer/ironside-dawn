@@ -3,11 +3,19 @@ import type { SpeciesId } from '../../content';
 import type { Calling, Character, DeathCause } from './character';
 import type { Ledger, Market, Shock } from './market';
 import type { Encounter } from './encounter';
-import type { CharacterId, EncounterId, ItemId, LocationId, PartyId, RouteId } from './ids';
+import type {
+  CharacterId,
+  EncounterId,
+  ItemId,
+  LocationId,
+  PartyId,
+  RegionId,
+  RouteId,
+} from './ids';
 import type { Bounty, Party } from './social';
 import type { Legend } from './item';
 import type { Job } from './jobs';
-import type { Location, Route } from './location';
+import type { Location, Region, Route } from './location';
 
 /**
  * The whole world state: plain data, entities referring to each other by ID
@@ -21,6 +29,11 @@ export interface World {
   readonly characters: Map<CharacterId, Character>;
   readonly locations: Map<LocationId, Location>;
   readonly routes: Map<RouteId, Route>;
+  /** The lands of a generated world; none on the starter map. */
+  readonly regions: Map<RegionId, Region>;
+  /** The map's extent in leagues. */
+  readonly width: number;
+  readonly height: number;
   /** Fights in progress. */
   readonly encounters: Map<EncounterId, Encounter>;
   /** Every legendary item ever found. */
@@ -54,6 +67,9 @@ export interface Tally {
   murders: number;
   bountiesClaimed: number;
   legendsFound: number;
+  raids: number;
+  /** Dread masters destroyed. */
+  dreadSlain: number;
 }
 
 export interface WorldSample {
