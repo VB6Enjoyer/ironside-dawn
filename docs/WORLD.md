@@ -202,6 +202,12 @@ That last one makes a good log line.
   (elves) and **Deeptongue** (dwarves). Common is human speech, not a trade
   tongue, though it gets around because humans live in every town. A
   character can hold a conversation at 30 and is fluent at 70.
+- In trade (Phase 7) a character's prices depend on how well they understand a
+  town's people, weighted by how many of each people live there: up to 40%
+  worse for someone who speaks none of their tongues. Brindlemoor is mostly
+  dwarven and Saltmere mostly elven, so merchants who travel learn Deeptongue
+  and Sylvan, and do better for it. No pidgin has been needed so far: Common
+  does that job in practice.
 
 ---
 

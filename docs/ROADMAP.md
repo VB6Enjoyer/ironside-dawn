@@ -561,33 +561,88 @@ and read their life story.
 **Goal:** A real economy. Nobody sets prices: they come from supply, demand,
 and individual price beliefs.
 
-- [ ] **Goods**: raw materials (ore, hides, herbs, creature parts), crafted
+- [x] **Goods**: raw materials (ore, hides, herbs, creature parts), crafted
       items, consumables (food, potions), and **reagents** for magic.
-- [ ] **Market per town** run as a bid/ask clearinghouse. Agents hold _private
+- [x] **Market per town** run as a bid/ask clearinghouse. Agents hold _private
       price beliefs_ that adjust after each successful or failed trade
       (Doran & Parberry model).
-- [ ] **Town demand from statistical populations**: townsfolk eat, wear out
+- [x] **Town demand from statistical populations**: townsfolk eat, wear out
       tools, and buy goods in aggregate.
-- [ ] **Producers and crafters**: smiths, alchemists, and tanners. Crafting
+- [x] **Producers and crafters**: smiths, alchemists, and tanners. Crafting
       recipes use materials and skill, and quality depends on skill rolls.
       Adventurers become suppliers of creature parts and ore.
-- [ ] **Merchants and caravans**: trader characters who buy low in one town,
+- [x] **Merchants and caravans**: trader characters who buy low in one town,
       haul goods along routes (where bandits and creatures raid them), and sell
       high in another. **Arbitrage** is what ties town prices together.
-- [ ] **Language in trade**: no shared tongue means fewer deals and worse
+- [x] **Language in trade**: no shared tongue means fewer deals and worse
       prices, which gives merchants a reason to learn languages (and
       possibly leads to a trade pidgin).
-- [ ] **Random shocks**: a failed harvest, a collapsed mine, a creature
+- [x] **Random shocks**: a failed harvest, a collapsed mine, a creature
       blockade on a route, a rich new vein. Prices react.
-- [ ] **Money supply accounting**: every gold source (loot) and sink (food,
+- [x] **Money supply accounting**: every gold source (loot) and sink (food,
       repairs, lodging, lost on death) is tracked, so the headless report can
       catch runaway inflation or deflation.
-- [ ] UI: market panel per location (prices, order book, history chart),
+- [x] UI: market panel per location (prices, order book, history chart),
       price index over time, caravan tracker.
 
 **Exit criteria:** A bandit gang on the iron route makes swords more expensive
 in the town at the far end, and a multilingual merchant takes the risk and
 makes money from it.
+
+**Status: done.** Notes from building it (design in `ARCHITECTURE.md` §4.9):
+
+- **Goods**: food, iron ore, hides, herbs, spider silk, reagents, tools,
+  clothes, healing draughts, arms and armor. Creature parts sell as goods (a
+  wolf pelt is hides, an imp horn reagents), spare weapons and armor as scrap
+  iron; rings, goblets and trinkets are assayed for coin.
+- **Markets**: each town's commoners are split into trades, each one agent
+  with private price beliefs, and a Doran & Parberry clearinghouse runs every
+  morning. Labor drifts toward the trades that pay, which is what keeps
+  supply in line with demand; without it the first version starved every town
+  but the farmers.
+- **Trading houses** stand between the auction and named characters: they buy
+  loot and cargo, sell draughts and gear, keep the inns, pay bounties, and pay
+  their surplus out as wages, which carries adventurers' gold into the towns.
+- **The map changed**: Brindlemoor is now mostly dwarven and has the iron
+  mine and the best smiths; Saltmere is mostly elven, grows herbs and brews,
+  and has no forge; a mountain pass, the **Ironpass**, sits on the road between
+  them, where bandits can lie in wait.
+- **Merchants** (one for every eight adventurers) plan runs from a price book
+  that goes stale and is swapped with other merchants at taverns; they weigh
+  margin, rivals already hauling the same goods there, and the danger of the
+  road. Robbers take their cargo too. They learn the tongues of the towns
+  they trade in by living there, and get better prices for it (up to 40% worse
+  with none).
+- **Adventurers** now buy healing draughts (and drink them in fights) and,
+  when rich enough, better weapons and armor; they spend a little on nights
+  out, and sleep rough rather than spend their last coins on an inn.
+- **Troubles**: failed harvests, mine collapses, rich veins, blight, and
+  beasts holding a road (closed to anyone planning a journey).
+- **Money accounting**: every coin is minted or burned through a ledger; a
+  test checks that the gold held always equals what was minted less what was
+  burned. Over ten years the money supply levels off rather than running away,
+  and prices stay within a third and three times a good's worth.
+- **UI**: a market panel on every town (prices, 30-day change, the last
+  auction's demand and supply, the trading house's quotes and stores, a price
+  history chart, who works there and how well fed they are), a **Trade** page
+  (caravans on the road, merchants and their tongues, closed roads, recent
+  deals), price index and money charts and the ledger on the statistics page,
+  and cargo or draughts on character cards.
+- **Exit criteria, partly met.** With a gang dug in at the Ironpass for a
+  year (six worlds tried), robberies at the pass went from about none to 6–24,
+  and tools in Saltmere got dearer in five worlds of six (about 26% on
+  average); arms only in three of six (about 10% on average), since Saltmere
+  can also get them from Concordale through the Witherwood. The merchants who
+  made most on the Brindlemoor–Saltmere run were mostly ones who spoke the
+  dwarves' or elves' tongue.
+- **Bugs found on the way**: a float rounding to −0.0000000000000004 herbs
+  turned into NaN prices and hung the whole world (stock is now clamped at
+  zero); merchants who spoke no tongue of a town could trade nowhere and
+  starved slowly at inns.
+- **Performance**: 500 adventurers and their 63 merchants run 10 years in
+  217 s headless, as fast-forward runs. A world gets slower as it ages
+  (veterans delve deeper); caching whether a veteran's pack holds anything to
+  sell, and merchants replanning only once a market day, kept it there.
 
 ---
 

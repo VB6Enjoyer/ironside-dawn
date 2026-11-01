@@ -446,6 +446,49 @@ sides, each any mix of characters and creatures, so delves (party against
 creatures), ambushes (travelers against outlaws) and hunts (hunters against
 an outlaw and their gang) share one combat system.
 
+### 4.9 The economy: markets nobody runs
+
+Built in Phase 7 (`src/sim/systems/market.ts`, `economy.ts`, `merchants.ts`,
+`shopping.ts`, `ledger.ts`), after Doran & Parberry (§9).
+
+- **Townsfolk as agents.** Each town's commoners are split into trades
+  (farmers, miners, hunters, herbalists, smiths, alchemists, tailors), each
+  one aggregate agent with a share of the town, gold, a stock of goods and a
+  private price range for every good. Every morning each trade works (its most
+  profitable recipe, slowed by a glut of its own goods, by hunger and by a lack
+  of tools), eats and wears out its tools (the prosperous use more of
+  everything but food), then posts bids for what it is short of and asks for
+  what it has spare, at prices drawn from its beliefs.
+- **The clearinghouse.** Per good, bids are sorted high to low and asks low to
+  high, and matched at the midpoint until they no longer cross. A filled order
+  narrows its owner's belief toward the price; an unfilled one moves it (a
+  buyer offers more, a seller asks less), within a third and three times the
+  good's worth.
+- **Labor moves.** A little of each town's workforce drifts every day from the
+  worst-paid trade to the best-paid, within limits set by the land. This is
+  what keeps supply in line with demand (Doran & Parberry's agents change
+  jobs).
+- **The trading house.** One more agent per town, with no workers. It keeps a
+  couple of days of the town's use of every good, buys from adventurers and
+  merchants at a spread below what it believes things are worth (less for
+  what it has too much of), sells to them above, keeps the inns, pays
+  bounties, and pays out its surplus as wages. That last is how the gold
+  adventurers bring back reaches the townsfolk.
+- **Named characters** never join the auction; they deal with the trading
+  house at once, at its quotes, worse the less they understand the townsfolk's
+  tongues.
+- **Merchants** plan from a price book: what each town's house paid and asked
+  when they last saw it (or heard from another merchant). They weigh margin,
+  staleness, what rivals are already hauling there, and the danger of the road
+  against their nerve, load up, and go. Arbitrage is what ties the towns'
+  prices together.
+- **Troubles** (failed harvests, mine collapses, rich veins, blight, beasts
+  on a road) change output or close a road to anyone planning a journey.
+- **The ledger.** Gold is only created (founding, newcomers' purses, treasure
+  found, treasure assayed) or destroyed (lost with the dead, upkeep paid out
+  of the towns) through the ledger; everything else is a transfer. A test
+  checks that the gold held equals what was minted less what was burned.
+
 ---
 
 ## 5. UI ↔ simulation boundary

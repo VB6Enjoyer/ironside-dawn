@@ -28,14 +28,16 @@ town's market, or watch a dungeon's population change over time.
 
 ## Status
 
-Phase 6 (The Observatory) is done. The world runs in a Web Worker. Follow
-anyone and watch their fights blow by blow, read their life story, look in on
-any place, search the living and the dead, and browse the chronicle, the
-statistics and the halls of heroes, the fallen and the wanted. Skip ahead
-years at a time and read a digest of what happened. Worlds are saved as you
-watch and can be exported, imported and shared by seed. Phases 1 to 5 built
-the world itself: travel, dungeons, growth and magic, minds, bonds, languages
-and outlaws. Phase 7 (Markets) is next. The plan is in:
+Phase 7 (Markets) is done. Each town runs a daily market where nobody sets
+the prices: farmers, miners, smiths, alchemists and the rest bid and ask from
+their own beliefs, and drift toward the trades that pay. Adventurers sell
+their finds and buy healing draughts and gear; merchants haul goods between
+towns, learn the townsfolk's tongues to get better prices, and risk the
+bandits on the Ironpass. Harvests fail, mines collapse, wargs close roads, and
+every coin is accounted for. Phase 6 made it an observatory: follow anyone,
+read life stories, look in on places, browse the chronicle, statistics and
+halls, skip years at a time, and save, load and share worlds. Phase 8
+(Generations) is next. The plan is in:
 
 - [`docs/ROADMAP.md`](docs/ROADMAP.md): the phased development plan, with exit
   criteria for each milestone.
