@@ -1,10 +1,13 @@
 import {
+  packOf,
   SKILLS,
   SPECIES,
   STATS,
   TRAITS,
   weaponBase,
   type ArmorId,
+  type CultureId,
+  type PeopleId,
   type LanguageId,
   type Traits,
   type SkillId,
@@ -79,6 +82,14 @@ export function createCharacter(ctx: SimContext, home: Location, arrival: Arriva
     if (commoners > 0) home.population[species] = commoners - 1;
   }
   const def = SPECIES[species];
+  // Raised in the ways of their family, or of the land where they grew up, if
+  // its culture takes in their people; otherwise in their people's own.
+  const culture: CultureId = parents
+    ? rng.pick(parents).culture
+    : packOf(home.culture)?.peoples[species as PeopleId]
+      ? home.culture
+      : def.culture;
+  const pack = packOf(culture);
 
   const stats = Object.fromEntries(
     STATS.map((stat) => {
@@ -97,12 +108,12 @@ export function createCharacter(ctx: SimContext, home: Location, arrival: Arriva
     : rng.chance(def.giftChance);
   const weaponId = parents
     ? (rng.pick(parents).equipment.weapon.base as WeaponId)
-    : rng.weighted(Object.entries(def.weapons) as [WeaponId, number][]);
-  const armorId = rng.weighted(Object.entries(def.armor) as [ArmorId, number][]);
+    : rng.weighted(Object.entries(pack?.weapons ?? def.weapons) as [WeaponId, number][]);
+  const armorId = rng.weighted(Object.entries(pack?.armor ?? def.armor) as [ArmorId, number][]);
   const itemsRng = ctx.rng.items;
   const weapon = starterWeapon(ctx, itemsRng, weaponId);
   const armor = generateItem(ctx, itemsRng, {
-    culture: def.culture,
+    culture,
     depth: 0,
     base: armorId,
     rarity: 'common',
@@ -111,7 +122,7 @@ export function createCharacter(ctx: SimContext, home: Location, arrival: Arriva
 
   const skills = Object.fromEntries(SKILLS.map((s) => [s, 0])) as Record<SkillId, number>;
   skills[weaponBase(weaponId).skill] = rng.int(15, 30);
-  for (const skill of ['blades', 'axes', 'blunt', 'polearms'] as const) {
+  for (const skill of ['blades', 'axes', 'blunt', 'polearms', 'bows'] as const) {
     if (skills[skill] === 0) skills[skill] = rng.int(0, 8);
   }
   for (const skill of ['stealth', 'lockpicking', 'awareness'] as const) {
@@ -120,8 +131,8 @@ export function createCharacter(ctx: SimContext, home: Location, arrival: Arriva
   skills.arcana = gifted ? rng.int(15, 30) : 0;
 
   const name = parents
-    ? generateChildName(rng, def.culture, rng.pick(parents).familyName, world.takenNames)
-    : generateName(rng, def.culture, world.takenNames);
+    ? generateChildName(rng, culture, rng.pick(parents).familyName, world.takenNames)
+    : generateName(rng, culture, world.takenNames);
   const [youngest, oldest] = def.startingAge;
   const age = parents ? 0 : rng.int(youngest, oldest) + rng.next();
   // A child grows up speaking whatever their parents speak, a little.
@@ -137,7 +148,7 @@ export function createCharacter(ctx: SimContext, home: Location, arrival: Arriva
     calling,
     ...name,
     species,
-    culture: def.culture,
+    culture,
     homeId: home.id,
     born: world.time - Math.round(age * YEAR),
     occupation: null,

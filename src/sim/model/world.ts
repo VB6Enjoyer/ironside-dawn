@@ -1,5 +1,5 @@
 import type { SchedulerState } from '../core/scheduler';
-import type { SpeciesId } from '../../content';
+import type { CreatureId, CultureId, SpeciesId } from '../../content';
 import type { Calling, Character, DeathCause } from './character';
 import type { Ledger, Market, Shock } from './market';
 import type { Encounter } from './encounter';
@@ -60,6 +60,30 @@ export interface World {
   readonly ledger: Ledger;
   /** The great dead, whose deeds are told in taverns, most recent last. */
   readonly heroes: CharacterId[];
+  /** Local legends grown out of what happened (Phase 10), oldest first. */
+  readonly myths: Myth[];
+  /** Deaths so far to each creature at each wild place, by "place|creature", toward a myth. */
+  readonly omens: Record<string, number>;
+}
+
+/**
+ * A local legend: something that has killed people at a place, as the folk
+ * of the land tell it ("the kappa of the Yanagi Ford").
+ */
+export interface Myth {
+  readonly id: number;
+  readonly locationId: LocationId;
+  readonly regionId: RegionId | null;
+  /** Whose tale it is: the culture of the land, or the generic one. */
+  readonly culture: CultureId;
+  readonly subject:
+    | { readonly kind: 'creature'; readonly creature: CreatureId }
+    | { readonly kind: 'dread'; readonly characterId: CharacterId };
+  readonly born: number;
+  /** Lives it has taken. */
+  deaths: number;
+  /** When the dread it tells of was destroyed. */
+  endedAt: number | null;
 }
 
 export interface Tally {

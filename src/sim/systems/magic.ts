@@ -159,6 +159,8 @@ export function cast(
 export function learnSpells(ctx: SimContext, character: Character, locationId: LocationId): void {
   for (const spell of SPELLS) {
     if (character.spells.includes(spell.id)) continue;
+    // Common lore, or the tradition they were raised in.
+    if (spell.culture !== 'generic' && spell.culture !== character.culture) continue;
     if (character.skills.arcana < spell.arcana) continue;
     character.spells.push(spell.id);
     addDeed(character, { kind: 'spell', at: ctx.world.time, spell: spell.id });

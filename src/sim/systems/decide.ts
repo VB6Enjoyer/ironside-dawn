@@ -9,6 +9,7 @@ import { roleOf } from './progress';
 import { canTrade, wantsToShop } from './shopping';
 import { lairOdds } from './delve';
 import { mustersOf } from './dread';
+import { mythFear } from './myths';
 import { CRUSADE_SIZE, willingRecruits } from './social';
 import { findPath, nearbyPlaces } from './roads';
 import type { TravelReason } from './travel';
@@ -224,6 +225,11 @@ function optionsAt(ctx: SimContext, character: Character, here: Location): Optio
       } else {
         terms.push({ value: 0.06 * nearness, motive: null });
       }
+      // The tales of a wild place keep the folk raised on them away.
+      if (there.kind === 'wilderness') {
+        const dread = mythFear(ctx.world, character, there.id);
+        if (dread > 0) terms.push({ value: -0.3 * dread * (1.2 - traits.bravery), motive: null });
+      }
       if (character.outlaw && there.kind === 'wilderness') {
         terms.push({ value: 0.4 * nearness, motive: { kind: 'drive', drive: 'wealth' } });
       }
@@ -310,7 +316,8 @@ function delveTerms(
   } else {
     terms.push({ value: 0.25 * traits.curiosity, motive: { kind: 'novelty', locationId: place } });
   }
-  const fear = fearOf(character, place, ctx.world.time);
+  // What they fear there: what befell them, and the tales they grew up on.
+  const fear = fearOf(character, place, ctx.world.time) + mythFear(ctx.world, character, place);
   if (fear > 0) terms.push({ value: -0.8 * fear * (1.2 - traits.bravery), motive: null });
   // One of the dread lairs there: a call to the brave who stand a chance, a
   // dread to everyone else.

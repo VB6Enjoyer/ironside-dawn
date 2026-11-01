@@ -3,6 +3,7 @@ import type { Character, DeathCause, Item, LocationId } from '../model';
 import { carriedGear, takeGear } from './items';
 import { burn } from './ledger';
 import { lordDied } from './lords';
+import { creatureKilled } from './myths';
 import { mournDeath } from './social';
 
 /** Renown below which nobody is a legend, however few have died. */
@@ -54,6 +55,8 @@ export function die(ctx: SimContext, character: Character, cause: DeathCause): v
   if (cause.kind !== 'character') world.bounties.delete(character.id);
 
   if (character.calling === 'lord') lordDied(ctx, character);
+  // Too many deaths to one kind of creature at one place, and folk start telling of it.
+  if (cause.kind === 'creature' && place) creatureKilled(ctx, place, cause.creature.species);
 
   const kills = Object.values(character.kills).reduce((sum, n) => sum + n, 0);
   ctx.emit(

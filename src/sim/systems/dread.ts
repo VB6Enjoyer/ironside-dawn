@@ -7,6 +7,7 @@ import { generateItem } from './items';
 import { learnSpells } from './magic';
 import { nudgeTrait, satisfy } from './mind';
 import { addDeed, gainXp, refreshMaxima, xpForLevel } from './progress';
+import { dreadEnded, dreadInfamous } from './myths';
 import { raidTown } from './raids';
 import { nearbyPlaces } from './roads';
 
@@ -87,6 +88,7 @@ export function dreadDay(ctx: SimContext): void {
     const master = world.characters.get(masterId)!;
     if (!isAlive(master)) continue;
     living++;
+    dreadInfamous(ctx, master);
     if (master.activity.kind !== 'living') continue;
     master.hp = Math.min(master.maxHp, master.hp + Math.ceil(master.maxHp * MENDING));
     master.stamina = master.maxStamina;
@@ -242,6 +244,7 @@ export function dreadFell(
   const lair = world.locations.get(master.homeId);
   if (lair?.dungeon?.masterId === master.id) lair.dungeon.masterId = null;
   world.tally.dreadSlain++;
+  dreadEnded(ctx, master, at);
   const name = `${master.givenName} ${master.familyName}`;
   for (const hero of slayers) {
     addDeed(hero, { kind: 'vanquish', at: world.time, characterId: master.id, name });

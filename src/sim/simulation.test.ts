@@ -376,7 +376,9 @@ describe('a year of danger', () => {
       if (e.type === 'delve.enter')
         delves.set(e.data.characterId, (delves.get(e.data.characterId) ?? 0) + 1);
     }
+    // Adventurers, then: lords, merchants and the dread don't delve however bold they are.
     const lives = characters
+      .filter((c) => c.calling === 'adventurer' || c.calling === 'townsfolk')
       .map((c) => ({ c, months: ((c.death?.at ?? sim.world.time) - c.arrivedAt) / (30 * DAY) }))
       .filter(({ months }) => months >= 1)
       .sort((a, b) => a.c.traits.bravery - b.c.traits.bravery);

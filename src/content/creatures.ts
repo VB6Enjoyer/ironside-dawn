@@ -98,6 +98,43 @@ export const CREATURES = [
     level: 4, hp: '3d8', attack: 4, damage: '1d8+1', defense: 15, agility: 2, fleeBelow: 0,
     group: [1, 1], gold: null, drops: [{ loot: 'wraith-essence', chance: 0.6 }],
   },
+  // Japonic: yōkai and spirits
+  {
+    id: 'kappa', culture: 'japonic', name: 'kappa', plural: 'kappa', family: 'beast',
+    level: 2, hp: '2d8+2', attack: 2, damage: '1d6', defense: 13, agility: 1, fleeBelow: 0.3,
+    group: [1, 2], gold: { dice: '1d4', chance: 0.3 }, drops: [{ loot: 'kappa-shell', chance: 0.5 }],
+  },
+  {
+    id: 'kitsune', culture: 'japonic', name: 'kitsune', plural: 'kitsune', family: 'beast',
+    level: 3, hp: '2d8', attack: 3, damage: '1d6', defense: 14, agility: 3, fleeBelow: 0.4,
+    group: [1, 2], gold: { dice: '1d6', chance: 0.4 }, drops: [{ loot: 'fox-tail', chance: 0.5 }],
+  },
+  {
+    id: 'tengu', culture: 'japonic', name: 'tengu', plural: 'tengu', family: 'beast',
+    level: 4, hp: '3d8+2', attack: 4, damage: '1d8', defense: 15, agility: 3, fleeBelow: 0.25,
+    group: [1, 2], gold: null, drops: [{ loot: 'tengu-feather', chance: 0.6 }],
+  },
+  {
+    id: 'yurei', culture: 'japonic', name: 'yūrei', plural: 'yūrei', family: 'undead',
+    level: 3, hp: '2d8', attack: 3, damage: '1d6+1', defense: 15, agility: 2, fleeBelow: 0,
+    group: [1, 2], gold: null, drops: [{ loot: 'mourning-comb', chance: 0.3 }],
+  },
+  {
+    id: 'oni', culture: 'japonic', name: 'oni', plural: 'oni', family: 'demon',
+    level: 5, hp: '5d8+8', attack: 4, damage: '2d6+2', defense: 12, agility: 0, fleeBelow: 0.1,
+    group: [1, 1], gold: { dice: '3d6', chance: 0.5 }, drops: [{ loot: 'oni-horn', chance: 0.7 }],
+  },
+  // Norse
+  {
+    id: 'draugr', culture: 'norse', name: 'draugr', plural: 'draugar', family: 'undead',
+    level: 4, hp: '4d8+4', attack: 3, damage: '1d8+2', defense: 13, agility: -1, fleeBelow: 0,
+    group: [1, 2], gold: { dice: '2d6', chance: 0.5 }, drops: [{ loot: 'barrow-silver', chance: 0.4 }],
+  },
+  {
+    id: 'jotunn', culture: 'norse', name: 'jötunn', plural: 'jötnar', family: 'beast',
+    level: 5, hp: '6d8+12', attack: 4, damage: '2d8', defense: 11, agility: -1, fleeBelow: 0.1,
+    group: [1, 1], gold: { dice: '3d6', chance: 0.5 }, drops: [{ loot: 'jotunn-tooth', chance: 0.7 }],
+  },
   // A lord's garrison: not found in dungeons, but on patrol and on the walls.
   {
     id: 'soldier', culture: 'generic', name: 'garrison soldier', plural: 'garrison soldiers', family: 'mortal',

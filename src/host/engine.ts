@@ -2,6 +2,7 @@ import {
   createSimulation,
   DAY,
   Importance,
+  roleOf,
   worldSample,
   type CharacterId,
   type EventType,
@@ -332,7 +333,8 @@ export function createEngine(options: EngineOptions): Engine {
     function changedNames(): NameEntry[] {
       const changed: NameEntry[] = [];
       for (const c of sim.world.characters.values()) {
-        const key = `${c.equipment.weapon.base}|${c.death ? 1 : 0}`;
+        const role = roleOf(c);
+        const key = `${c.equipment.weapon.base}|${c.death ? 1 : 0}|${role}`;
         if (sentNames.get(c.id) === key) continue;
         sentNames.set(c.id, key);
         changed.push({
@@ -341,6 +343,8 @@ export function createEngine(options: EngineOptions): Engine {
           species: c.species,
           weapon: c.equipment.weapon.base,
           dead: c.death !== null,
+          culture: c.culture,
+          role,
         });
       }
       return changed;

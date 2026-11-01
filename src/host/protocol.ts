@@ -1,5 +1,7 @@
 import type {
   BiomeId,
+  CultureId,
+  Role,
   GoodId,
   Goods,
   ItemBaseId,
@@ -46,6 +48,9 @@ export interface NameEntry {
   readonly species: SpeciesId;
   readonly weapon: ItemBaseId;
   readonly dead: boolean;
+  /** The ways they were raised in, and what their best skills make them. */
+  readonly culture: CultureId;
+  readonly role: Role;
 }
 
 export interface PlaceEntry {
@@ -53,6 +58,7 @@ export interface PlaceEntry {
   readonly name: string;
   readonly article: 'the' | null;
   readonly kind: LocationKind;
+  readonly culture: CultureId;
 }
 
 /** Stands in the log for events left out to keep it readable. */

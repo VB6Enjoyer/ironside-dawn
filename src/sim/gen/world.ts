@@ -56,7 +56,8 @@ export function createWorldState(seed: string, map: MapDef): World {
       academy: def.academy ?? false,
       dungeon: def.dungeon ? { def: def.dungeon, population, lostItems: [], masterId: null } : null,
       economy: def.economy ?? null,
-      roaming: {},
+      roaming: def.haunt ? { [def.haunt.creature]: Math.ceil(def.haunt.max / 2) } : {},
+      haunt: def.haunt ?? null,
       fortress:
         def.kind === 'fortress'
           ? {
@@ -73,7 +74,13 @@ export function createWorldState(seed: string, map: MapDef): World {
   const regions = new Map<RegionId, Region>();
   for (const def of map.regions ?? []) {
     const id = def.id as RegionId;
-    regions.set(id, { ...def, id, weather: 'fair', weatherSince: WORLD_START });
+    regions.set(id, {
+      ...def,
+      id,
+      culture: def.culture ?? null,
+      weather: 'fair',
+      weatherSince: WORLD_START,
+    });
   }
 
   const world: World = {
@@ -109,6 +116,8 @@ export function createWorldState(seed: string, map: MapDef): World {
     shocks: [],
     ledger: { minted: {}, burned: {} },
     heroes: [],
+    myths: [],
+    omens: {},
   };
   for (const location of locations.values()) {
     const market = createMarket(world, location);

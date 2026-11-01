@@ -84,7 +84,7 @@ function noteLegends(sim: Simulation): void {
 }
 
 export function placeEntry(l: Location): PlaceEntry {
-  return { id: l.id, name: l.name, article: l.article, kind: l.kind };
+  return { id: l.id, name: l.name, article: l.article, kind: l.kind, culture: l.culture };
 }
 
 /** A slice of the world holding these people and what they belong to. */

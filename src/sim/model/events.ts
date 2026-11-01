@@ -381,6 +381,31 @@ export type EventBody =
         readonly since: number;
       }
     >
+  /** Folk begin to tell of something that has killed people at a place. */
+  | Body<
+      'myth.born',
+      {
+        readonly locationId: LocationId;
+        readonly mythId: number;
+        readonly creature: CreatureId | null;
+        readonly characterId: CharacterId | null;
+        readonly deaths: number;
+      }
+    >
+  /** The dread a myth tells of is destroyed: the tale gets its ending. */
+  | Body<'myth.end', CharacterAt & { readonly mythId: number }>
+  /** `characterId` tells `otherId` the local legend `mythId`. */
+  | Body<
+      'social.myth',
+      CharacterAt &
+        WithOther & {
+          readonly mythId: number;
+          /** Where the tale is set, and what it tells of. */
+          readonly placeId: LocationId;
+          readonly creature: CreatureId | null;
+          readonly subjectId: CharacterId | null;
+        }
+    >
   /** A trouble begins: in a town, or on the road between `locationId` and `otherId`. */
   | Body<
       'market.shock',
@@ -485,5 +510,8 @@ export const EVENT_IMPORTANCE: Record<EventType, Importance> = {
   'lord.seat': Importance.Notable,
   'dread.rise': Importance.Notable,
   'dread.fall': Importance.Legendary,
+  'myth.born': Importance.Notable,
+  'myth.end': Importance.Notable,
+  'social.myth': Importance.Trivial,
   'market.recover': Importance.Normal,
 };
