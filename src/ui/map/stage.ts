@@ -52,6 +52,7 @@ const TEXEL = 4;
 export interface StageEvents {
   onPlace(id: LocationId): void;
   onTraveler(id: CharacterId): void;
+  onRegion(id: string): void;
   onHover(text: string | null): void;
 }
 
@@ -179,6 +180,18 @@ export class MapStage {
       label.scale.set(1 / 20);
       label.anchor.set(0.5);
       label.position.set(r.x, r.y);
+      // A land's name opens its page.
+      label.eventMode = 'static';
+      label.cursor = 'pointer';
+      label.on('pointertap', () => this.events.onRegion(r.id));
+      label.on('pointerover', () => {
+        label.alpha = 0.8;
+        this.events.onHover(`${r.name} · ${r.biome}`);
+      });
+      label.on('pointerout', () => {
+        label.alpha = 0.45;
+        this.events.onHover(null);
+      });
       this.land.addChild(label);
     }
   }

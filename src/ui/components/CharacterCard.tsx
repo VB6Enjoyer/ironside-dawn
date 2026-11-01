@@ -41,7 +41,7 @@ import {
   goodsList,
   lootList,
   SKILL_NAMES,
-  SPECIES_NAMES,
+  peopleName,
   spellName,
   type NameResolver,
 } from '../../text';
@@ -104,7 +104,7 @@ export function CharacterCard({
   const { character, slice: world } = view;
 
   const home = world.locations.get(character.homeId);
-  const species = SPECIES_NAMES[character.species].singular;
+  const species = peopleName(character.species, character.culture).singular;
   const dead = character.death !== null;
   const recent = view.events.slice(-RECENT_EVENTS).reverse();
 

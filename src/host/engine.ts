@@ -40,6 +40,7 @@ import {
   statsView,
   tradeView,
   mapView,
+  regionView,
 } from './views';
 
 /**
@@ -439,6 +440,8 @@ export function createEngine(options: EngineOptions): Engine {
           return savedGame(sim);
         case 'map':
           return mapView(sim);
+        case 'region':
+          return regionView(sim, request.id);
       }
     }
 

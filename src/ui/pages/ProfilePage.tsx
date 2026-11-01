@@ -1,3 +1,4 @@
+import { CULTURES, type CultureDef } from '../../content';
 import type { FamilyTree as Family, SimHost, WorldSlice } from '../../host';
 import { DAY, Importance, toCalendar, type CharacterId, type SimEvent } from '../../sim';
 import {
@@ -5,7 +6,7 @@ import {
   describeEvent,
   formatTimestamp,
   seasonName,
-  SPECIES_NAMES,
+  peopleName,
   type NameResolver,
 } from '../../text';
 import { LineChart } from '../components/charts';
@@ -46,7 +47,10 @@ export function ProfilePage({
           {c.givenName} {c.familyName}
         </h2>
         <p className="card-subtitle">
-          {callingTitle(c)} · {SPECIES_NAMES[c.species].singular} of {home?.name ?? 'nowhere'}
+          {callingTitle(c)} · {peopleName(c.species, c.culture).singular} of{' '}
+          {home?.name ?? 'nowhere'}
+          {(CULTURES[c.culture] as CultureDef).pack &&
+            ` · raised in ${CULTURES[c.culture].name} ways`}
           {c.outlaw && ' · outlaw'}
           {c.death &&
             ` · ${c.death.cause.kind === 'departed' ? 'moved on' : 'died'} ${formatTimestamp(c.death.at)}`}

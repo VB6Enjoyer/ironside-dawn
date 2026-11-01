@@ -1,4 +1,4 @@
-import { GOODS, type ProfessionId } from '../content';
+import { CULTURES, GOODS, type CultureDef, type ProfessionId } from '../content';
 import {
   goingPrice,
   houseQuote,
@@ -8,6 +8,7 @@ import {
   renownOf,
   toCalendar,
   type Character,
+  type RegionId,
   type CharacterId,
   type EventQuery,
   type Location,
@@ -32,6 +33,7 @@ import type {
   MapTraveler,
   MapView,
   MarketView,
+  RegionView,
   PlaceEntry,
   PlaceSummary,
   SavedGame,
@@ -67,6 +69,7 @@ export function summarize(c: Character): CharacterSummary {
     outlaw: c.outlaw !== null,
     dead: c.death !== null,
     calling: c.calling,
+    culture: c.culture,
     born: c.born,
     died: c.death?.at ?? null,
     legend: legends.has(c.id),
@@ -175,7 +178,9 @@ export function locationView(sim: Simulation, id: LocationId): LocationView | nu
   const region = location.regionId ? world.regions.get(location.regionId) : undefined;
   const holder = [...world.locations.values()].find((l) => l.fortress?.territory.includes(id));
   return {
-    region: region ? { name: region.name, biome: region.biome, weather: region.weather } : null,
+    region: region
+      ? { id: region.id, name: region.name, biome: region.biome, weather: region.weather }
+      : null,
     lord: living(location.fortress?.lordId),
     territory: (location.fortress?.territory ?? []).map((t) => placeEntry(world.locations.get(t)!)),
     heldBy: holder ? placeEntry(holder) : null,
@@ -221,7 +226,7 @@ export function placesView(sim: Simulation): PlaceSummary[] {
 
 function regionOf(sim: Simulation, l: Location): PlaceSummary['region'] {
   const region = l.regionId ? sim.world.regions.get(l.regionId) : undefined;
-  return region ? { name: region.name, biome: region.biome } : null;
+  return region ? { id: region.id, name: region.name, biome: region.biome } : null;
 }
 
 export function statsView(sim: Simulation): StatsView {
@@ -526,5 +531,64 @@ export function mapView(sim: Simulation): MapView {
     })),
     roads: [...world.routes.values()].map((r) => ({ a: r.a, b: r.b })),
     travelers,
+  };
+}
+
+export function regionView(sim: Simulation, id: string): RegionView | null {
+  const world = sim.world;
+  const region = world.regions.get(id as RegionId);
+  if (!region) return null;
+  noteLegends(sim);
+  const places = [...world.locations.values()].filter((l) => l.regionId === region.id);
+  const here = new Set(places.map((l) => l.id));
+  const def = region.culture ? (CULTURES[region.culture] as CultureDef) : null;
+  const notable: (CharacterSummary & { note: string })[] = [];
+  for (const l of places) {
+    const lord = l.fortress?.lordId ? world.characters.get(l.fortress.lordId) : undefined;
+    if (lord && !lord.death) notable.push({ ...summarize(lord), note: `lord of ${l.name}` });
+    const master = l.dungeon?.masterId ? world.characters.get(l.dungeon.masterId) : undefined;
+    if (master && !master.death) {
+      notable.push({
+        ...summarize(master),
+        note: `lairs in ${l.name}, ${master.slain} lives claimed`,
+      });
+    }
+  }
+  const renowned = [...world.characters.values()]
+    .filter((c) => !c.death && here.has(c.homeId) && c.calling !== 'dread' && c.calling !== 'lord')
+    .sort((a, b) => renownOf(b) - renownOf(a))
+    .slice(0, 6);
+  for (const c of renowned) notable.push({ ...summarize(c), note: `renown ${renownOf(c)}` });
+  const myths = world.myths
+    .filter((m) => m.regionId === region.id)
+    .map((m) => ({
+      id: m.id,
+      placeId: m.locationId,
+      creature: m.subject.kind === 'creature' ? m.subject.creature : null,
+      subjectId: m.subject.kind === 'dread' ? m.subject.characterId : null,
+      born: m.born,
+      deaths: m.deaths,
+      ended: m.endedAt !== null,
+    }));
+  return {
+    slice: sliceFor(sim, [...notable.map((c) => c.id), ...myths.flatMap((m) => m.subjectId ?? [])]),
+    id: region.id,
+    name: region.name,
+    biome: region.biome,
+    weather: region.weather,
+    culture:
+      def?.pack && region.culture
+        ? {
+            id: region.culture,
+            name: def.name,
+            deities: def.pack.deities,
+            peoples: Object.values(def.pack.peoples).map(
+              (p) => (p as { readonly plural: string }).plural,
+            ),
+          }
+        : null,
+    places: places.map(placeEntry),
+    myths,
+    notable,
   };
 }

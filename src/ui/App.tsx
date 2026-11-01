@@ -13,6 +13,7 @@ import { HallsPage } from './pages/HallsPage';
 import { LogPage } from './pages/LogPage';
 import { PlacePage, PlacesPage } from './pages/PlacesPage';
 import { ProfilePage } from './pages/ProfilePage';
+import { RegionPage } from './pages/RegionPage';
 import { StatsPage } from './pages/StatsPage';
 import { TradePage } from './pages/TradePage';
 
@@ -240,6 +241,7 @@ function Observatory({
     onCharacter: setSelected,
     onLocation: (id: LocationId) => go({ page: 'place', id }),
   };
+  const toRegion = (id: string) => go({ page: 'region', id });
   const cardId = selected ?? (route.page === 'profile' ? route.id : null);
 
   return (
@@ -288,17 +290,38 @@ function Observatory({
             <ChroniclePage host={host} names={names} time={snapshot.time} {...links} />
           )}
           {route.page === 'places' && (
-            <PlacesPage host={host} time={snapshot.time} onLocation={links.onLocation} />
+            <PlacesPage
+              host={host}
+              time={snapshot.time}
+              onLocation={links.onLocation}
+              onRegion={toRegion}
+            />
           )}
           {route.page === 'place' && (
-            <PlacePage host={host} id={route.id} names={names} time={snapshot.time} {...links} />
+            <PlacePage
+              host={host}
+              id={route.id}
+              names={names}
+              time={snapshot.time}
+              onRegion={toRegion}
+              {...links}
+            />
+          )}
+          {route.page === 'region' && (
+            <RegionPage host={host} id={route.id} names={names} time={snapshot.time} {...links} />
           )}
           {route.page === 'trade' && (
             <TradePage host={host} names={names} time={snapshot.time} {...links} />
           )}
           {route.page === 'map' && (
             <Suspense fallback={<p className="muted page-loading">Unrolling the map…</p>}>
-              <MapPage host={host} time={snapshot.time} following={snapshot.following} {...links} />
+              <MapPage
+                host={host}
+                time={snapshot.time}
+                following={snapshot.following}
+                onRegion={toRegion}
+                {...links}
+              />
             </Suspense>
           )}
           {route.page === 'stats' && <StatsPage host={host} time={snapshot.time} />}
@@ -362,7 +385,7 @@ const TABS = [
 ] as const;
 
 function tabOf(route: Route): Route['page'] | null {
-  if (route.page === 'place') return 'places';
+  if (route.page === 'place' || route.page === 'region') return 'places';
   if (route.page === 'profile') return null;
   return route.page;
 }

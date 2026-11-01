@@ -1,5 +1,6 @@
 import type {
   BiomeId,
+  CreatureId,
   CultureId,
   Role,
   GoodId,
@@ -121,6 +122,7 @@ export interface CharacterSummary {
   readonly outlaw: boolean;
   readonly dead: boolean;
   readonly calling: Calling;
+  readonly culture: CultureId;
   readonly born: number;
   /** When they died or moved on. */
   readonly died: number | null;
@@ -169,6 +171,7 @@ export interface LocationView {
   readonly events: readonly SimEvent[];
   /** The land it lies in, and its weather today. */
   readonly region: {
+    readonly id: string;
     readonly name: string;
     readonly biome: BiomeId;
     readonly weather: WeatherId;
@@ -193,7 +196,7 @@ export interface PlaceSummary {
   /** Adventurers who have died there. */
   readonly fallen: number;
   /** The land it lies in, if the world has regions. */
-  readonly region: { readonly name: string; readonly biome: BiomeId } | null;
+  readonly region: { readonly id: string; readonly name: string; readonly biome: BiomeId } | null;
 }
 
 export interface StatsView {
@@ -358,7 +361,8 @@ export type Request =
   | { readonly kind: 'search'; readonly text: string }
   | { readonly kind: 'events'; readonly query: EventQuery }
   | { readonly kind: 'save' }
-  | { readonly kind: 'map' };
+  | { readonly kind: 'map' }
+  | { readonly kind: 'region'; readonly id: string };
 
 export interface Responses {
   character: CharacterView | null;
@@ -373,6 +377,35 @@ export interface Responses {
   events: readonly SimEvent[];
   save: SavedGame;
   map: MapView;
+  region: RegionView | null;
+}
+
+/** One land (Phase 10): its culture and gods, its places, its tales, and who matters there. */
+export interface RegionView {
+  readonly slice: WorldSlice;
+  readonly id: string;
+  readonly name: string;
+  readonly biome: BiomeId;
+  readonly weather: WeatherId;
+  readonly culture: {
+    readonly id: CultureId;
+    readonly name: string;
+    readonly deities: readonly { readonly name: string; readonly domain: string }[];
+    /** The peoples it raises, by its own names for them. */
+    readonly peoples: readonly string[];
+  } | null;
+  readonly places: readonly PlaceEntry[];
+  readonly myths: readonly {
+    readonly id: number;
+    readonly placeId: LocationId;
+    readonly creature: CreatureId | null;
+    readonly subjectId: CharacterId | null;
+    readonly born: number;
+    readonly deaths: number;
+    readonly ended: boolean;
+  }[];
+  /** Lords and the dread of the land, and its most renowned living folk. */
+  readonly notable: readonly (CharacterSummary & { readonly note: string })[];
 }
 
 /** Everything the world map draws (ROADMAP.md Phase 9). Distances in leagues. */

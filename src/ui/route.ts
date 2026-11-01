@@ -12,7 +12,8 @@ export type Route =
   | { readonly page: 'halls' }
   | { readonly page: 'map' }
   | { readonly page: 'profile'; readonly id: CharacterId }
-  | { readonly page: 'place'; readonly id: LocationId };
+  | { readonly page: 'place'; readonly id: LocationId }
+  | { readonly page: 'region'; readonly id: string };
 
 export function parseRoute(hash: string): Route {
   const [page, id] = hash.replace(/^#\/?/, '').split('/');
@@ -28,6 +29,8 @@ export function parseRoute(hash: string): Route {
       return id ? { page, id: decodeURIComponent(id) as CharacterId } : { page: 'log' };
     case 'place':
       return id ? { page, id: decodeURIComponent(id) as LocationId } : { page: 'places' };
+    case 'region':
+      return id ? { page, id: decodeURIComponent(id) } : { page: 'places' };
     default:
       return { page: 'log' };
   }

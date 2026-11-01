@@ -7,7 +7,7 @@ export {
 } from './calendar';
 export { describeEvent, toPlainText } from './describe';
 export type { Segment } from './describe';
-export { SPECIES_NAMES, worldNames } from './names';
+export { peopleName, roleTitle, SPECIES_NAMES, worldNames } from './names';
 export type { NameResolver } from './names';
 export {
   aCreature,

@@ -45,7 +45,10 @@ export function PlacesPage({
   host,
   time,
   onLocation,
-}: { host: SimHost; time: number } & Required<Pick<ProseLinks, 'onLocation'>>) {
+  onRegion,
+}: { host: SimHost; time: number; onRegion?: (id: string) => void } & Required<
+  Pick<ProseLinks, 'onLocation'>
+>) {
   const places = useQuery(host, { kind: 'places' }, Math.floor(time / HOUR));
   if (!places) return <p className="muted page-loading">Surveying the land…</p>;
   const lands = new Map<string, PlaceSummary[]>();
@@ -61,7 +64,18 @@ export function PlacesPage({
         <section key={land || 'all'} className="land">
           {land && (
             <h3>
-              {capitalFirst(land)} <span className="muted">· {list[0]!.region!.biome}</span>
+              {onRegion ? (
+                <button
+                  type="button"
+                  className="ref ref-location"
+                  onClick={() => onRegion(list[0]!.region!.id)}
+                >
+                  {capitalFirst(land)}
+                </button>
+              ) : (
+                capitalFirst(land)
+              )}{' '}
+              <span className="muted">· {list[0]!.region!.biome}</span>
             </h3>
           )}
           <ul className="place-list">
@@ -102,8 +116,15 @@ export function PlacePage({
   id,
   names,
   time,
+  onRegion,
   ...links
-}: { host: SimHost; id: LocationId; names: NameResolver; time: number } & ProseLinks) {
+}: {
+  host: SimHost;
+  id: LocationId;
+  names: NameResolver;
+  time: number;
+  onRegion?: (id: string) => void;
+} & ProseLinks) {
   // Watching a place reports its fights blow by blow.
   useEffect(() => {
     host.watchPlace(id);
@@ -122,7 +143,19 @@ export function PlacePage({
       <h2>{placeName(host.places.get(id))}</h2>
       {view.region && (
         <p className="muted">
-          In {view.region.name}, {view.region.biome}; {WEATHER_NAMES[view.region.weather]} today.
+          In{' '}
+          {onRegion ? (
+            <button
+              type="button"
+              className="ref ref-location"
+              onClick={() => onRegion(view.region!.id)}
+            >
+              {view.region.name}
+            </button>
+          ) : (
+            view.region.name
+          )}
+          , {view.region.biome}; {WEATHER_NAMES[view.region.weather]} today.
           {view.heldBy && (
             <>
               {' '}

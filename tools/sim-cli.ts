@@ -366,6 +366,21 @@ function worldRows(
     ...fortresses,
     row('The dread', `${world.tally.dreadSlain} destroyed`),
     ...dread,
+    row(
+      'Culture lands',
+      [...world.regions.values()]
+        .filter((r) => r.culture)
+        .map((r) => `${r.name} (${r.culture})`)
+        .join(', ') || 'none',
+    ),
+    row('Myths', `${world.myths.length} (${world.myths.filter((m) => m.endedAt).length} ended)`),
+    ...world.myths.slice(-5).map((m) => {
+      const place = world.locations.get(m.locationId)!;
+      const where = `${place.article ? 'the ' : ''}${place.name}`;
+      const what =
+        m.subject.kind === 'creature' ? `the ${m.subject.creature}` : name(m.subject.characterId);
+      return row(`  ${what} of ${where}`, `${m.deaths} lives, told by ${m.culture} folk`);
+    }),
   ];
 }
 

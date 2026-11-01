@@ -60,7 +60,8 @@ export function wildsDay(ctx: SimContext): void {
       // Whatever haunts a place keeps coming back to it.
       const count = location.roaming[haunt.creature] ?? 0;
       if (count < haunt.max) {
-        location.roaming[haunt.creature] = count + stochasticRound(rng.next(), HAUNT_RETURN * season);
+        location.roaming[haunt.creature] =
+          count + stochasticRound(rng.next(), HAUNT_RETURN * season);
       }
     }
     roam(ctx, location);

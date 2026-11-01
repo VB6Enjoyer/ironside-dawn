@@ -23,9 +23,7 @@ export function creatureKilled(ctx: SimContext, place: Location, creature: Creat
   const world = ctx.world;
   const existing = world.myths.find(
     (m) =>
-      m.locationId === place.id &&
-      m.subject.kind === 'creature' &&
-      m.subject.creature === creature,
+      m.locationId === place.id && m.subject.kind === 'creature' && m.subject.creature === creature,
   );
   if (existing) {
     existing.deaths++;
@@ -69,12 +67,7 @@ export function dreadEnded(ctx: SimContext, master: Character, at: LocationId): 
   );
 }
 
-function bear(
-  ctx: SimContext,
-  place: Location,
-  subject: Myth['subject'],
-  deaths: number,
-): void {
+function bear(ctx: SimContext, place: Location, subject: Myth['subject'], deaths: number): void {
   const world = ctx.world;
   const region = place.regionId ? world.regions.get(place.regionId) : undefined;
   const myth: Myth = {

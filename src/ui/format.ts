@@ -1,3 +1,4 @@
+import { roleTitle } from '../text';
 import {
   DAY,
   HOUR,
@@ -36,7 +37,7 @@ const OCCUPATION_TITLES: Record<Occupation, string> = {
 export function callingTitle(c: Character): string {
   switch (c.calling) {
     case 'adventurer':
-      return `Level ${c.level} ${roleOf(c)}`;
+      return `Level ${c.level} ${roleTitle(c.culture, roleOf(c)) ?? roleOf(c)}`;
     case 'merchant':
       return 'Merchant';
     case 'child':

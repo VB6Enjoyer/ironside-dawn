@@ -25,7 +25,13 @@ export default function MapPage({
   following,
   onCharacter,
   onLocation,
-}: { host: SimHost; time: number; following: readonly CharacterId[] } & ProseLinks) {
+  onRegion,
+}: {
+  host: SimHost;
+  time: number;
+  following: readonly CharacterId[];
+  onRegion?: (id: string) => void;
+} & ProseLinks) {
   // Travelers move between updates by the clock; the roads only need asking for now and then.
   const view = useQuery(host, { kind: 'map' }, Math.floor(time / HOUR));
   const holder = useRef<HTMLDivElement>(null);
@@ -34,9 +40,9 @@ export default function MapPage({
   const followed = useMemo(() => new Set(following), [following]);
 
   // The latest handlers, for the stage to call without being rebuilt.
-  const handlers = useRef({ onCharacter, onLocation });
+  const handlers = useRef({ onCharacter, onLocation, onRegion });
   useEffect(() => {
-    handlers.current = { onCharacter, onLocation };
+    handlers.current = { onCharacter, onLocation, onRegion };
   });
 
   useEffect(() => {
@@ -45,6 +51,7 @@ export default function MapPage({
     const map = new MapStage(element, {
       onPlace: (id) => handlers.current.onLocation?.(id),
       onTraveler: (id) => handlers.current.onCharacter?.(id),
+      onRegion: (id) => handlers.current.onRegion?.(id),
       onHover: setHover,
     });
     stage.current = map;
