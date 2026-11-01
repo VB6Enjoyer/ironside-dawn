@@ -54,6 +54,16 @@ choices make them dangerous.
 | **Demons**           | Malevolent by nature   | Blighted wastes, rifts        | Strong, cruel, often magically gifted. Mostly appear as raiders, cult masters, and bosses. |
 | **Undead (sapient)** | Malevolent by nature   | Barrows, ruined cities        | Liches and revenants: ageless, patient, and they remember everything.                      |
 
+As built (Phase 8), humans live about 70 years and come of age at 16, dwarves
+250 years and 30, elves 600 years and 50. The longer a people lives, the fewer
+children it has: a human couple is about three times as likely to have a child
+in a year as a dwarven one, and nine times as likely as an elven one.
+
+As built (Phase 9), centaurs live about 90 years, come of age at 14, speak
+Windspeech, and travel half as fast again as anyone on foot. The sapient
+undead and demons are the **dread**: liches, revenants and demon lords, each
+alone in its lair, ageless, hated by every people and hating them back.
+
 The **lesser undead** (skeletons, zombies) and **lesser demons** (imps,
 hounds) are _creatures_, not characters. They are often under the command of a
 sapient one.
@@ -202,6 +212,12 @@ That last one makes a good log line.
   (elves) and **Deeptongue** (dwarves). Common is human speech, not a trade
   tongue, though it gets around because humans live in every town. A
   character can hold a conversation at 30 and is fluent at 70.
+- In trade (Phase 7) a character's prices depend on how well they understand a
+  town's people, weighted by how many of each people live there: up to 40%
+  worse for someone who speaks none of their tongues. Brindlemoor is mostly
+  dwarven and Saltmere mostly elven, so merchants who travel learn Deeptongue
+  and Sylvan, and do better for it. No pidgin has been needed so far: Common
+  does that job in practice.
 
 ---
 

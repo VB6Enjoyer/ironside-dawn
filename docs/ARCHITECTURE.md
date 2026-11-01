@@ -114,7 +114,7 @@ src/
   content/             # data tables: species, cultures, creatures, items, spells, names
   text/                # event → prose, calendar names. No DOM; shared by UI and CLI.
   host/                # SimHost (main thread now, worker in Phase 6) + speed tiers
-  ui/                  # React app
+  ui/                  # React app; the world map (ui/map) draws with PixiJS
 tools/
   sim-cli.ts           # headless runner
 docs/
@@ -226,12 +226,18 @@ full-world scans in hot paths. Techniques, from day one onward:
 3. **Silent detail.** Fights and delves are always resolved fully, so RNG use
    is identical either way. Fine-grained events (each blow, each room) are only
    _emitted_ when someone is watching that character or place. Emitting never
-   touches world RNG or state, so it can't change history. _(Planned for
-   Phase 6 with follow mode. Until then every blow is emitted as a trivial
-   event; detail events will need IDs that don't shift the main sequence.)_
+   touches world RNG or state, so it can't change history. _(As built in
+   Phase 6: the detail events are each blow, each flight and each quiet
+   chamber. An unwatched one is never built, but still takes its ID, so every
+   other event keeps the same ID whoever is watched. A test runs the same world
+   watching everyone, no one and one character, and compares. Other trivial
+   events (pastimes, nights' rest, passing through, meetings) are skipped the
+   same way unless the log is showing trivia, so at high speed and while
+   skipping ahead they cost nothing.)_
 4. **Retention by importance.** Unwatched trivial events are never stored.
    Normal events expire after a while. Notable and legendary events are kept
-   forever.
+   forever. _(As built: one ring per importance, 2,000 trivial, 20,000 normal,
+   100,000 notable, and every legendary event.)_
 5. **Display throttling.** The UI gets at most N events per batch above the
    current floor, and the rest becomes a digest line ("…and 3,412 minor
    happenings across the realm").
@@ -318,8 +324,14 @@ Consumers of the event stream:
   given event always reads the same way.
 - **Character memory** (in-sim): an actor in an event may record it.
 - **Statistics**: deaths by cause, gold flow, population.
-- **The chronicle**: important events (≥ notable) are kept forever. Trivial
-  ones expire from a ring buffer, so memory use stays flat over a long run.
+- **The chronicle**: important events (≥ notable) are kept for good. Trivial
+  and everyday ones expire, each importance from its own ring buffer, so
+  memory use stays flat over a long run and a flood of small events never
+  pushes out the chronicle.
+- **Seasonal samples**: at the start of every season the world records its
+  population by species, deaths by cause, levels, gold and crime, and every
+  living adventurer records their level, gold and kills. Charts are drawn from
+  these, not from the log.
 
 Events record what happened. Systems never read the log to decide anything;
 they read world state. This prevents feedback loops that are hard to debug.
@@ -434,6 +446,114 @@ sides, each any mix of characters and creatures, so delves (party against
 creatures), ambushes (travelers against outlaws) and hunts (hunters against
 an outlaw and their gang) share one combat system.
 
+### 4.9 The economy: markets nobody runs
+
+Built in Phase 7 (`src/sim/systems/market.ts`, `economy.ts`, `merchants.ts`,
+`shopping.ts`, `ledger.ts`), after Doran & Parberry (§9).
+
+- **Townsfolk as agents.** Each town's commoners are split into trades
+  (farmers, miners, hunters, herbalists, smiths, alchemists, tailors), each
+  one aggregate agent with a share of the town, gold, a stock of goods and a
+  private price range for every good. Every morning each trade works (its most
+  profitable recipe, slowed by a glut of its own goods, by hunger and by a lack
+  of tools), eats and wears out its tools (the prosperous use more of
+  everything but food), then posts bids for what it is short of and asks for
+  what it has spare, at prices drawn from its beliefs.
+- **The clearinghouse.** Per good, bids are sorted high to low and asks low to
+  high, and matched at the midpoint until they no longer cross. A filled order
+  narrows its owner's belief toward the price; an unfilled one moves it (a
+  buyer offers more, a seller asks less), within a third and three times the
+  good's worth.
+- **Labor moves.** A little of each town's workforce drifts every day from the
+  worst-paid trade to the best-paid, within limits set by the land. This is
+  what keeps supply in line with demand (Doran & Parberry's agents change
+  jobs).
+- **The trading house.** One more agent per town, with no workers. It keeps a
+  couple of days of the town's use of every good, buys from adventurers and
+  merchants at a spread below what it believes things are worth (less for
+  what it has too much of), sells to them above, keeps the inns, pays
+  bounties, and pays out its surplus as wages. That last is how the gold
+  adventurers bring back reaches the townsfolk.
+- **Named characters** never join the auction; they deal with the trading
+  house at once, at its quotes, worse the less they understand the townsfolk's
+  tongues.
+- **Merchants** plan from a price book: what each town's house paid and asked
+  when they last saw it (or heard from another merchant). They weigh margin,
+  staleness, what rivals are already hauling there, and the danger of the road
+  against their nerve, load up, and go. Arbitrage is what ties the towns'
+  prices together.
+- **Troubles** (failed harvests, mine collapses, rich veins, blight, beasts
+  on a road) change output or close a road to anyone planning a journey.
+- **The ledger.** Gold is only created (founding, newcomers' purses, treasure
+  found, treasure assayed) or destroyed (lost with the dead, upkeep paid out
+  of the towns) through the ledger; everything else is a transfer. A test
+  checks that the gold held equals what was minted less what was burned.
+
+### 4.10 Generations: lives with a beginning and an end
+
+Built in Phase 8 (`src/sim/systems/lifecycle.ts`, `death.ts`, `social.ts`).
+
+- **Callings.** Every named character is an adventurer, a merchant, one of the
+  townsfolk, or a child. Only adventurers and merchants are scheduled. Townsfolk
+  and children have the activity `living` and are handled in one daily round,
+  so a town full of retired heroes and their children costs next to nothing.
+- **Ages.** Each people has a lifespan, an age of adulthood, the age range its
+  first adventurers start at, and a fertility. From 60% of a lifespan the years
+  tell (might, agility and toughness wane a little each birthday); from 75%,
+  the yearly risk of death of old age climbs steeply. A people can be marked
+  `ageless` (undead, later).
+- **Promotion and demotion.** Adventurers and merchants are still promoted
+  from a town's commoners (§4.2), from the people most short of its share, so
+  the long-lived peoples don't take over the adventurers as humans age out.
+  Adventurers retire, through age, wealth, a family, or broken nerve, to a trade
+  in town (innkeeper, smith, weapons master, farmer, clerk) or to the merchant's
+  life; they keep their memories and friends. Lone townsfolk of a crowded
+  people may move on, which takes them out of the world without a death.
+- **Families.** Two characters who love each other (high mutual affinity and
+  familiarity, a friend bond) may marry; across peoples only rarely, never
+  close kin. A married couple in its fertile years has children at its people's
+  fertility, less the fuller the people's settled young already are (that
+  density dependence is what keeps each people's numbers level). Children
+  blend their parents' stats and traits with a mutation, take a parent's family
+  name and weapon, are likelier to have the gift if a parent did, and come of
+  age as adventurers (while the world needs them; with a parent's grudges, and
+  a vow against a parent's killer) or in a parent's trade.
+- **Inheritance.** Someone who dies at home with a living spouse or children
+  leaves them their purse and gear, legendary items included; elsewhere,
+  legendary items stay where they fell. A purse with no heir is burned.
+- **Legends.** Renown is level, legendary finds and fearsome kills. A dead
+  character whose renown passes a floor and outshines 90% of those who died
+  before becomes a legend: a legendary event, a place in the halls, and a tale
+  others tell in taverns. Legendary items grow rarer the more of them there are.
+
+### 4.11 A living world
+
+Built in Phase 9 (`src/sim/gen/geography.ts`, and `systems/weather.ts`,
+`wilds.ts`, `raids.ts`, `lords.ts`, `dread.ts`).
+
+- **Generation is a pure function of the seed**: `generateMap(seed, size)`
+  returns an ordinary map definition (regions, places with coordinates,
+  roads), drawn from its own random stream, so the simulation never knows
+  whether its map was made by hand or by the generator. Regions are the
+  Voronoi cells of scattered hearts; each place belongs to the nearest.
+- **Decisions look near.** A large world has seventy places; a character
+  weighs a journey only to the dozen nearest by road, and home. Roads keep,
+  per starting place, one Dijkstra search's results (times to everywhere, and
+  the way), until a road closes or opens.
+- **The dread are characters**, not creatures, with the calling `dread`: they
+  fight with the same rules, gear, spells and levels as anyone, with their
+  species' vitality multiplying their health and their level adding to their
+  blows. Like townsfolk and lords they are never scheduled; the daily round
+  mends them and sends them on raids, and they fight only when found.
+- **Creature fights generalized**: any fight can have characters and
+  creatures on side 1, and records where its creatures came from (a
+  dungeon's population, a band roaming a place, or a fortress's garrison), so
+  each one slain thins the right count. Delves, waylayings on the road, raids
+  and patrols share it.
+- **Weather and seasons only on generated maps.** The starter map has no
+  regions, so its harvests and breeding stay as they were, and the tests that
+  use it keep their numbers.
+
 ---
 
 ## 5. UI ↔ simulation boundary
@@ -442,6 +562,25 @@ an outlaw and their gang) share one combat system.
   `start()`, `pause()`, `setSpeed()`, `save()`, `load()`, `query(...)`. Phase 1
   may run it on the main thread behind the same interface, then switch to the
   worker before the population grows.
+
+  _As built (Phase 6, `src/host/`):_ the **engine** runs the clock, the log
+  floor, follow mode, fast-forward and the queries. It knows nothing about
+  workers: it takes messages and posts messages, so tests drive it in Node
+  with a hand-cranked timer. `worker.ts` wires it to the worker, and the
+  **remote host** on the main thread keeps a copy of what the UI shows all the
+  time (status, the log, every name and place) and turns requests into
+  promises. The protocol is about a dozen typed messages, written by hand
+  rather than with Comlink. Answers to requests are **world slices**, shaped
+  like the world (characters, parties, bounties by ID), so UI code reads them
+  as it read the world.
+
+- **Playback buffer**: at Real-time and Minute speeds the engine runs a
+  quarter of a real second ahead and lets events out when the shown clock
+  reaches them, sending updates 25 times a second, so blows land on time
+  rather than in bursts.
+- **Display throttling**: more than 250 new log entries in one update are
+  thinned, keeping the notable, the followed and the latest, and the rest
+  becomes a digest line ("…and 3,412 minor happenings across the realm").
 - The worker pushes **batched new events** and **small throttled snapshots**
   (clock, counts, the followed character) to the UI about **5–10 times per
   second**, no matter how fast the sim runs. The UI never re-renders per
@@ -460,6 +599,17 @@ an outlaw and their gang) share one combat system.
   first; switch to a binary format only if saves get large).
 - The save version is checked on load. Simple migrations are kept per version;
   until 1.0, an incompatible save is refused with a clear message.
+
+_As built (Phase 6):_ a save holds the world with its maps and sets encoded as
+tagged plain data, the state of every random stream, the population target,
+and the chronicle plus the 2,000 most recent everyday events. Loading it and
+carrying on gives exactly the history the world would have had without
+stopping; a test compares the two. A 500-adventurer world a year in is about
+3.5 MB of JSON, 0.7 MB gzipped. Saves live in two IndexedDB stores (a list and
+the data), so listing them is cheap. While a world runs it is autosaved once a
+minute and whenever the tab is hidden, one autosave per seed; opening a link to
+a world you've watched carries on from its autosave. Files are gzipped JSON
+where the browser can compress.
 
 ---
 

@@ -32,3 +32,7 @@ export {
   personalitySummary,
   traitWord,
 } from './mind';
+export { biography, causeOfDeath, deathLine, whenIn } from './biography';
+export { EVENT_CATEGORIES, eventCategory } from './categories';
+export type { EventCategory } from './categories';
+export { goodsAmount, goodsList, SHOCK_NAMES } from './goods';

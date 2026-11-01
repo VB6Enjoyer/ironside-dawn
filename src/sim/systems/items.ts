@@ -55,6 +55,8 @@ export interface ItemOptions {
   readonly base?: ItemBaseId;
 }
 
+/** With this many legendary items in the world, new ones turn up half as often. */
+const LEGEND_SCARCITY = 10;
 /** How much each chamber deeper improves the odds of rare finds. */
 const RARITY_DEPTH_BONUS = 0.15;
 const SLOT_WEIGHTS: readonly (readonly [Slot, number])[] = [
@@ -67,7 +69,7 @@ export function generateItem(ctx: SimContext, rng: Rng, options: ItemOptions): I
   const slot =
     options.slot ?? (options.base ? itemBase(options.base).slot : rng.weighted(SLOT_WEIGHTS));
   const base = options.base ? itemBase(options.base) : pickBase(rng, slot, options.culture);
-  const rarity = options.rarity ?? rollRarity(rng, slot, options.depth);
+  const rarity = options.rarity ?? rollRarity(rng, slot, options.depth, ctx.world.legends.size);
   const takesMaterial = base.slot !== 'armor' || base.metal;
   const material = takesMaterial
     ? (options.material ??
@@ -198,11 +200,19 @@ function pickBase(rng: Rng, slot: Slot, culture: CultureId): ItemBase {
   return rng.weighted(bases.map((b) => [b, b.weight * (b.culture === culture ? 2 : 1)] as const));
 }
 
-function rollRarity(rng: Rng, slot: Slot, depth: number): Rarity {
+/**
+ * Rarer finds deeper down. Legendary items grow scarcer the more of them the
+ * world already holds: there are only so many great blades to be found.
+ */
+function rollRarity(rng: Rng, slot: Slot, depth: number, legends: number): Rarity {
   // A plain trinket does nothing, so trinkets are at least fine.
   const options = RARITIES.filter((r) => slot !== 'trinket' || r.id !== 'common');
+  const scarcity = LEGEND_SCARCITY / (LEGEND_SCARCITY + legends);
   return rng.weighted(
-    options.map((r, i) => [r.id, r.weight * (1 + RARITY_DEPTH_BONUS * depth * i)] as const),
+    options.map((r, i) => {
+      const weight = r.weight * (1 + RARITY_DEPTH_BONUS * depth * i);
+      return [r.id, r.id === 'legendary' ? weight * scarcity : weight] as const;
+    }),
   );
 }
 
@@ -300,6 +310,7 @@ export function claimLegend(
   if (!legend) {
     legend = { item, holder: null, lostAt: null, owners: [] };
     world.legends.set(item.id, legend);
+    world.tally.legendsFound++;
   }
   legend.holder = character.id;
   legend.lostAt = null;

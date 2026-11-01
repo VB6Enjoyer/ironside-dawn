@@ -46,7 +46,12 @@ export interface EncounterSide {
  */
 export interface Encounter {
   readonly id: EncounterId;
-  readonly kind: 'delve' | 'ambush' | 'hunt';
+  /**
+   * A delve; outlaws' ambush; a hunt for an outlaw; creatures roaming the
+   * roads falling on travelers (`waylay`); a raid on a town; a lord's patrol
+   * catching outlaws.
+   */
+  readonly kind: 'delve' | 'ambush' | 'hunt' | 'waylay' | 'raid' | 'patrol';
   readonly locationId: LocationId;
   readonly sides: readonly [EncounterSide, EncounterSide];
   round: number;
@@ -60,4 +65,14 @@ export interface Encounter {
   readonly delve: { readonly leaderId: CharacterId; readonly progress: DelveProgress } | null;
   /** Coins and items dropped by slain creatures, claimed by the winners. */
   spoils: { gold: number; items: LootItem[] };
+  /**
+   * Where the creatures came from, and so whose numbers fall when they die: a
+   * dungeon's population, a band roaming a place, or a fortress's garrison.
+   */
+  readonly herd: Herd | null;
+}
+
+export interface Herd {
+  readonly locationId: LocationId;
+  readonly pool: 'dungeon' | 'roaming' | 'garrison';
 }

@@ -1,14 +1,25 @@
 import {
   creatureDef,
+  itemBase,
   LANGUAGES,
   type CreatureId,
   type ItemBaseId,
+  type LocationKind,
   type PastimeId,
   type WeaponId,
 } from '../content';
-import type { CharacterId, Combatant, EventOfType, EventType, LocationId, SimEvent } from '../sim';
+import type {
+  CharacterId,
+  Combatant,
+  EventOfType,
+  EventType,
+  LocationId,
+  Occupation,
+  SimEvent,
+} from '../sim';
 import { describeDuration, seasonName } from './calendar';
 import { anItem, itemName, legendTitle, SKILL_PHRASES, spellName } from './items';
+import { goodsList } from './goods';
 import { describeWhy } from './mind';
 import { SPECIES_NAMES, type NameResolver } from './names';
 import {
@@ -18,6 +29,7 @@ import {
   condition,
   countWord,
   creatureGroup,
+  listOf,
   lootList,
   spoils,
   theCreature,
@@ -60,7 +72,7 @@ interface Helpers {
   foes(foes: readonly Combatant[]): Part[];
   /** A town's name, for bounty notices. */
   place(id: LocationId): Segment;
-  kindOf(id: LocationId): 'town' | 'dungeon' | 'wilderness' | undefined;
+  kindOf(id: LocationId): LocationKind | undefined;
   /** "a human", "an elf". */
   aSpecies(id: CharacterId): string;
   weaponOf(id: CharacterId): ItemBaseId | undefined;
@@ -129,7 +141,18 @@ const CREATURE_VERBS: Record<CreatureId, readonly string[]> = {
   zombie: ['claws at', 'pummels'],
   'infernal-imp': ['claws', 'scorches'],
   hellhound: ['bites', 'sears'],
+  'dire-boar': ['gores', 'tramples'],
+  troll: ['pounds', 'smashes'],
+  ghoul: ['claws at', 'bites'],
+  wraith: ['chills', 'drains'],
+  soldier: ['cuts', 'thrusts at'],
 };
+
+/** "a troll", "six wolves". */
+function herd(creature: CreatureId, count: number): string {
+  const def = creatureDef(creature);
+  return count === 1 ? `${article(def.name)} ${def.name}` : `${countWord(count)} ${def.plural}`;
+}
 
 function attackVerb(h: Helpers, attacker: Combatant): string {
   if (attacker.kind === 'creature') return h.pick(CREATURE_VERBS[attacker.ref.species]);
@@ -137,6 +160,21 @@ function attackVerb(h: Helpers, attacker: Combatant): string {
   const verbs = weapon ? WEAPON_VERBS[weapon as WeaponId] : undefined;
   return verbs ? h.pick(verbs) : 'strikes';
 }
+
+const RETIRE_REASONS = {
+  age: 'at last, their best years behind them,',
+  wealth: 'with a fortune made',
+  family: 'for the sake of their family',
+  nerves: 'after one narrow escape too many',
+} as const;
+
+export const OCCUPATION_NAMES: Record<Occupation, string> = {
+  innkeeper: 'an innkeeper',
+  smith: 'a smith',
+  trainer: 'a weapons master',
+  farmer: 'a farmer',
+  clerk: 'a clerk of the trading house',
+};
 
 const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
   'world.created': [
@@ -233,6 +271,18 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
           [c, ' dies at the hands of ', h.c(cause.characterId), ' in ', l, `${legacy}.`],
         ]);
       }
+      if (cause.kind === 'departed') {
+        return h.pick<Part[]>([
+          [c, ' leaves ', l, ' for distant lands.'],
+          [c, ' sells up and leaves ', l, ', never to return.'],
+        ]);
+      }
+      if (cause.kind === 'age') {
+        return h.pick<Part[]>([
+          [c, ` dies of old age in `, l, `, ${cause.age} years old.`],
+          [c, ` passes away peacefully in `, l, ` at the age of ${cause.age}.`],
+        ]);
+      }
       return h.pick<Part[]>([
         [c, ` is slain by ${aCreature(cause.creature)} in `, l, `${legacy}.`],
         [c, ` falls to ${aCreature(cause.creature)} in `, l, `${legacy}.`],
@@ -267,6 +317,11 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
           return [c, ' limps out of ', from, ', heading for ', to, ' to recover.'];
         case 'home':
           return [c, ' heads for ', to, ' with a heavy pack.'];
+        case 'trade':
+          return h.pick<Part[]>([
+            [c, ' drives a wagon out of ', from, ', bound for ', to, '.'],
+            [c, ' takes the road from ', from, ' to ', to, ' with a wagonload of goods.'],
+          ]);
         case 'delve':
           return h.pick<Part[]>([
             [c, ' sets out from ', from, ' toward ', to, '.'],
@@ -428,6 +483,33 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
           return [
             ...us,
             many ? ' corner ' : ' corners ',
+            ...them,
+            ' in ',
+            h.l(e.data.locationId),
+            '.',
+          ];
+        case 'waylay':
+          return [
+            ...us,
+            many ? ' are set upon by ' : ' is set upon by ',
+            ...them,
+            ' roaming ',
+            h.l(e.data.locationId),
+            '.',
+          ];
+        case 'raid':
+          return [
+            ...them,
+            ' fall upon ',
+            h.l(e.data.locationId),
+            '! ',
+            ...us,
+            many ? ' stand to defend it.' : ' stands to defend it.',
+          ];
+        case 'patrol':
+          return [
+            ...us,
+            many ? ' are run to ground by ' : ' is run to ground by ',
             ...them,
             ' in ',
             h.l(e.data.locationId),
@@ -686,7 +768,9 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
             h.c(e.data.leaderId),
             "'s party for a life of crime.",
           ]
-        : [h.c(e.data.characterId), ' leaves ', h.c(e.data.leaderId), "'s party in disgust."],
+        : e.data.reason === 'retire'
+          ? [h.c(e.data.characterId), ' leaves ', h.c(e.data.leaderId), "'s party to settle down."]
+          : [h.c(e.data.characterId), ' leaves ', h.c(e.data.leaderId), "'s party in disgust."],
   ],
   'party.disband': [
     (e, h) => {
@@ -697,6 +781,8 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
           return [h.c(e.data.characterId), "'s party falls apart in bitterness."];
         case 'outlaw':
           return [h.c(e.data.characterId), "'s party breaks up."];
+        case 'retire':
+          return [h.c(e.data.characterId), "'s companions go their separate ways."];
       }
     },
   ],
@@ -736,7 +822,14 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
     },
   ],
   'crime.robbery': [
-    (e, h) => [h.c(e.data.characterId), ' robs ', h.c(e.data.victimId), ` of ${e.data.gold} gold.`],
+    (e, h) => [
+      h.c(e.data.characterId),
+      ' robs ',
+      h.c(e.data.victimId),
+      e.data.goods && Object.keys(e.data.goods).length > 0
+        ? ` of ${e.data.gold} gold and ${goodsList(e.data.goods)}.`
+        : ` of ${e.data.gold} gold.`,
+    ],
   ],
   'bounty.post': [
     (e, h) => [
@@ -764,6 +857,353 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
       h.l(e.data.locationId),
       ` for ${e.data.gold} gold.`,
     ],
+  ],
+  'trade.shop': [
+    (e, h) => {
+      const bought = [
+        ...(e.data.potions > 0
+          ? [
+              e.data.potions === 1
+                ? 'a healing draught'
+                : `${countWord(e.data.potions)} healing draughts`,
+            ]
+          : []),
+        ...(e.data.item ? [anItem(e.data.item)] : []),
+      ];
+      return [
+        h.c(e.data.characterId),
+        ` buys ${listOf(bought)} in `,
+        h.l(e.data.locationId),
+        ` for ${e.data.gold} gold.`,
+      ];
+    },
+  ],
+  'trade.load': [
+    (e, h) => [
+      h.c(e.data.characterId),
+      ` loads ${goodsList(e.data.goods)} in `,
+      h.l(e.data.locationId),
+      ` for ${e.data.gold} gold, bound for `,
+      h.l(e.data.destinationId),
+      '.',
+    ],
+    (e, h) => [
+      h.c(e.data.characterId),
+      ` buys up ${goodsList(e.data.goods)} in `,
+      h.l(e.data.locationId),
+      ' to sell in ',
+      h.l(e.data.destinationId),
+      ` (${e.data.gold} gold).`,
+    ],
+  ],
+  'trade.unload': [
+    (e, h) => [
+      h.c(e.data.characterId),
+      ` sells ${goodsList(e.data.goods)} in `,
+      h.l(e.data.locationId),
+      ` for ${e.data.gold} gold`,
+      e.data.profit === null
+        ? '.'
+        : e.data.profit >= 0
+          ? `, a profit of ${e.data.profit}.`
+          : `, at a loss of ${-e.data.profit}.`,
+    ],
+  ],
+  'item.potion': [
+    (e, h) => [h.c(e.data.characterId), ' gulps down a healing draught.'],
+    (e, h) => [h.c(e.data.characterId), ' drinks a healing draught mid-fight.'],
+  ],
+  'character.elder': [
+    (e, h) => [
+      h.c(e.data.characterId),
+      `'s hair is grey now; at ${e.data.age}, the years begin to tell.`,
+    ],
+    (e, h) => [
+      h.c(e.data.characterId),
+      ` turns ${e.data.age}, and is slower to rise in the mornings.`,
+    ],
+  ],
+  'character.retire': [
+    (e, h) => {
+      const c = h.c(e.data.characterId);
+      const town = h.l(e.data.locationId);
+      const why = RETIRE_REASONS[e.data.reason];
+      if (e.data.merchant)
+        return [c, ` hangs up their sword ${why} and takes up the merchant's trade in `, town, '.'];
+      return [
+        c,
+        ` hangs up their sword ${why} and settles in `,
+        town,
+        e.data.occupation ? ` as ${OCCUPATION_NAMES[e.data.occupation]}.` : '.',
+      ];
+    },
+  ],
+  'family.marry': [
+    (e, h) => [
+      h.c(e.data.characterId),
+      ' and ',
+      h.c(e.data.otherId),
+      ' are married in ',
+      h.l(e.data.locationId),
+      '.',
+    ],
+    (e, h) => [
+      h.c(e.data.characterId),
+      ' weds ',
+      h.c(e.data.otherId),
+      ' in ',
+      h.l(e.data.locationId),
+      '.',
+    ],
+  ],
+  'family.birth': [
+    (e, h) => [
+      h.c(e.data.characterId),
+      ' is born in ',
+      h.l(e.data.locationId),
+      ' to ',
+      ...h.group(e.data.parentIds),
+      '.',
+    ],
+  ],
+  'family.comeOfAge': [
+    (e, h) => {
+      const c = h.c(e.data.characterId);
+      if (e.data.calling === 'adventurer') {
+        const weapon = h.weaponOf(e.data.characterId);
+        return [
+          c,
+          ' comes of age in ',
+          h.l(e.data.locationId),
+          weapon ? ` and takes up the ${itemBase(weapon).name}.` : ' and sets out to adventure.',
+        ];
+      }
+      return [
+        c,
+        ' comes of age in ',
+        h.l(e.data.locationId),
+        e.data.occupation ? ` and goes to work as ${OCCUPATION_NAMES[e.data.occupation]}.` : '.',
+      ];
+    },
+  ],
+  'family.inherit': [
+    (e, h) => {
+      const gifts = [
+        ...(e.data.gold > 0 ? [`${e.data.gold} gold`] : []),
+        ...e.data.items.map((item) => anItem(item)),
+      ];
+      return [h.c(e.data.characterId), ` inherits ${listOf(gifts)} from `, h.c(e.data.fromId), '.'];
+    },
+  ],
+  'legend.hero': [
+    (e, h) => ['The bards begin to sing of ', h.c(e.data.characterId), '.'],
+    (e, h) => ['The deeds of ', h.c(e.data.characterId), ' pass into legend.'],
+  ],
+  'social.tale': [
+    (e, h) => [
+      h.c(e.data.characterId),
+      ' tells ',
+      h.c(e.data.otherId),
+      ' of the deeds of ',
+      h.c(e.data.heroId),
+      '.',
+    ],
+    (e, h) => [
+      h.c(e.data.characterId),
+      ' and ',
+      h.c(e.data.otherId),
+      ' drink to the memory of ',
+      h.c(e.data.heroId),
+      '.',
+    ],
+  ],
+  'character.avenger': [
+    (e, h) => [
+      h.c(e.data.characterId),
+      ' takes up the sword in ',
+      h.l(e.data.locationId),
+      ' to avenge ',
+      h.c(e.data.forId),
+      ' on ',
+      h.c(e.data.againstId),
+      '.',
+    ],
+  ],
+  'weather.turn': [
+    (e) => {
+      const region = e.data.region;
+      switch (e.data.weather) {
+        case 'snow':
+          return ['Snow falls across ', region, '; the roads grow slow and cold.'];
+        case 'storm':
+          return ['Storms lash ', region, '.'];
+        case 'heat':
+          return ['A scorching heat settles over ', region, '.'];
+        case 'rain':
+          return ['Rain sweeps over ', region, '.'];
+        case 'fair':
+          return ['The skies clear over ', region, '.'];
+      }
+    },
+  ],
+  'creature.migrate': [
+    (e, h) => {
+      const band = herd(e.data.creature, e.data.count);
+      return e.data.roaming
+        ? [
+            capitalize(band),
+            ' spill out of ',
+            h.l(e.data.locationId),
+            ' and roam ',
+            h.l(e.data.toId),
+            '.',
+          ]
+        : [
+            capitalize(band),
+            ' leave the crowded ',
+            h.l(e.data.locationId),
+            ' for ',
+            h.l(e.data.toId),
+            '.',
+          ];
+    },
+  ],
+  'raid.sack': [
+    (e, h) => {
+      const toll = e.data.lost > 0 ? `; ${e.data.lost} of its folk are lost` : '';
+      const raiders =
+        e.data.creature && e.data.count > 0 ? herd(e.data.creature, e.data.count) : 'raiders';
+      if (e.data.count === 0 && e.data.leaderId) {
+        return [
+          h.c(e.data.leaderId),
+          ' falls on ',
+          h.l(e.data.locationId),
+          ` alone and plunders its stores${toll}.`,
+        ];
+      }
+      const led: Part[] = e.data.leaderId ? [', led by ', h.c(e.data.leaderId), ','] : [];
+      return [
+        capitalize(raiders),
+        ...led,
+        e.data.count === 1 ? ' overruns ' : ' overrun ',
+        h.l(e.data.locationId),
+        e.data.count === 1 ? ` and plunders its stores${toll}.` : ` and plunder its stores${toll}.`,
+      ];
+    },
+  ],
+  'raid.repelled': [
+    (e, h) => {
+      const many = e.data.characterIds.length > 1;
+      return [
+        ...h.group(e.data.characterIds),
+        many ? ' drive the raiders from ' : ' drives the raiders from ',
+        h.l(e.data.locationId),
+        ...(e.data.leaderId ? [' and send ', h.c(e.data.leaderId), ' back to its lair'] : []),
+        '.',
+      ];
+    },
+  ],
+  'patrol.clear': [
+    (e, h) => [
+      'Soldiers from ',
+      h.l(e.data.fortressId),
+      ' cut down ',
+      herd(e.data.creature, e.data.count),
+      ' roaming ',
+      h.l(e.data.locationId),
+      '.',
+    ],
+  ],
+  'lord.seat': [
+    (e, h) => {
+      const who = h.c(e.data.characterId);
+      const where = h.l(e.data.locationId);
+      switch (e.data.how) {
+        case 'founded':
+          return [who, ' holds ', where, ' and the lands around it.'];
+        case 'inherited':
+          return [who, ' inherits the seat of ', where, '.'];
+        case 'claimed':
+          return [who, ' lays down the sword and takes up the lordship of ', where, '.'];
+        case 'appointed':
+          return [who, ' is raised to the empty seat of ', where, '.'];
+      }
+    },
+  ],
+  'dread.rise': [
+    (e, h) => [
+      h.c(e.data.characterId),
+      ', ',
+      h.aSpecies(e.data.characterId),
+      ', makes its lair in ',
+      h.l(e.data.locationId),
+      '.',
+    ],
+    (e, h) => [
+      'Something stirs in the deeps of ',
+      h.l(e.data.locationId),
+      ': ',
+      h.c(e.data.characterId),
+      ', ',
+      h.aSpecies(e.data.characterId),
+      ', has come.',
+    ],
+  ],
+  'dread.fall': [
+    (e, h) => [
+      ...h.group(e.data.slayerIds),
+      e.data.slayerIds.length > 1 ? ' destroy ' : ' destroys ',
+      h.c(e.data.characterId),
+      ' in ',
+      h.l(e.data.locationId),
+      e.data.slain > 0 ? `, ending a terror that claimed ${countWord(e.data.slain)} lives.` : '.',
+    ],
+  ],
+  'market.shock': [
+    (e, h) => {
+      const town = h.l(e.data.locationId);
+      switch (e.data.shock) {
+        case 'failed-harvest':
+          return ['The harvest fails around ', town, '; bread will be dear.'];
+        case 'mine-collapse':
+          return ['A gallery collapses in the mines of ', town, '.'];
+        case 'rich-vein':
+          return ['Miners in ', town, ' strike a rich vein of iron.'];
+        case 'blight':
+          return ['A blight withers the herb gardens of ', town, '.'];
+        case 'blockade':
+          return [
+            'A pack of wargs holds the road between ',
+            town,
+            ' and ',
+            e.data.otherId ? h.l(e.data.otherId) : 'the wilds',
+            '.',
+          ];
+      }
+    },
+  ],
+  'market.recover': [
+    (e, h) => {
+      const town = h.l(e.data.locationId);
+      switch (e.data.shock) {
+        case 'failed-harvest':
+          return ['The granaries of ', town, ' fill again.'];
+        case 'mine-collapse':
+          return ['The mines of ', town, ' are dug out and working again.'];
+        case 'rich-vein':
+          return ['The rich vein in the mines of ', town, ' runs out.'];
+        case 'blight':
+          return ['The herb gardens of ', town, ' recover from the blight.'];
+        case 'blockade':
+          return [
+            'The road between ',
+            town,
+            ' and ',
+            e.data.otherId ? h.l(e.data.otherId) : 'the wilds',
+            ' is clear again.',
+          ];
+      }
+    },
   ],
 };
 

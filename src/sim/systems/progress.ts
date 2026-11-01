@@ -1,4 +1,12 @@
-import { SKILL_RANKS, SKILL_ROLE, SKILLS, type Role, type SkillId } from '../../content';
+import {
+  SKILL_RANKS,
+  SKILL_ROLE,
+  SKILLS,
+  SPECIES,
+  type Role,
+  type SkillId,
+  type SpeciesDef,
+} from '../../content';
 import type { SimContext } from '../context';
 import type { Character, Deed, LocationId } from '../model';
 import { gearTotals } from './items';
@@ -104,7 +112,11 @@ export function refreshMaxima(character: Character): void {
   const gear = gearTotals(character);
   const toughness = character.stats.toughness + (gear.stats.toughness ?? 0);
   const might = character.stats.might + (gear.stats.might ?? 0);
-  const maxHp = BASE_HP + toughness + HP_PER_LEVEL * (character.level - 1) + gear.maxHp;
+  // The dread take far more killing than any mortal.
+  const vitality = (SPECIES[character.species] as SpeciesDef).vitality ?? 1;
+  const maxHp = Math.round(
+    (BASE_HP + toughness + HP_PER_LEVEL * (character.level - 1) + gear.maxHp) * vitality,
+  );
   const maxStamina =
     BASE_STAMINA +
     Math.round((toughness + might) / 2) +

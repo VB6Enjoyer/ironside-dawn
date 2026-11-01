@@ -1,6 +1,7 @@
 import type {
   CreatureId,
   CultureId,
+  Goods,
   LanguageId,
   LootId,
   PastimeId,
@@ -17,18 +18,48 @@ import type { CharacterId, EncounterId, ItemId, LocationId, PartyId } from './id
 import type { Opinion, Outlaw } from './social';
 import type { Equipment, Item } from './item';
 import type { Drives, Expectation, Goal, Memory } from './mind';
+import type { PriceNote } from './market';
+
+/**
+ * What a character does with their life: adventurers delve, merchants trade,
+ * townsfolk (the retired, and those who never took up the sword) live and
+ * work in town, and children grow up there.
+ */
+export type Calling =
+  | 'adventurer'
+  | 'merchant'
+  | 'townsfolk'
+  | 'child'
+  /** Holds a fortress and the lands around it, with a garrison. */
+  | 'lord'
+  /** One of the dread: a lich, revenant or demon lord in its lair. */
+  | 'dread';
+
+/** Townsfolk's work, mostly taken up on retiring. */
+export type Occupation = 'innkeeper' | 'smith' | 'trainer' | 'farmer' | 'clerk';
 
 export interface Character {
   readonly id: CharacterId;
+  /** Adventurers seek glory and gold in dungeons; merchants buy low and sell high. */
+  calling: Calling;
   readonly givenName: string;
   readonly familyName: string;
   readonly species: SpeciesId;
   readonly culture: CultureId;
-  readonly homeId: LocationId;
+  homeId: LocationId;
+  /** World time of birth; before the world began for those who were already grown. */
+  readonly born: number;
+  /** Townsfolk's work. */
+  occupation: Occupation | null;
+  /** Married to, living or dead. */
+  spouseId: CharacterId | null;
+  /** Mother and father, for those born in the world. */
+  readonly parents: readonly CharacterId[];
+  readonly children: CharacterId[];
   /** World time the character entered the world. */
   readonly arrivedAt: number;
 
-  readonly stats: Stats;
+  stats: Stats;
   /** Personality, 0 to 1 each. Mostly fixed; bravery drifts with experience. */
   traits: Traits;
   /** Born with the gift for magic (WORLD.md §4). */
@@ -55,6 +86,8 @@ export interface Character {
   /** Loot carried, waiting to be sold. */
   pack: LootItem[];
   kills: Partial<Record<CreatureId, number>>;
+  /** People they have killed. */
+  slain: number;
   /** Lifetime gold from loot sold and coins found, for reports. */
   goldEarned: number;
 
@@ -78,13 +111,27 @@ export interface Character {
   /** How each town sees them, -1 (wanted) to 1 (celebrated). */
   reputation: Partial<Record<LocationId, number>>;
 
+  /** Healing draughts carried, drunk when a fight goes badly. */
+  potions: number;
+  /** Merchants: goods carried to sell, in units. */
+  cargo: Goods;
+  /** Merchants: what the cargo cost, to reckon the profit. */
+  cargoPaid: number;
+  /** Merchants: what each town's prices were when last seen. */
+  priceBook: Partial<Record<LocationId, PriceNote>>;
+
   /** Where the character is, or null while on the road. */
   locationId: LocationId | null;
   activity: Activity;
   /** Identifies the one scheduled wake-up still in force (see systems/wake.ts). */
   wakeToken: number;
   death: Death | null;
+  /** How they stood at the start of each season they lived through. */
+  history: LifeSample[];
 }
+
+/** [time, level, gold, kills], compact because there are many. */
+export type LifeSample = readonly [t: number, level: number, gold: number, kills: number];
 
 export type TimedStatus =
   | { readonly kind: 'dizzy'; readonly until: number }
@@ -106,7 +153,14 @@ export type Deed =
   | { readonly kind: 'legend'; readonly at: number; readonly itemId: ItemId; readonly name: string }
   | { readonly kind: 'slay'; readonly at: number; readonly creature: CreatureRef }
   | { readonly kind: 'spell'; readonly at: number; readonly spell: SpellId }
-  | { readonly kind: 'rank'; readonly at: number; readonly skill: SkillId; readonly rank: string };
+  | { readonly kind: 'rank'; readonly at: number; readonly skill: SkillId; readonly rank: string }
+  /** Helped destroy one of the dread. */
+  | {
+      readonly kind: 'vanquish';
+      readonly at: number;
+      readonly characterId: CharacterId;
+      readonly name: string;
+    };
 
 export interface Death {
   readonly at: number;
@@ -118,7 +172,10 @@ export type DeathCause =
   | { readonly kind: 'creature'; readonly creature: CreatureRef }
   | { readonly kind: 'character'; readonly characterId: CharacterId }
   | { readonly kind: 'trap'; readonly trap: TrapId }
-  | { readonly kind: 'magic'; readonly spell: SpellId };
+  | { readonly kind: 'magic'; readonly spell: SpellId }
+  | { readonly kind: 'age'; readonly age: number }
+  /** Not a death: they left for distant lands, and the world stopped following them. */
+  | { readonly kind: 'departed' };
 
 export interface DelveProgress {
   readonly locationId: LocationId;
@@ -135,6 +192,8 @@ export interface DelveProgress {
 export type Activity =
   /** At a location, about to decide what to do next. */
   | { readonly kind: 'idle' }
+  /** Townsfolk and children: living their lives in town, not deciding moment to moment. */
+  | { readonly kind: 'living' }
   /** Passing time at a location from `since` until `until`. */
   | {
       readonly kind: 'pastime';

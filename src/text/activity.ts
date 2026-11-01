@@ -1,5 +1,6 @@
 import type { PastimeId } from '../content';
-import type { Character, Deed, LocationId, World } from '../sim';
+import type { Character, Deed, LocationId, Occupation } from '../sim';
+import type { NameResolver } from './names';
 import type { Segment } from './describe';
 import { SKILL_PHRASES, spellName } from './items';
 import { aCreature, article } from './words';
@@ -16,13 +17,22 @@ const PASTIME_PLACES: Record<PastimeId, string> = {
   lurk: 'Lying in wait by the road in ',
 };
 
+/** What townsfolk do with their days. */
+export const OCCUPATION_PLACES: Record<Occupation, string> = {
+  innkeeper: 'Keeping an inn in ',
+  smith: 'Working a forge in ',
+  trainer: 'Training young fighters in ',
+  farmer: 'Farming the fields of ',
+  clerk: 'Keeping accounts at the trading house in ',
+};
+
 /** What a character is doing right now, for the character card. */
-export function describeActivity(character: Character, world: World): Segment[] {
+export function describeActivity(character: Character, names: NameResolver): Segment[] {
   const place = (id: LocationId | null): Segment => {
-    const location = id === null ? undefined : world.locations.get(id);
-    if (!location) return { text: 'the wilds' };
+    const location = id === null ? undefined : names.location(id);
+    if (!location || id === null) return { text: 'the wilds' };
     const text = location.article ? `${location.article} ${location.name}` : location.name;
-    return { text, ref: { kind: 'location', id: location.id } };
+    return { text, ref: { kind: 'location', id } };
   };
   const here = place(character.locationId);
   const activity = character.activity;
@@ -30,6 +40,12 @@ export function describeActivity(character: Character, world: World): Segment[] 
   switch (activity.kind) {
     case 'idle':
       return [{ text: 'In ' }, here];
+    case 'living':
+      if (character.calling === 'child') return [{ text: 'Growing up in ' }, here];
+      return [
+        { text: character.occupation ? OCCUPATION_PLACES[character.occupation] : 'Living in ' },
+        here,
+      ];
     case 'pastime':
       return [{ text: PASTIME_PLACES[activity.pastime] }, here];
     case 'resting':
@@ -45,8 +61,7 @@ export function describeActivity(character: Character, world: World): Segment[] 
     case 'fighting':
       return [{ text: 'Fighting for their life in ' }, here];
     case 'accompanying': {
-      const leader = world.characters.get(activity.leaderId);
-      const name = leader ? `${leader.givenName} ${leader.familyName}` : 'their party';
+      const name = names.character(activity.leaderId)?.name ?? 'their party';
       return character.locationId
         ? [
             { text: `With ` },
@@ -69,8 +84,7 @@ export function describeActivity(character: Character, world: World): Segment[] 
         case 'magic':
           return [{ text: `Killed by a backfiring ${spellName(death.cause.spell)} in ` }, where];
         case 'character': {
-          const killer = world.characters.get(death.cause.characterId);
-          const name = killer ? `${killer.givenName} ${killer.familyName}` : 'someone';
+          const name = names.character(death.cause.characterId)?.name ?? 'someone';
           return [
             { text: 'Killed by ' },
             { text: name, ref: { kind: 'character', id: death.cause.characterId } },
@@ -80,6 +94,10 @@ export function describeActivity(character: Character, world: World): Segment[] 
         }
         case 'creature':
           return [{ text: `Slain by ${aCreature(death.cause.creature)} in ` }, where];
+        case 'age':
+          return [{ text: `Died of old age, ${death.cause.age} years old, in ` }, where];
+        case 'departed':
+          return [{ text: 'Left for distant lands from ' }, where];
       }
     }
   }
@@ -98,5 +116,7 @@ export function describeDeed(deed: Deed): string {
       return `Learned ${spellName(deed.spell)}`;
     case 'rank':
       return `Became ${article(deed.rank)} ${deed.rank} ${SKILL_PHRASES[deed.skill]}`;
+    case 'vanquish':
+      return `Helped destroy ${deed.name}`;
   }
 }

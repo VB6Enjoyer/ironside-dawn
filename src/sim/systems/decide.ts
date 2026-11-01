@@ -6,7 +6,11 @@ import { isDizzy, isFitToDelve, needsRecovery } from './condition';
 import { fearOf, hasVisited, healthNeed, wealthNeed } from './mind';
 import { isWantedIn } from './outlaws';
 import { roleOf } from './progress';
-import { findPath } from './roads';
+import { canTrade, wantsToShop } from './shopping';
+import { lairOdds } from './delve';
+import { mustersOf } from './dread';
+import { CRUSADE_SIZE, willingRecruits } from './social';
+import { findPath, nearbyPlaces } from './roads';
 import type { TravelReason } from './travel';
 
 /**
@@ -59,6 +63,8 @@ const TOWN_COMFORT = 0.3;
 const STUDY_EFFORT = 0.1;
 /** Restlessness at which a dungeon's full appeal is felt. */
 const RESTLESS = 0.3;
+/** Bounties a character weighs at once: the most tempting. */
+const HUNTS_CONSIDERED = 2;
 /** Hours on the road that halve a destination's appeal. */
 const DISTANCE_HALVING_HOURS = 30;
 
@@ -67,15 +73,20 @@ export function decideAt(ctx: SimContext, character: Character, here: Location):
   if (options.length === 0) return null;
 
   const rng = ctx.rng.behavior;
-  const scored = options
-    .map((option) => {
-      const raw = option.terms.reduce((sum, t) => sum + t.value, 0);
-      // Uniform noise with the same spread as a gaussian of NOISE_SD, but cheaper.
-      const noise = (rng.next() - 0.5) * NOISE_SD * Math.sqrt(12);
-      return { option, score: Math.max(0.01, raw * (1 + noise)) };
-    })
-    .sort((a, b) => b.score - a.score)
-    .slice(0, SHORTLIST);
+  // The best few, kept in order as the options are scored (cheaper than sorting them all).
+  const scored: { option: Option; score: number }[] = [];
+  for (const option of options) {
+    let raw = 0;
+    for (const t of option.terms) raw += t.value;
+    // Uniform noise with the same spread as a gaussian of NOISE_SD, but cheaper.
+    const noise = (rng.next() - 0.5) * NOISE_SD * Math.sqrt(12);
+    const score = Math.max(0.01, raw * (1 + noise));
+    if (scored.length === SHORTLIST && score <= scored[SHORTLIST - 1]!.score) continue;
+    let i = Math.min(scored.length, SHORTLIST - 1);
+    while (i > 0 && scored[i - 1]!.score < score) i--;
+    scored.splice(i, 0, { option, score });
+    if (scored.length > SHORTLIST) scored.pop();
+  }
   const chosen = rng.weighted(scored.map((s) => [s, s.score ** SHARPNESS] as const));
 
   const why = chosen.option.terms
@@ -93,11 +104,14 @@ function optionsAt(ctx: SimContext, character: Character, here: Location): Optio
   const recovering = needsRecovery(character);
   const health = healthNeed(character);
   const wealth = wealthNeed(character);
-  const loot = sellable(character).length > 0;
+  const loot = hasSellable(character);
 
   switch (here.kind) {
     case 'town': {
-      if (loot) {
+      // Only worth asking whether they can deal here if there's dealing to do.
+      const shopping = !loot && wantsToShop(ctx, character, here);
+      const trading = (loot || shopping) && canTrade(ctx, character, here);
+      if (trading && loot) {
         options.push({
           action: { kind: 'sell' },
           terms: [
@@ -105,6 +119,12 @@ function optionsAt(ctx: SimContext, character: Character, here: Location): Optio
             { value: 1.6, motive: { kind: 'loot' } },
             { value: 0.3 * wealth, motive: { kind: 'drive', drive: 'wealth' } },
           ],
+        });
+      } else if (trading && shopping) {
+        // Out of healing draughts, with coin to buy more.
+        options.push({
+          action: { kind: 'sell' },
+          terms: [{ value: 0.45, motive: { kind: 'drive', drive: 'health' } }],
         });
       }
       if (recovering) {
@@ -131,7 +151,7 @@ function optionsAt(ctx: SimContext, character: Character, here: Location): Optio
       if (isFitToDelve(character, now)) {
         options.push({
           action: { kind: 'delve' },
-          terms: [...delveTerms(ctx, character, here.id), { value: 0.05, motive: null }],
+          terms: [...delveTerms(ctx, character, here.id, 1), { value: 0.05, motive: null }],
         });
       } else if (isDizzy(character, now) && !recovering) {
         // Only dizzy: wait outside for the head to clear.
@@ -171,11 +191,10 @@ function optionsAt(ctx: SimContext, character: Character, here: Location): Optio
     }
   }
 
-  // Journeys elsewhere.
-  for (const there of ctx.world.locations.values()) {
-    if (there.id === here.id) continue;
-    const hours = (findPath(ctx.world, here.id, there.id)?.duration ?? Infinity) / HOUR;
-    if (!Number.isFinite(hours)) continue;
+  // Journeys elsewhere: anywhere within the nearest few places, and home.
+  for (const { id, duration } of journeysFrom(ctx, character, here)) {
+    const there = ctx.world.locations.get(id)!;
+    const hours = duration / HOUR;
     const nearness = 1 / (1 + hours / DISTANCE_HALVING_HOURS);
     const terms: Term[] = [];
     let reason: TravelReason = 'wander';
@@ -186,9 +205,7 @@ function optionsAt(ctx: SimContext, character: Character, here: Location): Optio
       terms.push({ value: (1 + health) * nearness, motive: { kind: 'drive', drive: 'health' } });
       reason = 'heal';
     } else if (there.kind === 'dungeon') {
-      terms.push(
-        ...delveTerms(ctx, character, there.id).map((t) => ({ ...t, value: t.value * nearness })),
-      );
+      terms.push(...delveTerms(ctx, character, there.id, nearness));
       reason = 'delve';
     } else {
       if (there.id === character.homeId) {
@@ -213,6 +230,20 @@ function optionsAt(ctx: SimContext, character: Character, here: Location): Optio
       if (there.kind === 'town' && isWantedIn(character, there.id)) {
         terms.push({ value: -0.3, motive: null });
       }
+      // A band is mustering there against one of the dread: the able answer the call.
+      if (there.kind === 'town' && !character.outlaw) {
+        for (const muster of mustersOf(ctx.world)) {
+          if (muster.townId !== there.id || character.level < muster.master.level - 20) continue;
+          terms.push({
+            value:
+              Math.min(1, drives.purpose / RESTLESS) *
+              nearness *
+              (0.15 + 0.3 * traits.honor + 0.3 * traits.bravery) *
+              Math.min(1, muster.master.slain / 20 + 0.5),
+            motive: { kind: 'dread', characterId: muster.master.id },
+          });
+        }
+      }
       if (!hasVisited(character, there.id)) {
         terms.push({
           value: 0.3 * traits.curiosity * nearness,
@@ -229,11 +260,37 @@ function optionsAt(ctx: SimContext, character: Character, here: Location): Optio
   return options;
 }
 
+/** How many of the nearest places anyone weighs going to, besides home. */
+const HORIZON = 7;
+
+/**
+ * The places worth weighing a journey to: the nearest few, and home. On a
+ * large map, nobody plans a trip to the far side of the world on a whim.
+ */
+function journeysFrom(
+  ctx: SimContext,
+  character: Character,
+  here: Location,
+): readonly { readonly id: LocationId; readonly duration: number }[] {
+  const near = nearbyPlaces(ctx.world, here.id);
+  if (near.length <= HORIZON) return near;
+  const within = near.slice(0, HORIZON);
+  if (character.homeId === here.id || within.some((p) => p.id === character.homeId)) return within;
+  const home = near.find((p) => p.id === character.homeId);
+  return home ? [...within, home] : within;
+}
+
 /**
  * Why delve somewhere: restlessness, glory and gold, how well it went before,
  * the pull of the unknown, against the fear of what happened there.
  */
-function delveTerms(ctx: SimContext, character: Character, place: LocationId): Term[] {
+function delveTerms(
+  ctx: SimContext,
+  character: Character,
+  place: LocationId,
+  /** Scales the whole appeal, for a dungeon some way off. */
+  nearness: number,
+): Term[] {
   const { traits, drives } = character;
   const expectation = character.expectations[place];
   const terms: Term[] = [
@@ -255,10 +312,33 @@ function delveTerms(ctx: SimContext, character: Character, place: LocationId): T
   }
   const fear = fearOf(character, place, ctx.world.time);
   if (fear > 0) terms.push({ value: -0.8 * fear * (1.2 - traits.bravery), motive: null });
+  // One of the dread lairs there: a call to the brave who stand a chance, a
+  // dread to everyone else.
+  const masterId = ctx.world.locations.get(place)?.dungeon?.masterId;
+  const master = masterId ? ctx.world.characters.get(masterId) : undefined;
+  if (master && !master.death && character.level >= master.level - 8) {
+    // In town, they'd raise a band from whoever would answer the call.
+    const here = ctx.world.locations.get(character.locationId ?? character.homeId)!;
+    const band = Math.min(
+      CRUSADE_SIZE,
+      1 + followersOrMembers(ctx, character) + willingRecruits(ctx, character, here, master).length,
+    );
+    const odds = lairOdds(character.level, band, master.level);
+    const infamy = Math.min(1, master.slain / 10);
+    terms.push({
+      value:
+        odds * (0.5 * drives.glory * traits.bravery + 0.3 * infamy * traits.honor + 0.2 * odds),
+      motive: { kind: 'dread', characterId: master.id },
+    });
+    terms.push({ value: -0.4 * (1 - odds) * (1.2 - traits.bravery), motive: null });
+  }
   // Glory and gold only call once restlessness has built up: nobody goes
   // straight back in for the sake of it.
   const eagerness = Math.min(1, drives.purpose / RESTLESS);
-  return terms.map((t) => (t.value > 0 ? { ...t, value: t.value * eagerness } : t));
+  return terms.map((t) => ({
+    motive: t.motive,
+    value: t.value * nearness * (t.value > 0 ? eagerness : 1),
+  }));
 }
 
 /**
@@ -310,7 +390,10 @@ function huntOptions(ctx: SimContext, character: Character, here: Location): Opt
       terms,
     });
   }
-  return options;
+  // However many outlaws are wanted, only the likeliest few cross anyone's mind.
+  if (options.length <= HUNTS_CONSIDERED) return options;
+  const appeal = (o: Option) => o.terms.reduce((sum, t) => sum + t.value, 0);
+  return options.sort((a, b) => appeal(b) - appeal(a)).slice(0, HUNTS_CONSIDERED);
 }
 
 function followersOrMembers(ctx: SimContext, character: Character): number {
@@ -350,14 +433,24 @@ function pastimeTerms(character: Character, pastime: PastimeId): Term[] {
   }
 }
 
-function pastimesAt(location: Location, character: Character): PastimeId[] {
-  return PASTIMES.filter(
-    (p) =>
-      p.kind === location.kind &&
-      p.id !== 'scout' &&
-      p.id !== 'lurk' &&
-      (!('academy' in p && p.academy) || (location.academy && canStudy(character))),
-  ).map((p) => p.id);
+/** The few possible lists of pastimes, worked out once each. */
+const pastimeLists = new Map<string, readonly PastimeId[]>();
+
+function pastimesAt(location: Location, character: Character): readonly PastimeId[] {
+  const study = location.academy && canStudy(character);
+  const key = `${location.kind}|${study}`;
+  let list = pastimeLists.get(key);
+  if (!list) {
+    list = PASTIMES.filter(
+      (p) =>
+        p.kind === location.kind &&
+        p.id !== 'scout' &&
+        p.id !== 'lurk' &&
+        (!('academy' in p && p.academy) || study),
+    ).map((p) => p.id);
+    pastimeLists.set(key, list);
+  }
+  return list;
 }
 
 /** Only the gifted, or the unusually clever or spiritual, take up the arcane. */
@@ -367,5 +460,25 @@ function canStudy(character: Character): boolean {
 
 /** Everything in the pack except legendary items, which adventurers keep. */
 export function sellable(character: Character): LootItem[] {
-  return character.pack.filter((p) => !('gear' in p) || p.gear.rarity !== 'legendary');
+  return character.pack.filter(isSellable);
+}
+
+/**
+ * Packs only grow by appending or are replaced whole, so whether one holds
+ * anything to sell is known from the array and its length. Veterans carry
+ * piles of legendary items they never sell; this saves rescanning them.
+ */
+const sellableCache = new WeakMap<LootItem[], { length: number; any: boolean }>();
+
+function hasSellable(character: Character): boolean {
+  const pack = character.pack;
+  const cached = sellableCache.get(pack);
+  if (cached && cached.length === pack.length) return cached.any;
+  const any = pack.some(isSellable);
+  sellableCache.set(pack, { length: pack.length, any });
+  return any;
+}
+
+function isSellable(item: LootItem): boolean {
+  return !('gear' in item) || item.gear.rarity !== 'legendary';
 }

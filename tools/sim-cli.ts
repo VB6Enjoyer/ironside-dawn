@@ -12,9 +12,14 @@ import { roleOf } from '../src/sim/systems/progress';
 import {
   createSimulation,
   DAY,
+  goingPrice,
   Importance,
+  moneyHeld,
+  priceIndex,
+  renownOf,
   StreamHash,
   WORLD_START,
+  type Character,
   type CharacterId,
   type SimEvent,
   type World,
@@ -102,7 +107,7 @@ function main(): number {
   const sim = createSimulation({
     seed,
     characterCount,
-    eventCapacity: 1,
+    retention: 1,
     onEvent(event) {
       hash.update(JSON.stringify(event));
       counts.set(event.type, (counts.get(event.type) ?? 0) + 1);
@@ -169,6 +174,10 @@ function worldReport(
           return `their own ${spellName(cause.spell)}`;
         case 'character':
           return 'other people';
+        case 'age':
+          return 'old age';
+        case 'departed':
+          return 'moving on (not deaths)';
       }
     }),
   );
@@ -215,6 +224,15 @@ function worldReport(
     '',
     'Bonds and crime',
     ...bondRows(world, counts, row),
+    '',
+    'Living world',
+    ...worldRows(world, counts, row),
+    '',
+    'Generations',
+    ...generationRows(world, counts, row),
+    '',
+    'Economy',
+    ...economyRows(world, counts, row),
     '',
     'Magic',
     row('Casters alive', `${casters.length} (${living.filter((c) => c.gifted).length} gifted)`),
@@ -296,6 +314,139 @@ function habitRows(
     row('Delves by bravery', compare('bravery', habits.delves)),
     row('Delves by patience', compare('patience', habits.delves)),
     row('Taverns by sociability', compare('sociability', habits.taverns)),
+  ];
+}
+
+/** The land, its weather and creatures, its lords, and the dread (ROADMAP.md Phase 9). */
+function worldRows(
+  world: World,
+  counts: ReadonlyMap<string, number>,
+  row: (label: string, value: string | number) => string,
+): string[] {
+  const kinds = new Map<string, number>();
+  for (const l of world.locations.values()) kinds.set(l.kind, (kinds.get(l.kind) ?? 0) + 1);
+  const name = (id: CharacterId | null) => {
+    const c = id ? world.characters.get(id) : undefined;
+    return c ? `${c.givenName} ${c.familyName}` : 'nobody';
+  };
+  const roaming = [...world.locations.values()].reduce(
+    (sum, l) => sum + Object.values(l.roaming).reduce<number>((a, n) => a + (n ?? 0), 0),
+    0,
+  );
+  const fortresses = [...world.locations.values()]
+    .filter((l) => l.fortress)
+    .map((l) =>
+      row(
+        `  ${l.name}`,
+        `${l.fortress!.lordId ? `held by ${name(l.fortress!.lordId)}` : 'empty'}, ` +
+          `${l.fortress!.garrison} soldiers, ${l.fortress!.lineage.length} ${l.fortress!.lineage.length === 1 ? 'lord' : 'lords'} so far`,
+      ),
+    );
+  const dread = [...world.characters.values()]
+    .filter((c) => c.calling === 'dread')
+    .map((c) =>
+      row(
+        `  ${c.givenName} ${c.familyName}`,
+        `${c.species} of level ${c.level}, ${c.slain} lives claimed` +
+          (c.death ? ', destroyed' : `, in ${world.locations.get(c.homeId)?.name}`),
+      ),
+    );
+  return [
+    row('Regions', [...world.regions.values()].map((r) => r.biome).join(', ') || 'none'),
+    row('Places', [...kinds].map(([k, n]) => `${n} ${k}`).join(', ')),
+    row('Hard weather', counts.get('weather.turn') ?? 0),
+    row('Creature migrations', counts.get('creature.migrate') ?? 0),
+    row('Creatures roaming now', roaming),
+    row(
+      'Raids',
+      `${world.tally.raids} (${counts.get('raid.sack') ?? 0} sacked, ${counts.get('raid.repelled') ?? 0} repelled)`,
+    ),
+    row('Patrols clearing roads', counts.get('patrol.clear') ?? 0),
+    row('Fortresses', ''),
+    ...fortresses,
+    row('The dread', `${world.tally.dreadSlain} destroyed`),
+    ...dread,
+  ];
+}
+
+/** Who lives how, how deep the families go, and who is remembered (ROADMAP.md Phase 8). */
+function generationRows(
+  world: World,
+  counts: ReadonlyMap<string, number>,
+  row: (label: string, value: string | number) => string,
+): string[] {
+  const living = [...world.characters.values()].filter((c) => !c.death);
+  const depth = new Map<CharacterId, number>();
+  const generation = (c: Character): number => {
+    let g = depth.get(c.id);
+    if (g === undefined) {
+      const parents = c.parents.flatMap((id) => world.characters.get(id) ?? []);
+      g = parents.length === 0 ? 1 : 1 + Math.max(...parents.map(generation));
+      depth.set(c.id, g);
+    }
+    return g;
+  };
+  const deepest = Math.max(1, ...[...world.characters.values()].map(generation));
+  const grid = (['human', 'elf', 'dwarf'] as const).map((species) => {
+    const folk = living.filter((c) => c.species === species);
+    const by = (calling: Character['calling']) => folk.filter((c) => c.calling === calling).length;
+    return row(
+      `  ${species}`,
+      `${folk.length}: ${by('adventurer')} adventurers, ${by('townsfolk')} townsfolk, ` +
+        `${by('child')} children, ${by('merchant')} merchants`,
+    );
+  });
+  const heroes = world.heroes.slice(-5).map((id) => {
+    const c = world.characters.get(id)!;
+    return row(`  ${c.givenName} ${c.familyName}`, `renown ${renownOf(c)}, level ${c.level}`);
+  });
+  return [
+    row('Living, by people', ''),
+    ...grid,
+    row('Deepest generation', deepest),
+    row('Births', counts.get('family.birth') ?? 0),
+    row('Marriages', counts.get('family.marry') ?? 0),
+    row('Retirements', counts.get('character.retire') ?? 0),
+    row('Came of age', counts.get('family.comeOfAge') ?? 0),
+    row('Inheritances', counts.get('family.inherit') ?? 0),
+    row('Tales told', counts.get('social.tale') ?? 0),
+    row('Legends', `${world.heroes.length}${heroes.length > 0 ? ', most recently:' : ''}`),
+    ...heroes,
+  ];
+}
+
+/** Prices in each town, the money supply, and how the merchants are doing (ROADMAP.md Phase 7). */
+function economyRows(
+  world: World,
+  counts: ReadonlyMap<string, number>,
+  row: (label: string, value: string | number) => string,
+): string[] {
+  const shown = ['food', 'ore', 'tools', 'arms', 'potions'] as const;
+  const towns = [...world.markets.values()].map((m) =>
+    row(
+      `  ${world.locations.get(m.townId)!.name}`,
+      `index ${priceIndex(m).toFixed(2)}; ` +
+        shown.map((g) => `${g} ${goingPrice(m, g).toFixed(1)}`).join(', '),
+    ),
+  );
+  const sum = (r: Partial<Record<string, number>>) =>
+    Object.values(r).reduce<number>((a, n) => a + (n ?? 0), 0);
+  const merchants = [...world.characters.values()].filter(
+    (c) => c.calling === 'merchant' && !c.death,
+  );
+  const richest = [...merchants].sort((a, b) => b.gold - a.gold)[0];
+  return [
+    row('Prices', '(against where they started; going prices in gold)'),
+    ...towns,
+    row('Money held', Math.round(moneyHeld(world))),
+    row('  minted', Math.round(sum(world.ledger.minted))),
+    row('  burned', Math.round(sum(world.ledger.burned))),
+    row('Merchants alive', merchants.length),
+    row('  runs completed', counts.get('trade.unload') ?? 0),
+    ...(richest
+      ? [row('  richest', `${richest.givenName} ${richest.familyName}, ${richest.gold} gold`)]
+      : []),
+    row('Troubles', counts.get('market.shock') ?? 0),
   ];
 }
 

@@ -1,5 +1,7 @@
 import { Fragment, useEffect } from 'react';
 
+import type { SimHost, WorldSlice } from '../../host';
+
 import {
   creatureDef,
   LANGUAGES,
@@ -12,9 +14,9 @@ import {
   type StatId,
 } from '../../content';
 import {
+  ageOf,
   conditionsOf,
   fearOf,
-  roleOf,
   vividMemories,
   vividness,
   statValue,
@@ -25,8 +27,6 @@ import {
   type LocationId,
   type Opinion,
   type CharacterId,
-  type SimEvent,
-  type World,
 } from '../../sim';
 import {
   describeGoal,
@@ -38,14 +38,16 @@ import {
   describeDeed,
   describeEvent,
   formatTimestamp,
+  goodsList,
   lootList,
   SKILL_NAMES,
   SPECIES_NAMES,
   spellName,
   type NameResolver,
 } from '../../text';
-import { formatCount } from '../format';
-import { Prose } from './Prose';
+import { callingTitle, formatCount } from '../format';
+import { useQuery } from '../useHost';
+import { Prose, type ProseLinks } from './Prose';
 
 const STAT_LABELS: Record<StatId, string> = {
   might: 'Might',
@@ -58,17 +60,31 @@ const STAT_LABELS: Record<StatId, string> = {
 
 const RECENT_EVENTS = 8;
 
-interface Props {
-  world: World;
+interface Props extends ProseLinks {
+  host: SimHost;
   characterId: CharacterId;
-  /** The host's log, for recent events. Changes whenever the world moves on. */
-  log: readonly SimEvent[];
+  /** Changes whenever the world moves on, to fetch the character again. */
+  refresh: unknown;
   names: NameResolver;
-  onSelect(id: CharacterId): void;
+  following: boolean;
+  onCharacter(id: CharacterId): void;
+  onFollow(follow: boolean): void;
+  onProfile(): void;
   onClose(): void;
 }
 
-export function CharacterCard({ world, characterId, log, names, onSelect, onClose }: Props) {
+export function CharacterCard({
+  host,
+  characterId,
+  refresh,
+  names,
+  following,
+  onCharacter: onSelect,
+  onLocation,
+  onFollow,
+  onProfile,
+  onClose,
+}: Props) {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose();
@@ -77,13 +93,20 @@ export function CharacterCard({ world, characterId, log, names, onSelect, onClos
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  const character = world.characters.get(characterId);
-  if (!character) return null;
+  const view = useQuery(host, { kind: 'character', id: characterId }, refresh);
+  if (!view) {
+    return (
+      <aside className="character-card" aria-busy="true">
+        <p className="muted">Looking for them…</p>
+      </aside>
+    );
+  }
+  const { character, slice: world } = view;
 
   const home = world.locations.get(character.homeId);
   const species = SPECIES_NAMES[character.species].singular;
   const dead = character.death !== null;
-  const recent = recentEvents(log, characterId);
+  const recent = view.events.slice(-RECENT_EVENTS).reverse();
 
   return (
     <aside className="character-card" aria-label={`${character.givenName} ${character.familyName}`}>
@@ -93,7 +116,8 @@ export function CharacterCard({ world, characterId, log, names, onSelect, onClos
             {character.givenName} {character.familyName}
           </h2>
           <p className="card-subtitle">
-            Level {character.level} {roleOf(character)} · {species} of {home?.name ?? 'nowhere'}
+            {callingTitle(character)} · {species} of {home?.name ?? 'nowhere'} · aged{' '}
+            {ageOf(character, character.death?.at ?? world.time)}
             {character.gifted && ' · gifted'}
           </p>
         </div>
@@ -102,13 +126,29 @@ export function CharacterCard({ world, characterId, log, names, onSelect, onClos
         </button>
       </header>
 
+      <div className="card-actions">
+        <button type="button" onClick={onProfile}>
+          Life story
+        </button>
+        {!dead && (
+          <button
+            type="button"
+            aria-pressed={following}
+            onClick={() => onFollow(!following)}
+            title="Log everything they do, blow by blow"
+          >
+            {following ? 'Following' : 'Follow'}
+          </button>
+        )}
+      </div>
+
       <p className={`card-status${dead ? ' card-status-dead' : ''}`}>
-        <Prose segments={describeActivity(character, world)} />
+        <Prose segments={describeActivity(character, names)} onLocation={onLocation} />
         {dead && character.death && <> · {formatTimestamp(character.death.at)}</>}
       </p>
       {!dead && character.goal && (
         <p className="card-goal">
-          {describeGoal(character.goal, world)}{' '}
+          {describeGoal(character.goal, names)}{' '}
           <span className="aside">{describeWhy(character.goal.why, names)}</span>
         </p>
       )}
@@ -122,12 +162,14 @@ export function CharacterCard({ world, characterId, log, names, onSelect, onClos
             max={character.maxStamina}
             kind="stamina"
           />
-          <Bar
-            label="Experience"
-            value={character.xp - xpForLevel(character.level)}
-            max={xpForLevel(character.level + 1) - xpForLevel(character.level)}
-            kind="xp"
-          />
+          {character.calling === 'adventurer' && (
+            <Bar
+              label="Experience"
+              value={character.xp - xpForLevel(character.level)}
+              max={xpForLevel(character.level + 1) - xpForLevel(character.level)}
+              kind="xp"
+            />
+          )}
           <Conditions character={character} now={world.time} />
         </section>
       )}
@@ -223,6 +265,34 @@ export function CharacterCard({ world, characterId, log, names, onSelect, onClos
             {formatCount(character.gold)}{' '}
             <span className="muted">({formatCount(character.goldEarned)} earned)</span>
           </dd>
+          {character.calling === 'merchant' ? (
+            <>
+              <dt>Cargo</dt>
+              <dd>
+                {Object.keys(character.cargo).length > 0 ? (
+                  <>
+                    {goodsList(character.cargo)}{' '}
+                    <span className="muted">
+                      ({formatCount(Math.round(character.cargoPaid))} gold paid)
+                    </span>
+                  </>
+                ) : (
+                  <span className="muted">an empty wagon</span>
+                )}
+              </dd>
+            </>
+          ) : (
+            <>
+              <dt>Draughts</dt>
+              <dd>
+                {character.potions > 0 ? (
+                  `${character.potions} healing ${character.potions === 1 ? 'draught' : 'draughts'}`
+                ) : (
+                  <span className="muted">none</span>
+                )}
+              </dd>
+            </>
+          )}
           <dt>Pack</dt>
           <dd>
             {character.pack.length > 0 ? (
@@ -239,8 +309,8 @@ export function CharacterCard({ world, characterId, log, names, onSelect, onClos
       </section>
 
       <Bonds character={character} world={world} onSelect={onSelect} />
-      <Memories character={character} world={world} />
-      <Places character={character} world={world} />
+      <Memories character={character} now={world.time} names={names} />
+      <Places character={character} now={world.time} names={names} />
 
       {character.deeds.length > 0 && (
         <section className="card-section">
@@ -267,7 +337,11 @@ export function CharacterCard({ world, characterId, log, names, onSelect, onClos
               <li key={event.id}>
                 <time>{formatTimestamp(event.t)}</time>
                 <span>
-                  <Prose segments={describeEvent(event, names)} onCharacter={onSelect} />
+                  <Prose
+                    segments={describeEvent(event, names)}
+                    onCharacter={onSelect}
+                    onLocation={onLocation}
+                  />
                 </span>
               </li>
             ))}
@@ -285,7 +359,7 @@ function Bonds({
   onSelect,
 }: {
   character: Character;
-  world: World;
+  world: WorldSlice;
   onSelect(id: CharacterId): void;
 }) {
   const link = (id: CharacterId) => {
@@ -294,10 +368,10 @@ function Bonds({
     return (
       <button
         type="button"
-        className={`ref ref-character${other.death ? ' ref-dead' : ''}`}
+        className={`ref ref-character${other.dead ? ' ref-dead' : ''}`}
         onClick={() => onSelect(id)}
       >
-        {other.givenName} {other.familyName}
+        {other.name}
       </button>
     );
   };
@@ -309,6 +383,9 @@ function Bonds({
       </Fragment>
     ));
   const party = character.partyId ? world.parties.get(character.partyId) : undefined;
+  const living = (ids: readonly CharacterId[]) => ids.filter((id) => world.characters.has(id));
+  const parents = living(character.parents);
+  const children = living(character.children);
   const bonds = Object.entries(character.opinions) as [CharacterId, Opinion][];
   const friends = bonds.filter(([, o]) => o.bond === 'friend').map(([id]) => id);
   const rivals = bonds.filter(([, o]) => o.bond === 'rival').map(([id]) => id);
@@ -334,9 +411,27 @@ function Bonds({
               <span className="muted">
                 {party.leaderId === character.id
                   ? ' (they lead)'
-                  : ` (led by ${leader?.givenName})`}
+                  : ` (led by ${leader?.name.split(' ')[0]})`}
               </span>
             </dd>
+          </>
+        )}
+        {character.spouseId && world.characters.has(character.spouseId) && (
+          <>
+            <dt>Spouse</dt>
+            <dd>{link(character.spouseId)}</dd>
+          </>
+        )}
+        {parents.length > 0 && (
+          <>
+            <dt>Parents</dt>
+            <dd>{list(parents)}</dd>
+          </>
+        )}
+        {children.length > 0 && (
+          <>
+            <dt>Children</dt>
+            <dd>{list(children)}</dd>
           </>
         )}
         <dt>Friends</dt>
@@ -390,16 +485,24 @@ function fluency(level: number): string {
   return ' (a little)';
 }
 
-function Memories({ character, world }: { character: Character; world: World }) {
-  const memories = vividMemories(character, world.time, 5);
+function Memories({
+  character,
+  now,
+  names,
+}: {
+  character: Character;
+  now: number;
+  names: NameResolver;
+}) {
+  const memories = vividMemories(character, now, 5);
   if (memories.length === 0) return null;
   return (
     <section className="card-section">
       <h3>Remembers</h3>
       <ul className="memories">
         {memories.map((memory, i) => (
-          <li key={i} style={{ opacity: 0.45 + 0.55 * vividness(memory, world.time) }}>
-            {describeMemory(memory, world)}
+          <li key={i} style={{ opacity: 0.45 + 0.55 * vividness(memory, now) }}>
+            {describeMemory(memory, names)}
           </li>
         ))}
       </ul>
@@ -408,7 +511,15 @@ function Memories({ character, world }: { character: Character; world: World }) 
 }
 
 /** What each dungeon has been like for them: their favorite, and the one they fear. */
-function Places({ character, world }: { character: Character; world: World }) {
+function Places({
+  character,
+  now,
+  names,
+}: {
+  character: Character;
+  now: number;
+  names: NameResolver;
+}) {
   const entries = Object.entries(character.expectations) as [LocationId, Expectation][];
   if (entries.length === 0) return null;
   return (
@@ -418,8 +529,8 @@ function Places({ character, world }: { character: Character; world: World }) {
         {entries
           .sort((a, b) => b[1].reward - a[1].reward)
           .map(([id, e]) => {
-            const place = world.locations.get(id);
-            const fear = fearOf(character, id, world.time);
+            const place = names.location(id);
+            const fear = fearOf(character, id, now);
             return (
               <Fragment key={id}>
                 <dt>{place?.name ?? id}</dt>
@@ -506,12 +617,4 @@ function Kills({ kills }: { kills: Character['kills'] }) {
       </span>
     </>
   );
-}
-
-function recentEvents(log: readonly SimEvent[], id: CharacterId): SimEvent[] {
-  const found: SimEvent[] = [];
-  for (let i = log.length - 1; i >= 0 && found.length < RECENT_EVENTS; i--) {
-    if (log[i]!.actors.includes(id)) found.push(log[i]!);
-  }
-  return found;
 }

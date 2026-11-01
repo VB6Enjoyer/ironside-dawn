@@ -4,9 +4,11 @@ export { CULTURES } from './cultures';
 export type { CultureDef, CultureId } from './cultures';
 export type {
   DungeonDef,
+  EconomyDef,
   LocationDef,
   LocationKind,
   MapDef,
+  RegionDef,
   RoomOutcome,
   RouteDef,
 } from './locations';
@@ -14,8 +16,8 @@ export { LOOT, lootDef } from './loot';
 export type { LootDef, LootId } from './loot';
 export { PASTIMES } from './pastimes';
 export type { PastimeDef, PastimeId } from './pastimes';
-export { SPECIES } from './species';
-export type { SpeciesDef, SpeciesId } from './species';
+export { isDread, PEOPLES, SPECIES } from './species';
+export type { PeopleId, SpeciesDef, SpeciesId } from './species';
 export { STARTER_MAP } from './starter-map';
 export { STATS } from './stats';
 export type { StatId, Stats } from './stats';
@@ -60,3 +62,26 @@ export { DEFAULT_TRAIT_MEAN, DEFAULT_TRAIT_SD, TRAIT_POLES, TRAITS } from './tra
 export type { TraitId, Traits, TraitTendencies } from './traits';
 export { LANGUAGE_LEVELS, LANGUAGES } from './languages';
 export type { LanguageId } from './languages';
+export {
+  GOODS,
+  goodDef,
+  NEEDS_PER_HEAD,
+  PROFESSIONS,
+  professionDef,
+  SHOCKS,
+  shockDef,
+} from './economy';
+export type {
+  GoodDef,
+  GoodId,
+  Goods,
+  ProfessionDef,
+  ProfessionId,
+  Recipe,
+  ShockDef,
+  ShockId,
+} from './economy';
+export { BIOMES, biomeDef, HOMELANDS, WEATHERS } from './biomes';
+export type { BiomeDef, BiomeId, NameParts, WeatherId } from './biomes';
+export { DUNGEON_TEMPLATES } from './dungeons';
+export type { DungeonTemplate, DungeonTemplateId } from './dungeons';

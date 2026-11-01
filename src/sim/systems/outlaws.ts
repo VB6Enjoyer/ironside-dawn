@@ -1,7 +1,12 @@
+import type { GoodId, Goods } from '../../content';
+import { HOUR } from '../core/time';
 import type { SimContext } from '../context';
+import { createCharacter } from '../gen/people';
 import type { Character, Location, LocationId } from '../model';
 import { startBrawl } from './combat';
 import { isAlive } from './condition';
+import { burn } from './ledger';
+import { payHouse } from './market';
 import { remember, wealthNeed } from './mind';
 import { wakeAt } from './wake';
 import {
@@ -23,7 +28,7 @@ import { charactersAt } from './whereabouts';
 /** Daily chance of turning outlaw, for the most susceptible and desperate. */
 const TURN_CHANCE = 0.04;
 /** Below this much gold an adventurer counts as broke. */
-const BROKE = 15;
+const BROKE = 40;
 const ROBBERY_BOUNTY = 25;
 const MURDER_BOUNTY = 60;
 /** Share of a surrendering victim's purse an outlaw takes. */
@@ -45,6 +50,8 @@ export function considerCrime(ctx: SimContext, character: Character): void {
 
   if (!character.outlaw) {
     if (character.gold >= BROKE || character.activity.kind === 'fighting') return;
+    // Only adventurers take to the road this way; a broke merchant borrows and tries again.
+    if (character.calling !== 'adventurer') return;
     const susceptibility = (1 - honor) * (0.5 + greed) * (1.2 - compassion);
     if (!rng.chance(TURN_CHANCE * susceptibility ** 2 * wealthNeed(character))) return;
     character.outlaw = {
@@ -66,8 +73,14 @@ export function considerCrime(ctx: SimContext, character: Character): void {
   // Prosperous, quiet and not without honor: some put it behind them.
   const quiet = now - character.outlaw.lastCrimeAt > REFORM_QUIET_DAYS * DAY;
   if (quiet && character.gold > 120 && honor > 0.35 && rng.chance(REFORM_CHANCE)) {
-    // Restitution: half their purse buys a pardon and the bounty is lifted.
-    character.gold = Math.floor(character.gold / 2);
+    // Restitution: half their purse, paid to their home town, buys a pardon and the bounty is lifted.
+    const home = ctx.world.markets.get(character.homeId);
+    const restitution = Math.ceil(character.gold / 2);
+    if (home) payHouse(home, character, restitution);
+    else {
+      character.gold -= restitution;
+      burn(ctx.world, 'upkeep', restitution);
+    }
     character.outlaw = null;
     ctx.world.bounties.delete(character.id);
     if (character.partyId) leaveParty(ctx, character, 'outlaw');
@@ -128,6 +141,14 @@ export function ambush(ctx: SimContext, traveler: Character, location: Location)
       const gold = Math.floor(victim.gold * ROBBERY_TAKE);
       victim.gold -= gold;
       leader.gold += gold;
+      // A merchant's cargo goes too, the better part of it, to be fenced far away.
+      const goods: Goods = {};
+      for (const [good, units] of Object.entries(victim.cargo) as [GoodId, number][]) {
+        const taken = Math.round(units * ROBBERY_TAKE);
+        if (taken < 1) continue;
+        goods[good] = taken;
+        victim.cargo[good] = units - taken;
+      }
       remember(
         victim,
         world.time,
@@ -138,11 +159,18 @@ export function ambush(ctx: SimContext, traveler: Character, location: Location)
       ctx.emit(
         {
           type: 'crime.robbery',
-          data: { characterId: leader.id, locationId: location.id, victimId: victim.id, gold },
+          data: {
+            characterId: leader.id,
+            locationId: location.id,
+            victimId: victim.id,
+            gold,
+            ...(Object.keys(goods).length > 0 ? { goods } : {}),
+          },
         },
         [leader.id, victim.id],
         location.id,
       );
+      ctx.world.tally.robberies++;
       registerCrime(ctx, leader, victim, 'robbery', location.id);
     }
     // A good haul: off to spend it before the alarm is raised.
@@ -163,8 +191,13 @@ export function onCharacterKilled(ctx: SimContext, victim: Character, killer: Ch
     const bounty = ctx.world.bounties.get(victim.id);
     if (!bounty) return;
     ctx.world.bounties.delete(victim.id);
-    killer.gold += bounty.amount;
-    killer.goldEarned += bounty.amount;
+    ctx.world.tally.bountiesClaimed++;
+    // The posting town's trading house pays, as much as it has.
+    const town = ctx.world.markets.get(bounty.townId);
+    const paid = town ? Math.min(bounty.amount, Math.floor(town.house.gold)) : 0;
+    if (town) town.house.gold -= paid;
+    killer.gold += paid;
+    killer.goldEarned += paid;
     killer.reputation[bounty.townId] = Math.min(1, (killer.reputation[bounty.townId] ?? 0) + 0.3);
     ctx.emit(
       {
@@ -176,12 +209,51 @@ export function onCharacterKilled(ctx: SimContext, victim: Character, killer: Ch
           amount: bounty.amount,
         },
       },
-      [killer.id, victim.id],
+      // The outlaw is named in the data; the dead take no further part.
+      [killer.id],
       bounty.townId,
     );
     return;
   }
-  if (killer.outlaw) registerCrime(ctx, killer, victim, 'murder', locationId);
+  // Whatever else, a dead outlaw's bounty lapses.
+  ctx.world.bounties.delete(victim.id);
+  if (killer.outlaw) {
+    ctx.world.tally.murders++;
+    registerCrime(ctx, killer, victim, 'murder', locationId);
+    if (!victim.outlaw) raiseAvenger(ctx, victim, killer);
+  }
+  // Those the dread kill may leave someone sworn to destroy it.
+  if (killer.calling === 'dread') raiseAvenger(ctx, victim, killer);
+}
+
+/** Chance that a murder moves a commoner of the victim's town to take up the sword. */
+const AVENGER_CHANCE = 0.3;
+
+/**
+ * Promotion from the commoners (ROADMAP.md Phase 8): a murder singles out
+ * someone in the victim's town, a friend or neighbor, who becomes an
+ * adventurer sworn to avenge them.
+ */
+function raiseAvenger(ctx: SimContext, victim: Character, killer: Character): void {
+  const town = ctx.world.locations.get(victim.homeId);
+  if (!town || town.kind !== 'town' || !ctx.rng.outlaws.chance(AVENGER_CHANCE)) return;
+  const avenger = createCharacter(ctx, town, { newcomer: true, firstWakeWithin: 2 * HOUR });
+  adjustOpinion(avenger, victim.id, { affinity: 0.7, familiarity: 0.6 }, ctx.world.time);
+  adjustOpinion(avenger, killer.id, { affinity: -0.9, trust: -1 }, ctx.world.time);
+  remember(avenger, ctx.world.time, { kind: 'grief', characterId: victim.id }, 0.9);
+  ctx.emit(
+    {
+      type: 'character.avenger',
+      data: {
+        characterId: avenger.id,
+        locationId: town.id,
+        forId: victim.id,
+        againstId: killer.id,
+      },
+    },
+    [avenger.id],
+    town.id,
+  );
 }
 
 /** A crime is known: the outlaw's bounty grows, and every town thinks less of them. */

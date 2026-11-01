@@ -1,9 +1,11 @@
+import type { BiomeId } from './biomes';
 import type { CreatureId } from './creatures';
+import type { ProfessionId } from './economy';
 import type { CultureId } from './cultures';
 import type { LootId } from './loot';
 import type { SpeciesId } from './species';
 
-export type LocationKind = 'town' | 'dungeon' | 'wilderness';
+export type LocationKind = 'town' | 'dungeon' | 'wilderness' | 'fortress';
 
 export interface LocationDef {
   readonly id: string;
@@ -12,6 +14,11 @@ export interface LocationDef {
   readonly article?: 'the';
   readonly kind: LocationKind;
   readonly culture: CultureId;
+  /** Where it lies on the map, in leagues from the top left (generated worlds). */
+  readonly x?: number;
+  readonly y?: number;
+  /** The region it lies in (generated worlds). */
+  readonly region?: string;
   /**
    * Towns: the commoners who live here, by people. A statistical population
    * (ARCHITECTURE.md §4.2) that new adventurers are drawn from.
@@ -21,6 +28,15 @@ export interface LocationDef {
   readonly academy?: boolean;
   /** Dungeons: what lives inside and what can be found. */
   readonly dungeon?: DungeonDef;
+  /** Towns: how the commoners make a living, and what the land offers. */
+  readonly economy?: EconomyDef;
+}
+
+export interface EconomyDef {
+  /** Share of the townsfolk in each trade; the shares add up to 1. */
+  readonly workforce: Partial<Record<ProfessionId, number>>;
+  /** An iron mine, for miners. */
+  readonly mine?: boolean;
 }
 
 export type RoomOutcome = 'fight' | 'treasure' | 'trap' | 'quiet';
@@ -45,6 +61,8 @@ export interface DungeonDef {
   /** Gold dice per point of danger, and what treasure rooms may hold. */
   readonly treasureGold: string;
   readonly treasure: readonly { readonly loot: LootId; readonly weight: number }[];
+  /** Which of the dread may make their lair here. */
+  readonly masters?: readonly SpeciesId[];
 }
 
 export interface RouteDef {
@@ -53,7 +71,22 @@ export interface RouteDef {
   readonly hours: number;
 }
 
+/** A stretch of one kind of land: the Silverwood, the Grey Peaks. */
+export interface RegionDef {
+  readonly id: string;
+  readonly name: string;
+  readonly biome: BiomeId;
+  /** Its heart, in leagues; places belong to the nearest heart. */
+  readonly x: number;
+  readonly y: number;
+}
+
 export interface MapDef {
   readonly locations: readonly LocationDef[];
   readonly routes: readonly RouteDef[];
+  /** Generated worlds have regions; the starter map has none. */
+  readonly regions?: readonly RegionDef[];
+  /** The map's extent in leagues, for drawing it. */
+  readonly width?: number;
+  readonly height?: number;
 }

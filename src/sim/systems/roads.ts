@@ -12,53 +12,103 @@ export interface Path {
   readonly duration: number;
 }
 
-// Roads never change in Phase 1, so the adjacency index is built once per world.
-const networks = new WeakMap<World, Map<LocationId, RoadLink[]>>();
+// Roads only change when one is blocked or reopens, so the network is kept.
+const networks = new WeakMap<
+  World,
+  { open: Map<LocationId, RoadLink[]>; all: Map<LocationId, RoadLink[]> }
+>();
 
-export function roadsFrom(world: World, from: LocationId): readonly RoadLink[] {
+/**
+ * The roads out of a place. Blocked roads are left out unless `blocked` is
+ * set: journeys are planned around them, but those already on one press on.
+ */
+export function roadsFrom(world: World, from: LocationId, blocked = false): readonly RoadLink[] {
   let network = networks.get(world);
   if (!network) {
-    network = new Map();
+    const closed = new Set(world.shocks.flatMap((s) => (s.routeId ? [s.routeId] : [])));
+    network = { open: new Map(), all: new Map() };
     for (const route of world.routes.values()) {
-      addLink(network, route.a, { to: route.b, route });
-      addLink(network, route.b, { to: route.a, route });
+      for (const map of closed.has(route.id) ? [network.all] : [network.all, network.open]) {
+        addLink(map, route.a, { to: route.b, route });
+        addLink(map, route.b, { to: route.a, route });
+      }
     }
     networks.set(world, network);
   }
-  return network.get(from) ?? [];
+  return (blocked ? network.all : network.open).get(from) ?? [];
 }
 
-// Roads never change, so paths are worth remembering too.
-const pathCaches = new WeakMap<World, Map<LocationId, Map<LocationId, Path | null>>>();
+/** A road was blocked or reopened: forget the network and every path. */
+export function roadsChanged(world: World): void {
+  networks.delete(world);
+  reachCaches.delete(world);
+}
+
+/** Everywhere reachable from one place: how long it takes, and the way there. */
+interface Reach {
+  readonly best: Map<LocationId, number>;
+  readonly previous: Map<LocationId, LocationId>;
+  /** Reachable places, nearest first (the start excluded). */
+  readonly nearest: readonly { readonly id: LocationId; readonly duration: number }[];
+  readonly paths: Map<LocationId, Path | null>;
+}
+
+// Worth remembering, until the roads change.
+const reachCaches = new WeakMap<World, Map<LocationId, Reach>>();
 
 /** Fastest path by typical travel time (Dijkstra), or null if unreachable. */
 export function findPath(world: World, from: LocationId, to: LocationId): Path | null {
-  let byOrigin = pathCaches.get(world);
-  if (!byOrigin) {
-    byOrigin = new Map();
-    pathCaches.set(world, byOrigin);
-  }
-  let cache = byOrigin.get(from);
-  if (!cache) {
-    cache = new Map();
-    byOrigin.set(from, cache);
-  }
-  const cached = cache.get(to);
+  const reach = reachFrom(world, from);
+  const cached = reach.paths.get(to);
   if (cached !== undefined) return cached;
-  const path = searchPath(world, from, to);
-  cache.set(to, path);
+  let path: Path | null = null;
+  if (from === to) path = { stops: [], duration: 0 };
+  else if (reach.best.has(to)) {
+    const stops: LocationId[] = [];
+    for (
+      let id: LocationId | undefined = to;
+      id !== undefined && id !== from;
+      id = reach.previous.get(id)
+    ) {
+      stops.push(id);
+    }
+    stops.reverse();
+    path = { stops, duration: reach.best.get(to)! };
+  }
+  reach.paths.set(to, path);
   return path;
 }
 
-function searchPath(world: World, from: LocationId, to: LocationId): Path | null {
-  if (from === to) return { stops: [], duration: 0 };
+/** The places reachable from `from` by open roads, nearest first. */
+export function nearbyPlaces(
+  world: World,
+  from: LocationId,
+): readonly { readonly id: LocationId; readonly duration: number }[] {
+  return reachFrom(world, from).nearest;
+}
 
+function reachFrom(world: World, from: LocationId): Reach {
+  let byOrigin = reachCaches.get(world);
+  if (!byOrigin) {
+    byOrigin = new Map();
+    reachCaches.set(world, byOrigin);
+  }
+  let reach = byOrigin.get(from);
+  if (!reach) {
+    reach = search(world, from);
+    byOrigin.set(from, reach);
+  }
+  return reach;
+}
+
+function search(world: World, from: LocationId): Reach {
   const best = new Map<LocationId, number>([[from, 0]]);
   const previous = new Map<LocationId, LocationId>();
   const done = new Set<LocationId>();
+  const nearest: { id: LocationId; duration: number }[] = [];
 
-  // The map is small, so a linear scan for the closest node is fine. Ties go
-  // to the earliest-inserted node, which keeps the result deterministic.
+  // Maps are a few dozen places, so a linear scan for the closest is fine. Ties
+  // go to the earliest-inserted place, which keeps the result deterministic.
   for (;;) {
     let current: LocationId | undefined;
     let currentCost = Infinity;
@@ -68,9 +118,9 @@ function searchPath(world: World, from: LocationId, to: LocationId): Path | null
         currentCost = cost;
       }
     }
-    if (current === undefined) return null;
-    if (current === to) break;
+    if (current === undefined) break;
     done.add(current);
+    if (current !== from) nearest.push({ id: current, duration: currentCost });
 
     for (const { to: next, route } of roadsFrom(world, current)) {
       const cost = currentCost + route.duration;
@@ -80,17 +130,7 @@ function searchPath(world: World, from: LocationId, to: LocationId): Path | null
       }
     }
   }
-
-  const stops: LocationId[] = [];
-  for (
-    let id: LocationId | undefined = to;
-    id !== undefined && id !== from;
-    id = previous.get(id)
-  ) {
-    stops.push(id);
-  }
-  stops.reverse();
-  return { stops, duration: best.get(to)! };
+  return { best, previous, nearest, paths: new Map() };
 }
 
 function addLink(network: Map<LocationId, RoadLink[]>, from: LocationId, link: RoadLink): void {

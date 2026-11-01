@@ -1,0 +1,246 @@
+import type { SimHost } from '../../host';
+import { DAY } from '../../sim';
+import { deathLine, formatTimestamp, SPECIES_NAMES, type NameResolver } from '../../text';
+import { formatCount, lifeYears } from '../format';
+import { Prose, type ProseLinks } from '../components/Prose';
+import { useQuery } from '../useHost';
+import type { CharacterId } from '../../sim';
+
+/** Hall of Heroes, the Dread, Legends, Great Houses, Most Wanted, and the Graveyard. */
+export function HallsPage({
+  host,
+  names,
+  time,
+  ...links
+}: { host: SimHost; names: NameResolver; time: number } & ProseLinks) {
+  const halls = useQuery(host, { kind: 'halls' }, Math.floor(time / DAY));
+  if (!halls) return <p className="muted page-loading">Opening the halls…</p>;
+  const who = (id: CharacterId, name: string) =>
+    links.onCharacter ? (
+      <button type="button" className="ref ref-character" onClick={() => links.onCharacter!(id)}>
+        {name}
+      </button>
+    ) : (
+      name
+    );
+  const place = (id: Parameters<NameResolver['location']>[0]) => {
+    const l = names.location(id);
+    const text = l ? `${l.article ? `${l.article} ` : ''}${l.name}` : 'the wilds';
+    return links.onLocation ? (
+      <button type="button" className="ref ref-location" onClick={() => links.onLocation!(id)}>
+        {text}
+      </button>
+    ) : (
+      text
+    );
+  };
+
+  return (
+    <div className="page halls-page">
+      <section className="hall">
+        <h2>Hall of Heroes</h2>
+        <p className="muted">The greatest of the living.</p>
+        {halls.heroes.length === 0 ? (
+          <p className="muted">No heroes yet.</p>
+        ) : (
+          <table className="hall-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Level</th>
+                <th>Kills</th>
+                <th>Legends</th>
+                <th>Gold earned</th>
+              </tr>
+            </thead>
+            <tbody>
+              {halls.heroes.map((h) => (
+                <tr key={h.id}>
+                  <td>
+                    {who(h.id, h.name)}{' '}
+                    <span className="muted">{SPECIES_NAMES[h.species].singular}</span>
+                  </td>
+                  <td>{h.level}</td>
+                  <td>{formatCount(h.kills)}</td>
+                  <td>{h.legends || '—'}</td>
+                  <td>{formatCount(h.goldEarned)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </section>
+
+      {halls.dread.length > 0 && (
+        <section className="hall">
+          <h2>The Dread</h2>
+          <p className="muted">
+            Liches, revenants and demon lords: those who still lair, and those brought down.
+          </p>
+          <table className="hall-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Lair</th>
+                <th>Level</th>
+                <th>Lives claimed</th>
+                <th>Fate</th>
+              </tr>
+            </thead>
+            <tbody>
+              {halls.dread.map((d) => (
+                <tr key={d.id} className={d.dead ? 'muted' : undefined}>
+                  <td>
+                    {who(d.id, d.name)}{' '}
+                    <span className="muted">{SPECIES_NAMES[d.species].singular}</span>
+                  </td>
+                  <td>{place(d.lairId)}</td>
+                  <td>{d.level}</td>
+                  <td>{formatCount(d.slain)}</td>
+                  <td>
+                    {d.dead ? (
+                      d.slayers.length > 0 ? (
+                        <>
+                          destroyed by{' '}
+                          {d.slayers.map((s, i) => (
+                            <span key={s.id}>
+                              {i > 0 && (i === d.slayers.length - 1 ? ' and ' : ', ')}
+                              {who(s.id, s.name)}
+                            </span>
+                          ))}
+                        </>
+                      ) : (
+                        'destroyed'
+                      )
+                    ) : (
+                      <>lurking since {lifeYears(d.rose, null).replace('b. ', 'Year ')}</>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
+
+      <section className="hall">
+        <h2>Legends</h2>
+        <p className="muted">The great dead, whose tales are still told in the taverns.</p>
+        {halls.legends.length === 0 ? (
+          <p className="muted">No legends yet. They take a lifetime.</p>
+        ) : (
+          <table className="hall-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Lived</th>
+                <th>Level</th>
+                <th>Kills</th>
+                <th>Legends</th>
+              </tr>
+            </thead>
+            <tbody>
+              {halls.legends.map((h) => (
+                <tr key={h.id}>
+                  <td>
+                    ★ {who(h.id, h.name)}{' '}
+                    <span className="muted">{SPECIES_NAMES[h.species].singular}</span>
+                  </td>
+                  <td>{lifeYears(h.born, h.died)}</td>
+                  <td>{h.level}</td>
+                  <td>{formatCount(h.kills)}</td>
+                  <td>{h.legends || '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </section>
+
+      <section className="hall">
+        <h2>Great Houses</h2>
+        <p className="muted">Families that have lasted generations, or bred legends.</p>
+        {halls.houses.length === 0 ? (
+          <p className="muted">No family has yet seen its grandchildren.</p>
+        ) : (
+          <table className="hall-table">
+            <thead>
+              <tr>
+                <th>House</th>
+                <th>Generations</th>
+                <th>Living</th>
+                <th>Legends</th>
+                <th>Greatest</th>
+              </tr>
+            </thead>
+            <tbody>
+              {halls.houses.map((h) => (
+                <tr key={h.familyName}>
+                  <td>{h.familyName}</td>
+                  <td>{h.generations}</td>
+                  <td>
+                    {h.living} <span className="muted">of {h.members}</span>
+                  </td>
+                  <td>{h.legends || '—'}</td>
+                  <td>
+                    {h.greatest.legend && '★ '}
+                    {who(h.greatest.id, h.greatest.name)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </section>
+
+      <section className="hall">
+        <h2>Most Wanted</h2>
+        <p className="muted">Outlaws with a price on their heads.</p>
+        {halls.wanted.length === 0 ? (
+          <p className="muted">The roads are safe, for now.</p>
+        ) : (
+          <ul className="wanted">
+            {halls.wanted.map((w) => (
+              <li key={w.id} className="wanted-poster">
+                <div className="wanted-bounty">{formatCount(w.bounty)} gold</div>
+                <div>{who(w.id, w.name)}</div>
+                <div className="muted">
+                  Level {w.level} {SPECIES_NAMES[w.species].singular} · {w.crimes}{' '}
+                  {w.crimes === 1 ? 'crime' : 'crimes'}
+                  {w.murders > 0 && `, ${w.murders} ${w.murders === 1 ? 'murder' : 'murders'}`}
+                </div>
+                <div className="muted">Last seen in {place(w.lastSeenAt)}</div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="hall">
+        <h2>The Graveyard</h2>
+        <p className="muted">The most recently fallen.</p>
+        {halls.fallen.length === 0 ? (
+          <p className="muted">Nobody has died yet.</p>
+        ) : (
+          <ol className="graveyard">
+            {halls.fallen.map((f) => (
+              <li key={f.id}>
+                <div>
+                  {who(f.id, f.name)}{' '}
+                  <span className="muted">
+                    level {f.level} {SPECIES_NAMES[f.species].singular}
+                    {f.outlaw && ', outlaw'}
+                  </span>
+                </div>
+                <div className="epitaph">
+                  <Prose segments={deathLine(f.cause, f.diedIn, names)} {...links} />
+                  <span className="muted"> · {formatTimestamp(f.diedAt)}</span>
+                </div>
+              </li>
+            ))}
+          </ol>
+        )}
+      </section>
+    </div>
+  );
+}

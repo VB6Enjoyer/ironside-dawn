@@ -28,14 +28,21 @@ town's market, or watch a dungeon's population change over time.
 
 ## Status
 
-Phase 5 (Kin & Bad Blood) is done: adventurers meet at taverns, make friends
-and rivals, team up into parties that delve and split the spoils, mourn the
-fallen and hold grudges. Each people has its own tongue, learned by living
-among its speakers. The broke and the dishonorable turn outlaw and rob
-travelers on the road, and bounty hunters come after them. Before that,
-Phase 4 gave everyone personalities, drives and fading memories, and the log
-says why they did things. Click any name to open their character card. Phase
-6 (The Observatory) is next. The plan is in:
+Phase 9 (A Living World) is done. Every seed makes its own world: regions
+of forest, mountain, steppe and waste, each people's towns in its homeland,
+dungeons, fortresses and the roads between them, drawn on a map you can pan
+and zoom. Weather turns with the seasons; creatures spill out of crowded
+dungeons and raid towns; lords hold the lands around their fortresses; and
+liches, revenants and demon lords lair in the deepest dungeons, growing
+infamous until someone brings them down.
+
+Before that, Phase 8 (Generations) made lives run from birth to old age, with
+marriages, children, heirs and legends; Phase 7 (Markets) gave each town a
+daily market where nobody sets the prices, and merchants to haul goods
+between them; and Phase 6 made it an observatory: follow anyone, read life
+stories, browse the chronicle, statistics and halls, skip years at a time,
+and save, load and share worlds. Phase 10 (Cultures & Myths) is next. The
+plan is in:
 
 - [`docs/ROADMAP.md`](docs/ROADMAP.md): the phased development plan, with exit
   criteria for each milestone.
@@ -71,7 +78,7 @@ npm run dev
 src/sim/      Simulation core. No DOM, no React, no Math.random (lint-enforced).
 src/content/  Data tables: species, creatures, items, names…
 src/text/     Turns events into prose. No DOM; shared by the UI and the CLI.
-src/host/     Runs the simulation for the UI: speed tiers, pause, log floor.
+src/host/     Runs the simulation in a Web Worker for the UI: speeds, skips, queries.
 src/ui/       React app.
 tools/        Headless tools, such as the sim CLI.
 docs/         Roadmap, world design and architecture.

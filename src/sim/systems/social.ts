@@ -20,7 +20,8 @@ import type {
 import { isAlive, isFitToDelve, needsRecovery } from './condition';
 import { remember, satisfy } from './mind';
 import { cancelWake, wakeAt } from './wake';
-import { charactersAt, moveTo } from './whereabouts';
+import { sharePrices } from './merchants';
+import { charactersAt, idsAt, moveTo } from './whereabouts';
 
 /**
  * Bonds between characters (ROADMAP.md Phase 5): opinions, language, tavern
@@ -28,12 +29,27 @@ import { charactersAt, moveTo } from './whereabouts';
  */
 
 const MAX_OPINIONS = 30;
+/** Opinions may run this far over before the faintest are forgotten, all at once. */
+const OPINION_SLACK = 8;
+/** Strangers who catch a character's eye in a crowded tavern, besides anyone they know. */
+const STRANGERS_NOTICED = 12;
 const FRIEND_AFFINITY = 0.55;
 const FRIEND_FAMILIARITY = 0.5;
 const RIVAL_AFFINITY = -0.4;
 /** Friends who trust each other this much will adventure together. */
 const PARTY_TRUST = 0.3;
 const MAX_PARTY = 4;
+/** A band raised against one of the dread can be bigger than a party. */
+export const CRUSADE_SIZE = 6;
+/** Affinity both ways at which friends may marry, and how well they must know each other. */
+const LOVE = 0.8;
+const LOVE_FAMILIARITY = 0.6;
+/** Chance per meeting that such a pair marries. */
+const PROPOSAL = 0.006;
+/** Chance a match across peoples goes ahead. */
+const MIXED_MARRIAGE = 0.1;
+/** Chance per meeting of a tale about a dead hero. */
+const TALE = 0.05;
 /** Below this, a member stops following their leader. */
 const LOYALTY_FLOOR = 0.1;
 /** Languages understood at least this well allow real conversation. */
@@ -66,18 +82,22 @@ export function adjustOpinion(
   return opinion;
 }
 
-/** Keeps the opinions that matter most: the strongest feelings and the best known. */
+/**
+ * Keeps the opinions that matter most: the strongest feelings and the best
+ * known. Done in batches, once there are a few too many, as it costs a sort.
+ */
 function forgetFaintest(character: Character, keep: CharacterId): void {
   const ids = Object.keys(character.opinions) as CharacterId[];
-  if (ids.length <= MAX_OPINIONS) return;
+  if (ids.length <= MAX_OPINIONS + OPINION_SLACK) return;
   const weight = (id: CharacterId) => {
     const o = character.opinions[id]!;
     return o.familiarity + Math.abs(o.affinity);
   };
-  const faintest = ids
+  const ranked = ids
     .filter((id) => id !== keep)
-    .reduce((a, b) => (weight(b) < weight(a) ? b : a));
-  delete character.opinions[faintest];
+    .map((id) => [id, weight(id)] as const)
+    .sort((a, b) => a[1] - b[1]);
+  for (const [id] of ranked.slice(0, ids.length - MAX_OPINIONS)) delete character.opinions[id];
 }
 
 export function isFriend(character: Character, otherId: CharacterId): boolean {
@@ -171,8 +191,20 @@ export function socialize(ctx: SimContext, character: Character, location: Locat
   const rng = ctx.rng.social;
   if (!rng.chance(0.35 + 0.5 * character.traits.sociability)) return;
 
+  // Anyone they know who is here, and a few strangers who catch their eye.
+  const world = ctx.world;
+  const here = idsAt(world, location.id);
+  const noticed = new Set<Character>();
+  for (const id in character.opinions) {
+    const other = world.characters.get(id as CharacterId);
+    if (other?.locationId === location.id) noticed.add(other);
+  }
+  for (let i = Math.min(STRANGERS_NOTICED, here.length); i > 0; i--) {
+    noticed.add(world.characters.get(here[rng.int(0, here.length - 1)]!)!);
+  }
+
   const candidates: [Character, number][] = [];
-  for (const other of charactersAt(ctx.world, location.id)) {
+  for (const other of noticed) {
     if (other.id === character.id || !isAlive(other)) continue;
     if (!available(other)) continue;
     const opinion = character.opinions[other.id];
@@ -194,6 +226,11 @@ function meet(ctx: SimContext, a: Character, b: Character, location: Location): 
   const now = ctx.world.time;
   const comm = communication(a, b);
   const first = !a.opinions[b.id];
+  // Merchants who can talk trade news of prices.
+  if (a.calling === 'merchant' && b.calling === 'merchant' && comm >= UNDERSTOOD) {
+    sharePrices(a, b);
+  }
+  if (comm >= UNDERSTOOD && rng.chance(TALE)) tellTale(ctx, a, b, location);
 
   for (const [self, other] of [
     [a, b],
@@ -352,6 +389,71 @@ function checkBonds(ctx: SimContext, a: Character, b: Character, location: Locat
   if (ab.bond === 'friend' && ab.trust >= PARTY_TRUST && ba.trust >= PARTY_TRUST) {
     joinUp(ctx, a, b, location.id);
   }
+  if (ab.affinity >= LOVE && ba.affinity >= LOVE) considerMarriage(ctx, a, b, location);
+}
+
+/**
+ * Close friends who love each other may marry: unwed grown-ups, not close
+ * kin, nearly always of the same people.
+ */
+function considerMarriage(ctx: SimContext, a: Character, b: Character, location: Location): void {
+  const world = ctx.world;
+  const unwed = (c: Character) => {
+    const spouse = c.spouseId ? world.characters.get(c.spouseId) : undefined;
+    return !spouse || spouse.death !== null;
+  };
+  if (a.calling === 'child' || b.calling === 'child' || !unwed(a) || !unwed(b)) return;
+  if ((a.opinions[b.id]?.familiarity ?? 0) < LOVE_FAMILIARITY) return;
+  if (Boolean(a.outlaw) !== Boolean(b.outlaw) || isKin(a, b)) return;
+  const rng = ctx.rng.social;
+  if (a.species !== b.species && !rng.chance(MIXED_MARRIAGE)) return;
+  if (!rng.chance(PROPOSAL)) return;
+  a.spouseId = b.id;
+  b.spouseId = a.id;
+  ctx.emit(
+    { type: 'family.marry', data: { characterId: a.id, otherId: b.id, locationId: location.id } },
+    [a.id, b.id],
+    location.id,
+  );
+}
+
+/**
+ * Someone tells of a dead hero's deeds, preferring their own kin or a hero
+ * of their own town; the listener is stirred to seek glory.
+ */
+function tellTale(ctx: SimContext, teller: Character, listener: Character, location: Location) {
+  const heroes = ctx.world.heroes;
+  if (heroes.length === 0) return;
+  const rng = ctx.rng.social;
+  const recent = heroes.slice(-20).map((id) => ctx.world.characters.get(id)!);
+  const own = recent.filter(
+    (h) => teller.parents.includes(h.id) || isKin(teller, h) || h.homeId === teller.homeId,
+  );
+  const hero = rng.pick(own.length > 0 ? own : recent);
+  if (hero.id === listener.id || hero.id === teller.id) return;
+  listener.drives.glory = Math.min(1, listener.drives.glory + 0.1);
+  ctx.emit(
+    {
+      type: 'social.tale',
+      data: {
+        characterId: teller.id,
+        otherId: listener.id,
+        heroId: hero.id,
+        locationId: location.id,
+      },
+    },
+    [teller.id, listener.id],
+    location.id,
+  );
+}
+
+/** Parent and child, or children of the same parent. */
+export function isKin(a: Character, b: Character): boolean {
+  return (
+    a.parents.includes(b.id) ||
+    b.parents.includes(a.id) ||
+    a.parents.some((p) => b.parents.includes(p))
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -400,6 +502,8 @@ export function partyOf(ctx: SimContext, character: Character): Party | null {
 /** Two friends who trust each other team up, or one joins the other's party. */
 function joinUp(ctx: SimContext, a: Character, b: Character, locationId: LocationId): void {
   if (Boolean(a.outlaw) !== Boolean(b.outlaw)) return;
+  // Only adventurers adventure together.
+  if (a.calling !== 'adventurer' || b.calling !== 'adventurer') return;
   const pa = partyOf(ctx, a);
   const pb = partyOf(ctx, b);
   if (pa && pb) return;
@@ -436,11 +540,109 @@ function joinUp(ctx: SimContext, a: Character, b: Character, locationId: Locatio
   );
 }
 
+/**
+ * Someone setting out against one of the dread calls for companions: the
+ * brave and able in town, who don't hate them, rally to the cause and join
+ * their party (ROADMAP.md Phase 9).
+ */
+export function rallyAgainst(
+  ctx: SimContext,
+  leader: Character,
+  location: Location,
+  master: Character,
+): void {
+  const world = ctx.world;
+  const now = world.time;
+  const existing = partyOf(ctx, leader);
+  if (existing && existing.leaderId !== leader.id) return;
+  // Only those who could lead such a band call for one.
+  if (leader.level < master.level - 10) return;
+  const party: Party = existing ?? {
+    id: `p${world.nextPartyNumber}` as PartyId,
+    leaderId: leader.id,
+    members: [leader.id],
+    formedAt: now,
+  };
+  const joined: Character[] = [];
+  for (const head of willingRecruits(ctx, leader, location, master)) {
+    // A party's leader brings their party along, if there's room for all of them.
+    const theirs = head.partyId ? world.parties.get(head.partyId) : undefined;
+    const band = theirs
+      ? theirs.members.map((id) => world.characters.get(id)!).filter((c) => isAlive(c))
+      : [head];
+    if (party.members.length + band.length > CRUSADE_SIZE) continue;
+    if (theirs) world.parties.delete(theirs.id);
+    for (const recruit of band) {
+      adjustOpinion(recruit, leader.id, { affinity: 0.25, trust: 0.25, familiarity: 0.2 }, now);
+      adjustOpinion(leader, recruit.id, { affinity: 0.15, trust: 0.2, familiarity: 0.2 }, now);
+      const kind = recruit.activity.kind;
+      if (kind === 'resting' || kind === 'accompanying') recruit.activity = { kind: 'idle' };
+      party.members.push(recruit.id);
+      recruit.partyId = party.id;
+      joined.push(recruit);
+    }
+  }
+  if (joined.length === 0) return;
+  if (existing) {
+    for (const recruit of joined) {
+      ctx.emit(
+        {
+          type: 'party.join',
+          data: { characterId: recruit.id, leaderId: leader.id, locationId: location.id },
+        },
+        [recruit.id, leader.id],
+        location.id,
+      );
+    }
+    return;
+  }
+  world.nextPartyNumber++;
+  world.parties.set(party.id, party);
+  leader.partyId = party.id;
+  ctx.emit(
+    {
+      type: 'party.form',
+      data: { characterId: leader.id, locationId: location.id, memberIds: party.members },
+    },
+    party.members,
+    location.id,
+  );
+}
+
+/** Who in town would answer a call against `master`, strongest first. */
+export function willingRecruits(
+  ctx: SimContext,
+  leader: Character,
+  location: Location,
+  master: Character,
+): Character[] {
+  if (location.kind !== 'town') return [];
+  // The more lives it has claimed, the more answer the call.
+  const floor = master.level - (master.slain >= 10 ? 25 : 18);
+  return charactersAt(ctx.world, location.id)
+    .filter(
+      (c) =>
+        c !== leader &&
+        c.calling === 'adventurer' &&
+        !c.outlaw &&
+        // Free, or leading a party of their own, which comes too.
+        (!c.partyId || ctx.world.parties.get(c.partyId)?.leaderId === c.id) &&
+        c.partyId !== leader.partyId &&
+        c.level >= floor &&
+        isAlive(c) &&
+        (available(c) || c.activity.kind === 'resting') &&
+        c.traits.bravery >= 0.3 &&
+        (c.opinions[leader.id]?.affinity ?? 0) > -0.2 &&
+        communication(c, leader) >= UNDERSTOOD,
+    )
+    .sort((a, b) => b.level - a.level);
+}
+
 /** Leaves the party; a party of one is no party, and a leaderless one picks the next. */
 export function leaveParty(
   ctx: SimContext,
   character: Character,
-  reason: 'quarrel' | 'outlaw' | 'death',
+  reason: 'quarrel' | 'outlaw' | 'death' | 'retire',
 ): void {
   const party = partyOf(ctx, character);
   character.partyId = null;
@@ -516,17 +718,36 @@ export function gatherParty(ctx: SimContext, leader: Character, location: Locati
 /** A follower whose party is gone stops following and decides for themselves again. */
 function goOwnWay(ctx: SimContext, character: Character): void {
   if (character.activity.kind !== 'accompanying') return;
-  character.activity = { kind: 'idle' };
-  wakeAt(ctx, character, ctx.world.time + MINUTE);
+  standDown(ctx, character, ctx.world.characters.get(character.activity.leaderId));
 }
 
 /** Lets the leader's followers go back to deciding for themselves. */
 export function releaseFollowers(ctx: SimContext, leader: Character): void {
-  for (const follower of followersOf(ctx, leader)) {
-    follower.activity = { kind: 'idle' };
-    moveTo(ctx.world, follower, leader.locationId ?? follower.locationId);
-    wakeAt(ctx, follower, ctx.world.time + MINUTE);
+  for (const follower of followersOf(ctx, leader)) standDown(ctx, follower, leader);
+}
+
+/**
+ * A follower decides for themselves again. In a town or a dungeon they do so
+ * at once; caught on the road, they walk the rest of the leg alone first.
+ */
+function standDown(ctx: SimContext, follower: Character, leader: Character | undefined): void {
+  const lead = leader?.activity;
+  if (follower.locationId === null && lead?.kind === 'traveling') {
+    follower.activity = {
+      kind: 'traveling',
+      destinationId: lead.leg.to,
+      leg: lead.leg,
+      remaining: [],
+    };
+    wakeAt(ctx, follower, lead.leg.arrivesAt);
+    return;
   }
+  follower.activity = { kind: 'idle' };
+  // Nobody stops following anywhere but on a road with their leader; this is a safety net.
+  if (follower.locationId === null) {
+    moveTo(ctx.world, follower, leader?.locationId ?? follower.homeId);
+  }
+  wakeAt(ctx, follower, ctx.world.time + MINUTE);
 }
 
 /**
@@ -580,7 +801,7 @@ export function shareSpoils(
 /** Free to be interrupted: not on the road, not fighting, not already with a party. */
 function available(character: Character): boolean {
   const kind = character.activity.kind;
-  return kind === 'idle' || kind === 'pastime' || kind === 'convalescing';
+  return kind === 'idle' || kind === 'pastime' || kind === 'convalescing' || kind === 'living';
 }
 
 function clamp(value: number, min: number, max: number): number {
