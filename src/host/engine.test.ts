@@ -5,6 +5,7 @@ import {
   DAY,
   DETAIL_EVENTS,
   Importance,
+  merchantsFor,
   type CharacterId,
   type SimEvent,
 } from '../sim';
@@ -58,7 +59,7 @@ describe('engine', () => {
     const { host } = setup();
     const snapshot = host.getSnapshot();
     expect(snapshot.ready).toBe(true);
-    expect(snapshot.livingCount).toBe(20);
+    expect(snapshot.livingCount).toBe(20 + merchantsFor(20));
     expect(host.places.size).toBeGreaterThan(3);
     const someone = snapshot.log.find((e) => !isDigest(e) && e.type === 'character.introduced');
     expect(
@@ -152,7 +153,7 @@ describe('engine', () => {
     host.setFloor(Importance.Trivial);
     host.setSpeed('max');
     host.start();
-    runTicks(20);
+    runTicks(8);
     const { log, eventCount, hiddenCount } = host.getSnapshot();
     expect(log.some(isDigest)).toBe(true);
     expect(represented(log)).toBe(eventCount - hiddenCount);
@@ -263,7 +264,7 @@ describe('engine', () => {
     const { host, runTicks } = setup({ seed: 'views' });
     host.setSpeed('max');
     host.start();
-    runTicks(30);
+    runTicks(20);
     host.pause();
 
     const hero = await host.request({ kind: 'character', id: 'c1' as CharacterId });

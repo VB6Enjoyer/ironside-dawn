@@ -19,6 +19,7 @@ import { adventurerFighter } from './condition';
 import { die } from './death';
 import { exitDelve, resumeDelve } from './delve';
 import { weaponSkillOf } from './items';
+import { mint } from './ledger';
 import { rollLootItem } from './loot';
 import { cast, chooseSpell, type SpellChoice } from './magic';
 import { nudgeTrait, remember, satisfy } from './mind';
@@ -52,6 +53,11 @@ const GLORY_PER_KILL_LEVEL = 0.02;
 const AFFIX_DEPTH_BONUS = 0.15;
 
 /** A party, led by `leaderId`, meets creatures in a dungeon chamber. */
+/** Below this share of their health, a fighter drinks a healing draught. */
+const POTION_BELOW = 0.35;
+/** A draught restores this share of health. */
+const POTION_HEALS = 0.35;
+
 export function startDelveFight(
   ctx: SimContext,
   party: readonly Character[],
@@ -217,6 +223,24 @@ export function runRound(ctx: SimContext, encounter: Encounter): void {
       }
       applySpell(ctx, caster, encounter, choice, result.amount, sideIndex);
     }
+  }
+
+  // The badly hurt drink a healing draught, if they have one; it takes their turn.
+  for (const id of everyone) {
+    if (!isIn(id) || casters.has(id)) continue;
+    const c = characterOf(id);
+    if (c.potions <= 0 || c.hp >= c.maxHp * POTION_BELOW) continue;
+    c.potions--;
+    c.hp = Math.min(c.maxHp, c.hp + Math.round(c.maxHp * POTION_HEALS));
+    casters.add(id);
+    ctx.emit(
+      {
+        type: 'item.potion',
+        data: { characterId: id, locationId: encounter.locationId, hp: c.hp, maxHp: c.maxHp },
+      },
+      [id],
+      encounter.locationId,
+    );
   }
 
   // Then everyone still standing fights.
@@ -503,6 +527,7 @@ function end(ctx: SimContext, encounter: Encounter, winner: Side | null): void {
       const { gold, items } = encounter.spoils;
       holder.gold += gold;
       holder.goldEarned += gold;
+      mint(world, 'treasure', gold);
       holder.pack.push(...items);
       ctx.emit(
         {

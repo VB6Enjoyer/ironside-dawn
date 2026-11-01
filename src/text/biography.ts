@@ -1,4 +1,4 @@
-import { creatureDef, type CreatureId } from '../content';
+import { creatureDef, LANGUAGES, type CreatureId, type LanguageId } from '../content';
 import {
   toCalendar,
   type Character,
@@ -95,6 +95,27 @@ export function biography(
     },
   ]);
 
+  // The career: a merchant's is in their ledger and their tongues.
+  if (c.calling === 'merchant') {
+    const runs = events.filter(
+      (e) => e.type === 'trade.unload' && e.data.characterId === c.id,
+    ).length;
+    const tongues = (Object.entries(c.languages) as [LanguageId, number][])
+      .filter(([, level]) => level >= 70)
+      .map(([id]) => LANGUAGES[id].name);
+    paragraphs.push([
+      {
+        text: `${alive ? 'They have hauled' : 'They hauled'} goods between the towns${
+          runs > 0
+            ? `, ${runs} ${runs === 1 ? 'load' : 'loads'} that the chronicle still recalls,`
+            : ''
+        } and cleared ${c.goldEarned.toLocaleString('en-US')} gold in profit. They ${
+          alive ? 'haggle' : 'haggled'
+        } in ${listOf(tongues)}.`,
+      },
+    ]);
+  }
+
   // The career.
   const kills = Object.entries(c.kills) as [CreatureId, number][];
   const totalKills = kills.reduce((n, [, k]) => n + k, 0);
@@ -128,7 +149,7 @@ export function biography(
   if (c.spells.length > 0) {
     sentence += ` They learned to cast ${listOf(c.spells.map(spellName))}.`;
   }
-  paragraphs.push([{ text: sentence }]);
+  if (c.calling !== 'merchant') paragraphs.push([{ text: sentence }]);
 
   // Bonds.
   const opinions = Object.entries(c.opinions) as [

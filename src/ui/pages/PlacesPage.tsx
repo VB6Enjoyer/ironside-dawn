@@ -11,6 +11,7 @@ import {
   type NameResolver,
   SPECIES_NAMES,
 } from '../../text';
+import { MarketPanel } from '../components/MarketPanel';
 import { formatCount } from '../format';
 import { Prose, type ProseLinks } from '../components/Prose';
 import { useQuery } from '../useHost';
@@ -90,6 +91,9 @@ export function PlacePage({
             .join(' and ')}
           {location.academy && ', with an academy where the gifted study magic'}.
         </p>
+      )}
+      {location.kind === 'town' && (
+        <MarketPanel host={host} townId={id} names={names} time={time} />
       )}
 
       {location.dungeon && (

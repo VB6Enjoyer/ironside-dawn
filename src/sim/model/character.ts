@@ -1,6 +1,7 @@
 import type {
   CreatureId,
   CultureId,
+  Goods,
   LanguageId,
   LootId,
   PastimeId,
@@ -17,9 +18,14 @@ import type { CharacterId, EncounterId, ItemId, LocationId, PartyId } from './id
 import type { Opinion, Outlaw } from './social';
 import type { Equipment, Item } from './item';
 import type { Drives, Expectation, Goal, Memory } from './mind';
+import type { PriceNote } from './market';
+
+export type Calling = 'adventurer' | 'merchant';
 
 export interface Character {
   readonly id: CharacterId;
+  /** Adventurers seek glory and gold in dungeons; merchants buy low and sell high. */
+  calling: Calling;
   readonly givenName: string;
   readonly familyName: string;
   readonly species: SpeciesId;
@@ -77,6 +83,15 @@ export interface Character {
   outlaw: Outlaw | null;
   /** How each town sees them, -1 (wanted) to 1 (celebrated). */
   reputation: Partial<Record<LocationId, number>>;
+
+  /** Healing draughts carried, drunk when a fight goes badly. */
+  potions: number;
+  /** Merchants: goods carried to sell, in units. */
+  cargo: Goods;
+  /** Merchants: what the cargo cost, to reckon the profit. */
+  cargoPaid: number;
+  /** Merchants: what each town's prices were when last seen. */
+  priceBook: Partial<Record<LocationId, PriceNote>>;
 
   /** Where the character is, or null while on the road. */
   locationId: LocationId | null;

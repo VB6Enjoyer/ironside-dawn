@@ -11,7 +11,9 @@ import {
   type WeaponId,
 } from '../../content';
 import type { SimContext } from '../context';
-import type { Character, CharacterId, Location } from '../model';
+import type { Calling, Character, CharacterId, Location, PriceNote, World } from '../model';
+import { mint } from '../systems/ledger';
+import { GOOD_IDS, houseQuote } from '../systems/market';
 import { generateItem, starterWeapon } from '../systems/items';
 import { learnSpells } from '../systems/magic';
 import { initialDrives, rollTraits } from '../systems/mind';
@@ -35,6 +37,7 @@ export function createCharacter(
   home: Location,
   newcomer: boolean,
   firstWakeWithin: number,
+  calling: Calling = 'adventurer',
 ): Character {
   const world = ctx.world;
   const rng = ctx.rng.people;
@@ -79,6 +82,7 @@ export function createCharacter(
   const name = generateName(rng, def.culture, world.takenNames);
   const character: Character = {
     id: `c${world.nextCharacterNumber++}` as CharacterId,
+    calling,
     ...name,
     species,
     culture: def.culture,
@@ -98,7 +102,7 @@ export function createCharacter(
     stamina: 0,
     maxStamina: 0,
     statuses: [],
-    gold: rng.roll(STARTING_GOLD),
+    gold: calling === 'merchant' ? stake(rng.roll('2d6')) : rng.roll(STARTING_GOLD),
     pack: [],
     kills: {},
     goldEarned: 0,
@@ -118,7 +122,13 @@ export function createCharacter(
     wakeToken: 0,
     death: null,
     history: [],
+    potions: 0,
+    cargo: {},
+    cargoPaid: 0,
+    // Merchants start out knowing what things cost in every town.
+    priceBook: calling === 'merchant' ? priceBookOfAllTowns(world) : {},
   };
+  mint(world, 'newcomers', character.gold);
   refreshMaxima(character);
   character.hp = character.maxHp;
   character.stamina = character.maxStamina;
@@ -137,6 +147,27 @@ export function createCharacter(
   if (gifted) learnSpells(ctx, character, home.id);
   wakeAt(ctx, character, world.time + rng.int(0, firstWakeWithin));
   return character;
+}
+
+/** A merchant's stake: two hundred gold and then some. */
+function stake(roll: number): number {
+  return 200 + roll * 20;
+}
+
+/** What every town's trading house pays and asks right now. */
+export function priceBookOfAllTowns(world: World): Partial<Record<string, PriceNote>> {
+  const book: Partial<Record<string, PriceNote>> = {};
+  for (const market of world.markets.values()) {
+    const bid: PriceNote['bid'] = {};
+    const ask: PriceNote['ask'] = {};
+    for (const good of GOOD_IDS) {
+      const quote = houseQuote(market, good);
+      bid[good] = quote.bid;
+      ask[good] = quote.ask;
+    }
+    book[market.townId] = { t: world.time, bid, ask };
+  }
+  return book;
 }
 
 export function towns(ctx: SimContext): Location[] {

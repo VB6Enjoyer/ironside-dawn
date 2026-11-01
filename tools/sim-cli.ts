@@ -12,7 +12,10 @@ import { roleOf } from '../src/sim/systems/progress';
 import {
   createSimulation,
   DAY,
+  goingPrice,
   Importance,
+  moneyHeld,
+  priceIndex,
   StreamHash,
   WORLD_START,
   type CharacterId,
@@ -216,6 +219,9 @@ function worldReport(
     'Bonds and crime',
     ...bondRows(world, counts, row),
     '',
+    'Economy',
+    ...economyRows(world, counts, row),
+    '',
     'Magic',
     row('Casters alive', `${casters.length} (${living.filter((c) => c.gifted).length} gifted)`),
     ...[...castOutcomes].sort((a, b) => b[1] - a[1]).map(([outcome, n]) => row(`  ${outcome}`, n)),
@@ -300,6 +306,41 @@ function habitRows(
 }
 
 /** Friendships, parties, outlaws and the law. */
+/** Prices in each town, the money supply, and how the merchants are doing (ROADMAP.md Phase 7). */
+function economyRows(
+  world: World,
+  counts: ReadonlyMap<string, number>,
+  row: (label: string, value: string | number) => string,
+): string[] {
+  const shown = ['food', 'ore', 'tools', 'arms', 'potions'] as const;
+  const towns = [...world.markets.values()].map((m) =>
+    row(
+      `  ${world.locations.get(m.townId)!.name}`,
+      `index ${priceIndex(m).toFixed(2)}; ` +
+        shown.map((g) => `${g} ${goingPrice(m, g).toFixed(1)}`).join(', '),
+    ),
+  );
+  const sum = (r: Partial<Record<string, number>>) =>
+    Object.values(r).reduce<number>((a, n) => a + (n ?? 0), 0);
+  const merchants = [...world.characters.values()].filter(
+    (c) => c.calling === 'merchant' && !c.death,
+  );
+  const richest = [...merchants].sort((a, b) => b.gold - a.gold)[0];
+  return [
+    row('Prices', '(against where they started; going prices in gold)'),
+    ...towns,
+    row('Money held', Math.round(moneyHeld(world))),
+    row('  minted', Math.round(sum(world.ledger.minted))),
+    row('  burned', Math.round(sum(world.ledger.burned))),
+    row('Merchants alive', merchants.length),
+    row('  runs completed', counts.get('trade.unload') ?? 0),
+    ...(richest
+      ? [row('  richest', `${richest.givenName} ${richest.familyName}, ${richest.gold} gold`)]
+      : []),
+    row('Troubles', counts.get('market.shock') ?? 0),
+  ];
+}
+
 function bondRows(
   world: World,
   counts: ReadonlyMap<string, number>,

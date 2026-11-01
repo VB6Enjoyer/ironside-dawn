@@ -8,17 +8,22 @@ const COMMON_TREASURE: DungeonDef['treasure'] = [
 ];
 
 /**
- * The hand-made starter world: three towns, two dungeons and a forest, joined
- * by roads. Replaced by procedural generation in Phase 9.
+ * The hand-made starter world: three towns, two dungeons, a forest and a
+ * mountain pass, joined by roads. Replaced by procedural generation in Phase 9.
  *
  *            Gorefang Caves
  *                  |
  *   Concordale --- Brindlemoor
  *        |    \          |
- *        |     \         |
+ *        |     \     Ironpass
+ *        |      \        |
  *   Witherwood --------- Saltmere
  *        |
  *   Dungeon of Misery
+ *
+ * Concordale farms and forges; Brindlemoor, a dwarven town, mines iron and
+ * makes the best steel; elven Saltmere grows herbs and brews, but has no
+ * forge, so its iron comes over the Ironpass or through the Witherwood.
  */
 export const STARTER_MAP: MapDef = {
   locations: [
@@ -29,21 +34,45 @@ export const STARTER_MAP: MapDef = {
       culture: 'generic',
       population: { human: 1200 },
       academy: true,
+      economy: {
+        workforce: {
+          farmers: 0.6,
+          hunters: 0.08,
+          herbalists: 0.06,
+          smiths: 0.12,
+          tailors: 0.08,
+          alchemists: 0.06,
+        },
+      },
     },
     {
       id: 'brindlemoor',
       name: 'Brindlemoor',
       kind: 'town',
       culture: 'generic',
-      population: { human: 500, dwarf: 350 },
+      population: { dwarf: 600, human: 250 },
+      economy: {
+        workforce: {
+          miners: 0.35,
+          farmers: 0.35,
+          smiths: 0.15,
+          hunters: 0.08,
+          tailors: 0.04,
+          alchemists: 0.03,
+        },
+        mine: true,
+      },
     },
     {
       id: 'saltmere',
       name: 'Saltmere',
       kind: 'town',
       culture: 'generic',
-      population: { human: 600, elf: 400 },
+      population: { elf: 600, human: 400 },
       academy: true,
+      economy: {
+        workforce: { farmers: 0.5, herbalists: 0.2, alchemists: 0.1, tailors: 0.1, hunters: 0.1 },
+      },
     },
     {
       id: 'dungeon-of-misery',
@@ -92,12 +121,20 @@ export const STARTER_MAP: MapDef = {
       kind: 'wilderness',
       culture: 'generic',
     },
+    {
+      id: 'ironpass',
+      name: 'Ironpass',
+      article: 'the',
+      kind: 'wilderness',
+      culture: 'generic',
+    },
   ],
   routes: [
     { between: ['concordale', 'brindlemoor'], hours: 9 },
     { between: ['concordale', 'witherwood'], hours: 5 },
     { between: ['concordale', 'saltmere'], hours: 16 },
-    { between: ['brindlemoor', 'saltmere'], hours: 12 },
+    { between: ['brindlemoor', 'ironpass'], hours: 6 },
+    { between: ['ironpass', 'saltmere'], hours: 7 },
     { between: ['brindlemoor', 'gorefang-caves'], hours: 7 },
     { between: ['witherwood', 'saltmere'], hours: 8 },
     { between: ['witherwood', 'dungeon-of-misery'], hours: 6 },

@@ -27,6 +27,10 @@ export function describeMotive(motive: Motive, names: NameResolver): string {
       return 'curious to see it';
     case 'home':
       return 'missing home';
+    case 'profit':
+      return 'hoping for a profit';
+    case 'news':
+      return 'for news of its prices';
     case 'loot':
       return 'with loot to sell';
     case 'bounty': {
@@ -51,7 +55,8 @@ export function describeWhy(why: readonly Motive[], names: NameResolver): string
 const GOAL_PHRASES: Record<Goal['kind'], string> = {
   delve: 'Off to delve',
   heal: 'Recovering from wounds',
-  sell: 'Selling loot',
+  sell: 'At the market',
+  trade: 'Taking goods to market',
   socialize: 'Seeking company',
   train: 'Training',
   study: 'Studying the arcane',
@@ -75,6 +80,7 @@ export function describeGoal(goal: Goal, names: NameResolver): string {
       return `${GOAL_PHRASES.delve} in${where}`;
     case 'travel':
     case 'home':
+    case 'trade':
       return `${GOAL_PHRASES[goal.kind]} to${where}`;
     case 'hunt': {
       const quarry = goal.targetId ? names.character(goal.targetId) : undefined;

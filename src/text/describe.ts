@@ -9,6 +9,7 @@ import {
 import type { CharacterId, Combatant, EventOfType, EventType, LocationId, SimEvent } from '../sim';
 import { describeDuration, seasonName } from './calendar';
 import { anItem, itemName, legendTitle, SKILL_PHRASES, spellName } from './items';
+import { goodsList } from './goods';
 import { describeWhy } from './mind';
 import { SPECIES_NAMES, type NameResolver } from './names';
 import {
@@ -18,6 +19,7 @@ import {
   condition,
   countWord,
   creatureGroup,
+  listOf,
   lootList,
   spoils,
   theCreature,
@@ -267,6 +269,11 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
           return [c, ' limps out of ', from, ', heading for ', to, ' to recover.'];
         case 'home':
           return [c, ' heads for ', to, ' with a heavy pack.'];
+        case 'trade':
+          return h.pick<Part[]>([
+            [c, ' drives a wagon out of ', from, ', bound for ', to, '.'],
+            [c, ' takes the road from ', from, ' to ', to, ' with a wagonload of goods.'],
+          ]);
         case 'delve':
           return h.pick<Part[]>([
             [c, ' sets out from ', from, ' toward ', to, '.'],
@@ -736,7 +743,14 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
     },
   ],
   'crime.robbery': [
-    (e, h) => [h.c(e.data.characterId), ' robs ', h.c(e.data.victimId), ` of ${e.data.gold} gold.`],
+    (e, h) => [
+      h.c(e.data.characterId),
+      ' robs ',
+      h.c(e.data.victimId),
+      e.data.goods && Object.keys(e.data.goods).length > 0
+        ? ` of ${e.data.gold} gold and ${goodsList(e.data.goods)}.`
+        : ` of ${e.data.gold} gold.`,
+    ],
   ],
   'bounty.post': [
     (e, h) => [
@@ -764,6 +778,107 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
       h.l(e.data.locationId),
       ` for ${e.data.gold} gold.`,
     ],
+  ],
+  'trade.shop': [
+    (e, h) => {
+      const bought = [
+        ...(e.data.potions > 0
+          ? [
+              e.data.potions === 1
+                ? 'a healing draught'
+                : `${countWord(e.data.potions)} healing draughts`,
+            ]
+          : []),
+        ...(e.data.item ? [anItem(e.data.item)] : []),
+      ];
+      return [
+        h.c(e.data.characterId),
+        ` buys ${listOf(bought)} in `,
+        h.l(e.data.locationId),
+        ` for ${e.data.gold} gold.`,
+      ];
+    },
+  ],
+  'trade.load': [
+    (e, h) => [
+      h.c(e.data.characterId),
+      ` loads ${goodsList(e.data.goods)} in `,
+      h.l(e.data.locationId),
+      ` for ${e.data.gold} gold, bound for `,
+      h.l(e.data.destinationId),
+      '.',
+    ],
+    (e, h) => [
+      h.c(e.data.characterId),
+      ` buys up ${goodsList(e.data.goods)} in `,
+      h.l(e.data.locationId),
+      ' to sell in ',
+      h.l(e.data.destinationId),
+      ` (${e.data.gold} gold).`,
+    ],
+  ],
+  'trade.unload': [
+    (e, h) => [
+      h.c(e.data.characterId),
+      ` sells ${goodsList(e.data.goods)} in `,
+      h.l(e.data.locationId),
+      ` for ${e.data.gold} gold`,
+      e.data.profit === null
+        ? '.'
+        : e.data.profit >= 0
+          ? `, a profit of ${e.data.profit}.`
+          : `, at a loss of ${-e.data.profit}.`,
+    ],
+  ],
+  'item.potion': [
+    (e, h) => [h.c(e.data.characterId), ' gulps down a healing draught.'],
+    (e, h) => [h.c(e.data.characterId), ' drinks a healing draught mid-fight.'],
+  ],
+  'market.shock': [
+    (e, h) => {
+      const town = h.l(e.data.locationId);
+      switch (e.data.shock) {
+        case 'failed-harvest':
+          return ['The harvest fails around ', town, '; bread will be dear.'];
+        case 'mine-collapse':
+          return ['A gallery collapses in the mines of ', town, '.'];
+        case 'rich-vein':
+          return ['Miners in ', town, ' strike a rich vein of iron.'];
+        case 'blight':
+          return ['A blight withers the herb gardens of ', town, '.'];
+        case 'blockade':
+          return [
+            'A pack of wargs holds the road between ',
+            town,
+            ' and ',
+            e.data.otherId ? h.l(e.data.otherId) : 'the wilds',
+            '.',
+          ];
+      }
+    },
+  ],
+  'market.recover': [
+    (e, h) => {
+      const town = h.l(e.data.locationId);
+      switch (e.data.shock) {
+        case 'failed-harvest':
+          return ['The granaries of ', town, ' fill again.'];
+        case 'mine-collapse':
+          return ['The mines of ', town, ' are dug out and working again.'];
+        case 'rich-vein':
+          return ['The rich vein in the mines of ', town, ' runs out.'];
+        case 'blight':
+          return ['The herb gardens of ', town, ' recover from the blight.'];
+        case 'blockade':
+          return [
+            'The road between ',
+            town,
+            ' and ',
+            e.data.otherId ? h.l(e.data.otherId) : 'the wilds',
+            ' is clear again.',
+          ];
+      }
+    },
   ],
 };
 

@@ -20,6 +20,7 @@ import type {
 import { isAlive, isFitToDelve, needsRecovery } from './condition';
 import { remember, satisfy } from './mind';
 import { cancelWake, wakeAt } from './wake';
+import { sharePrices } from './merchants';
 import { idsAt, moveTo } from './whereabouts';
 
 /**
@@ -214,6 +215,10 @@ function meet(ctx: SimContext, a: Character, b: Character, location: Location): 
   const now = ctx.world.time;
   const comm = communication(a, b);
   const first = !a.opinions[b.id];
+  // Merchants who can talk trade news of prices.
+  if (a.calling === 'merchant' && b.calling === 'merchant' && comm >= UNDERSTOOD) {
+    sharePrices(a, b);
+  }
 
   for (const [self, other] of [
     [a, b],
@@ -420,6 +425,8 @@ export function partyOf(ctx: SimContext, character: Character): Party | null {
 /** Two friends who trust each other team up, or one joins the other's party. */
 function joinUp(ctx: SimContext, a: Character, b: Character, locationId: LocationId): void {
   if (Boolean(a.outlaw) !== Boolean(b.outlaw)) return;
+  // Merchants travel on business of their own.
+  if (a.calling === 'merchant' || b.calling === 'merchant') return;
   const pa = partyOf(ctx, a);
   const pb = partyOf(ctx, b);
   if (pa && pb) return;

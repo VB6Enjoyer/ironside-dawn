@@ -119,6 +119,7 @@ const STREAMS = [
   'items',
   'social',
   'outlaws',
+  'markets',
 ] as const satisfies readonly (keyof SimContext['rng'])[];
 
 export function createSimulation(options: SimulationOptions): Simulation {

@@ -3,6 +3,7 @@ import { createScheduler } from '../core/scheduler';
 import { HOUR } from '../core/time';
 import type { SimContext } from '../context';
 import type { Location, LocationId, Route, RouteId, World } from '../model';
+import { createMarket } from '../systems/market';
 import { createCharacter, townPopulation, towns } from './people';
 
 /** Worlds begin at dawn on the first day of the first year. */
@@ -28,6 +29,7 @@ export function createWorldState(seed: string, map: MapDef): World {
       population: { ...def.population },
       academy: def.academy ?? false,
       dungeon: def.dungeon ? { def: def.dungeon, population, lostItems: [] } : null,
+      economy: def.economy ?? null,
     });
   }
 
@@ -42,7 +44,7 @@ export function createWorldState(seed: string, map: MapDef): World {
     routes.set(id, { id, a, b, duration: Math.round(def.hours * HOUR) });
   }
 
-  return {
+  const world: World = {
     seed,
     time: WORLD_START,
     characters: new Map(),
@@ -61,17 +63,31 @@ export function createWorldState(seed: string, map: MapDef): World {
     nextEventId: 1,
     tally: { robberies: 0, murders: 0, bountiesClaimed: 0, legendsFound: 0 },
     history: [],
+    markets: new Map(),
+    shocks: [],
+    ledger: { minted: {}, burned: {} },
   };
+  for (const location of locations.values()) {
+    const market = createMarket(world, location);
+    if (market) world.markets.set(location.id, market);
+  }
+  return world;
+}
+
+/** Merchants in a world of this many adventurers: one for every eight, and at least two. */
+export function merchantsFor(adventurers: number): number {
+  return Math.max(2, Math.round(adventurers / 8));
 }
 
 /** Creates `count` adventurers from the towns' commoners, larger towns giving more. */
 export function populate(ctx: SimContext, count: number): void {
   const homes = towns(ctx);
   if (homes.length === 0) throw new Error('The map needs at least one town');
-  for (let i = 0; i < count; i++) {
+  const merchants = merchantsFor(count);
+  for (let i = 0; i < count + merchants; i++) {
     const home = ctx.rng.people.weighted(
       homes.map((t) => [t, Math.max(1, townPopulation(t))] as const),
     );
-    createCharacter(ctx, home, false, FIRST_WAKE_SPREAD);
+    createCharacter(ctx, home, false, FIRST_WAKE_SPREAD, i < count ? 'adventurer' : 'merchant');
   }
 }

@@ -4,6 +4,7 @@ export { CULTURES } from './cultures';
 export type { CultureDef, CultureId } from './cultures';
 export type {
   DungeonDef,
+  EconomyDef,
   LocationDef,
   LocationKind,
   MapDef,
@@ -60,3 +61,22 @@ export { DEFAULT_TRAIT_MEAN, DEFAULT_TRAIT_SD, TRAIT_POLES, TRAITS } from './tra
 export type { TraitId, Traits, TraitTendencies } from './traits';
 export { LANGUAGE_LEVELS, LANGUAGES } from './languages';
 export type { LanguageId } from './languages';
+export {
+  GOODS,
+  goodDef,
+  NEEDS_PER_HEAD,
+  PROFESSIONS,
+  professionDef,
+  SHOCKS,
+  shockDef,
+} from './economy';
+export type {
+  GoodDef,
+  GoodId,
+  Goods,
+  ProfessionDef,
+  ProfessionId,
+  Recipe,
+  ShockDef,
+  ShockId,
+} from './economy';

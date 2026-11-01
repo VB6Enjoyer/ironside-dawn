@@ -7,6 +7,7 @@ export type Route =
   | { readonly page: 'log' }
   | { readonly page: 'chronicle' }
   | { readonly page: 'places' }
+  | { readonly page: 'trade' }
   | { readonly page: 'stats' }
   | { readonly page: 'halls' }
   | { readonly page: 'profile'; readonly id: CharacterId }
@@ -17,6 +18,7 @@ export function parseRoute(hash: string): Route {
   switch (page) {
     case 'chronicle':
     case 'places':
+    case 'trade':
     case 'stats':
     case 'halls':
       return { page };

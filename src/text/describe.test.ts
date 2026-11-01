@@ -26,7 +26,7 @@ import {
 } from './words';
 
 const events: SimEvent[] = [];
-const sim = createSimulation({ seed: 'prose', onEvent: (e) => events.push(e) });
+const sim = createSimulation({ seed: 'saga', onEvent: (e) => events.push(e) });
 sim.advance(sim.world.time + 365 * DAY);
 const names = worldNames(sim.world);
 const text = (e: SimEvent) => toPlainText(describeEvent(e, names));
@@ -39,6 +39,8 @@ const RARE: Record<string, (a: CharacterId, b: CharacterId) => object> = {
   'party.disband': (a) => ({ characterId: a, locationId: where, reason: 'outlaw' }),
   'bounty.claim': (a, b) => ({ characterId: a, locationId: where, outlawId: b, amount: 85 }),
   'outlaw.reform': (a) => ({ characterId: a, locationId: where }),
+  'market.shock': () => ({ shock: 'blockade', locationId: where, otherId: 'saltmere', days: 20 }),
+  'market.recover': () => ({ shock: 'failed-harvest', locationId: 'concordale', otherId: null }),
 };
 
 describe('describeEvent', () => {

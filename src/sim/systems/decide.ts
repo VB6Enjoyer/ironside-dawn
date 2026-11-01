@@ -6,6 +6,7 @@ import { isDizzy, isFitToDelve, needsRecovery } from './condition';
 import { fearOf, hasVisited, healthNeed, wealthNeed } from './mind';
 import { isWantedIn } from './outlaws';
 import { roleOf } from './progress';
+import { canTrade, wantsToShop } from './shopping';
 import { findPath } from './roads';
 import type { TravelReason } from './travel';
 
@@ -100,11 +101,14 @@ function optionsAt(ctx: SimContext, character: Character, here: Location): Optio
   const recovering = needsRecovery(character);
   const health = healthNeed(character);
   const wealth = wealthNeed(character);
-  const loot = character.pack.some(isSellable);
+  const loot = hasSellable(character);
 
   switch (here.kind) {
     case 'town': {
-      if (loot) {
+      // Only worth asking whether they can deal here if there's dealing to do.
+      const shopping = !loot && wantsToShop(ctx, character, here);
+      const trading = (loot || shopping) && canTrade(ctx, character, here);
+      if (trading && loot) {
         options.push({
           action: { kind: 'sell' },
           terms: [
@@ -112,6 +116,12 @@ function optionsAt(ctx: SimContext, character: Character, here: Location): Optio
             { value: 1.6, motive: { kind: 'loot' } },
             { value: 0.3 * wealth, motive: { kind: 'drive', drive: 'wealth' } },
           ],
+        });
+      } else if (trading && shopping) {
+        // Out of healing draughts, with coin to buy more.
+        options.push({
+          action: { kind: 'sell' },
+          terms: [{ value: 0.45, motive: { kind: 'drive', drive: 'health' } }],
         });
       }
       if (recovering) {
@@ -395,6 +405,22 @@ function canStudy(character: Character): boolean {
 /** Everything in the pack except legendary items, which adventurers keep. */
 export function sellable(character: Character): LootItem[] {
   return character.pack.filter(isSellable);
+}
+
+/**
+ * Packs only grow by appending or are replaced whole, so whether one holds
+ * anything to sell is known from the array and its length. Veterans carry
+ * piles of legendary items they never sell; this saves rescanning them.
+ */
+const sellableCache = new WeakMap<LootItem[], { length: number; any: boolean }>();
+
+function hasSellable(character: Character): boolean {
+  const pack = character.pack;
+  const cached = sellableCache.get(pack);
+  if (cached && cached.length === pack.length) return cached.any;
+  const any = pack.some(isSellable);
+  sellableCache.set(pack, { length: pack.length, any });
+  return any;
 }
 
 function isSellable(item: LootItem): boolean {

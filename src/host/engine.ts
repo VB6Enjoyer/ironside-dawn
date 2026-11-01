@@ -31,11 +31,13 @@ import {
   fullName,
   hallsView,
   locationView,
+  marketView,
   placeEntry,
   placesView,
   savedGame,
   searchView,
   statsView,
+  tradeView,
 } from './views';
 
 /**
@@ -414,6 +416,10 @@ export function createEngine(options: EngineOptions): Engine {
           return locationView(sim, request.id);
         case 'places':
           return placesView(sim);
+        case 'market':
+          return marketView(sim, request.id);
+        case 'trade':
+          return tradeView(sim);
         case 'stats':
           return statsView(sim);
         case 'chronicle':

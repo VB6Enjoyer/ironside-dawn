@@ -1383,3 +1383,60 @@ dialog input:not([type='checkbox']):not([type='file']) {
     width: 100%;
   }
 }
+
+/* Phase 7: markets and trade */
+
+.table-scroll {
+  overflow-x: auto;
+  margin: 8px 0 12px;
+}
+
+.market-table tbody tr {
+  cursor: pointer;
+}
+
+.market-table tbody tr:hover,
+.market-table tr.chosen {
+  background: rgba(201, 162, 92, 0.08);
+}
+
+button.link-button {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+}
+
+.market-table tr.chosen button.link-button {
+  color: var(--accent);
+}
+
+/* Changes are named in words too ("+12%"), never by color alone. */
+.dearer {
+  color: #e0a080;
+}
+
+.cheaper {
+  color: #8fc0a0;
+}
+
+.troubles,
+.caravans {
+  margin: 6px 0;
+  padding-left: 18px;
+}
+
+.troubles li {
+  color: var(--accent);
+}
+
+.caravans li + li {
+  margin-top: 4px;
+}
+
+.tongues {
+  text-align: left !important;
+  color: var(--muted);
+}

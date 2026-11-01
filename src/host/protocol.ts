@@ -1,4 +1,4 @@
-import type { ItemBaseId, LocationKind, SpeciesId } from '../content';
+import type { GoodId, Goods, ItemBaseId, LocationKind, ProfessionId, SpeciesId } from '../content';
 import type {
   Bounty,
   Character,
@@ -6,10 +6,14 @@ import type {
   EventQuery,
   EventType,
   Importance,
+  Ledger,
   Location,
   LocationId,
+  MarketDay,
   Party,
   PartyId,
+  RouteId,
+  Shock,
   SimEvent,
   WorldSave,
   WorldSample,
@@ -136,6 +140,69 @@ export interface StatsView {
   readonly history: readonly WorldSample[];
   /** Living adventurers by level, now. */
   readonly levels: Readonly<Record<number, number>>;
+  /** Every coin minted and burned so far. */
+  readonly ledger: Ledger;
+  readonly money: number;
+}
+
+/** One good in a town's market. */
+export interface GoodQuote {
+  readonly good: GoodId;
+  /** The going price. */
+  readonly price: number;
+  /** Against thirty days ago, as a ratio (1 = unchanged), or null without the history. */
+  readonly change: number | null;
+  /** Yesterday's auction. */
+  readonly day: MarketDay | null;
+  /** What the trading house pays and asks a named character, before language. */
+  readonly bid: number;
+  readonly ask: number;
+  readonly stock: number;
+}
+
+export interface WorkforceEntry {
+  readonly id: ProfessionId;
+  readonly workers: number;
+  /** Gold earned from sales per worker per day. */
+  readonly income: number;
+  /** Fed and equipped, 0 to 1. */
+  readonly vigor: number;
+}
+
+export interface MarketView {
+  readonly townId: LocationId;
+  readonly quotes: readonly GoodQuote[];
+  /** The going price each day for the last year, per good. */
+  readonly history: Readonly<Partial<Record<GoodId, readonly number[]>>>;
+  readonly workforce: readonly WorkforceEntry[];
+  /** Troubles in the town, and on roads out of it. */
+  readonly shocks: readonly Shock[];
+  readonly houseGold: number;
+  /** The town's prices against where they started. */
+  readonly priceIndex: number;
+}
+
+export interface CaravanEntry extends CharacterSummary {
+  readonly gold: number;
+  readonly cargo: Goods;
+  /** What the cargo cost. */
+  readonly cargoPaid: number;
+  readonly destinationId: LocationId | null;
+  readonly languages: Readonly<Partial<Record<string, number>>>;
+}
+
+export interface TradeView {
+  /** Every living merchant, the richest first. */
+  readonly merchants: readonly CaravanEntry[];
+  /** Roads closed by trouble. */
+  readonly shocks: readonly Shock[];
+  /** Recent trading and troubles, oldest first. */
+  readonly events: readonly SimEvent[];
+  readonly routes: readonly {
+    readonly id: RouteId;
+    readonly a: LocationId;
+    readonly b: LocationId;
+  }[];
 }
 
 export interface ChronicleView {
@@ -207,6 +274,8 @@ export type Request =
   | { readonly kind: 'character'; readonly id: CharacterId }
   | { readonly kind: 'location'; readonly id: LocationId }
   | { readonly kind: 'places' }
+  | { readonly kind: 'market'; readonly id: LocationId }
+  | { readonly kind: 'trade' }
   | { readonly kind: 'stats' }
   | { readonly kind: 'chronicle'; readonly year: number | null }
   | { readonly kind: 'halls' }
@@ -218,6 +287,8 @@ export interface Responses {
   character: CharacterView | null;
   location: LocationView | null;
   places: readonly PlaceSummary[];
+  market: MarketView | null;
+  trade: TradeView;
   stats: StatsView;
   chronicle: ChronicleView;
   halls: HallsView;

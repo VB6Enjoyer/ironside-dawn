@@ -17,6 +17,7 @@ export interface SimContext {
     readonly items: Rng;
     readonly social: Rng;
     readonly outlaws: Rng;
+    readonly markets: Rng;
   };
   /** Reports an event. Detail events nobody is watching are skipped (see `Watch`). */
   emit(body: EventBody, actors: readonly EntityId[], locationId: LocationId | null): void;

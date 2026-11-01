@@ -78,7 +78,11 @@ export type Motive =
   | { readonly kind: 'loot' }
   | { readonly kind: 'bounty'; readonly outlawId: CharacterId }
   | { readonly kind: 'revenge'; readonly characterId: CharacterId }
-  | { readonly kind: 'friends' };
+  | { readonly kind: 'friends' }
+  /** A merchant's run: buy here, sell there. */
+  | { readonly kind: 'profit' }
+  /** A merchant going for news of a town's prices. */
+  | { readonly kind: 'news'; readonly locationId: LocationId };
 
 /** What a character is currently trying to do, and why. */
 export interface Goal {
@@ -86,6 +90,7 @@ export interface Goal {
     | 'delve'
     | 'heal'
     | 'sell'
+    | 'trade'
     | 'socialize'
     | 'train'
     | 'study'

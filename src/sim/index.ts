@@ -6,7 +6,7 @@ export { StreamHash } from './core/hash';
 export { createRng, restoreRng } from './core/rng';
 export type { Rng, RngState } from './core/rng';
 export * from './core/time';
-export { WORLD_START } from './gen/world';
+export { merchantsFor, WORLD_START } from './gen/world';
 export * from './model';
 export { createSimulation, DETAIL_EVENTS } from './simulation';
 export { conditionsOf, statValue } from './systems/condition';
@@ -23,3 +23,5 @@ export type {
 export { checkSave, SAVE_FORMAT, SAVE_VERSION } from './save';
 export type { WorldSave } from './save';
 export { worldSample } from './systems/history';
+export { moneyBooked, moneyHeld } from './systems/ledger';
+export { goingPrice, houseQuote, priceIndex, understanding } from './systems/market';

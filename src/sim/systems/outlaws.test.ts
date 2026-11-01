@@ -73,6 +73,23 @@ describe('ambushes', () => {
     expect(outlaw.reputation[traveler.homeId]).toBeLessThan(0);
   });
 
+  it('take a merchant’s cargo along with the gold', () => {
+    const { ctx, outlaw, traveler, place } = outlawAndTraveler('caravan');
+    speak(outlaw, 'common');
+    speak(traveler, 'common');
+    traveler.calling = 'merchant';
+    traveler.cargo = { ore: 20, hides: 4 };
+    traveler.traits = { ...traveler.traits, bravery: 0.1 };
+    let robbery: (typeof ctx.events)[number] | undefined;
+    for (let i = 0; i < 10 && !robbery; i++) {
+      outlaw.activity = { kind: 'pastime', pastime: 'lurk', since: 0, until: 1e9 };
+      ambush(ctx, traveler, place);
+      robbery = ctx.events.find((e) => e.type === 'crime.robbery');
+    }
+    expect(robbery?.type === 'crime.robbery' && robbery.data.goods).toEqual({ ore: 12, hides: 2 });
+    expect(traveler.cargo).toEqual({ ore: 8, hides: 2 });
+  });
+
   it('leave a much stronger party alone', () => {
     const { ctx, outlaw, traveler, place } = outlawAndTraveler('strong');
     outlaw.level = 1;

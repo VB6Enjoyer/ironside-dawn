@@ -14,6 +14,7 @@ import { LogPage } from './pages/LogPage';
 import { PlacePage, PlacesPage } from './pages/PlacesPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { StatsPage } from './pages/StatsPage';
+import { TradePage } from './pages/TradePage';
 import { useRoute, type Route } from './route';
 import {
   DEFAULT_CHARACTER_COUNT,
@@ -289,6 +290,9 @@ function Observatory({
           {route.page === 'place' && (
             <PlacePage host={host} id={route.id} names={names} time={snapshot.time} {...links} />
           )}
+          {route.page === 'trade' && (
+            <TradePage host={host} names={names} time={snapshot.time} {...links} />
+          )}
           {route.page === 'stats' && <StatsPage host={host} time={snapshot.time} />}
           {route.page === 'halls' && (
             <HallsPage host={host} names={names} time={snapshot.time} {...links} />
@@ -343,6 +347,7 @@ const TABS = [
   { page: 'log', label: 'Live' },
   { page: 'chronicle', label: 'Chronicle' },
   { page: 'places', label: 'Places' },
+  { page: 'trade', label: 'Trade' },
   { page: 'stats', label: 'Statistics' },
   { page: 'halls', label: 'Halls' },
 ] as const;

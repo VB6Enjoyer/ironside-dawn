@@ -1,5 +1,6 @@
 export type {
   Activity,
+  Calling,
   Character,
   Death,
   DeathCause,
@@ -29,3 +30,14 @@ export type { Dungeon, Location, Route } from './location';
 export type { Tally, World, WorldSample } from './world';
 export type { DriveId, Drives, Expectation, Goal, Memory, MemoryEvent, Motive } from './mind';
 export type { Bounty, Opinion, Outlaw, Party } from './social';
+export type {
+  Belief,
+  Ledger,
+  Market,
+  MarketDay,
+  MoneySink,
+  MoneySource,
+  PriceNote,
+  Shock,
+  TownAgent,
+} from './market';

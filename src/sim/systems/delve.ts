@@ -6,6 +6,7 @@ import { startDelveFight } from './combat';
 import { isDizzy, modifier, retreatThreshold } from './condition';
 import { die } from './death';
 import { claimLegend, generateItem, takeGear } from './items';
+import { mint } from './ledger';
 import { rollLootItem } from './loot';
 import { learnFromDelve, satisfy } from './mind';
 import { followersOf, releaseFollowers, shareSpoils } from './social';
@@ -308,6 +309,7 @@ function treasureChamber(
 
   character.gold += gold;
   character.goldEarned += gold;
+  mint(ctx.world, 'treasure', gold);
   character.pack.push(...items);
   ctx.emit(
     {

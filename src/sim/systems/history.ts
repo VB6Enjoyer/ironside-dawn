@@ -1,5 +1,7 @@
 import type { SpeciesId } from '../../content';
 import type { DeathCause, World, WorldSample } from '../model';
+import { moneyHeld } from './ledger';
+import { priceIndex } from './market';
 
 /**
  * Snapshots for charts (ROADMAP.md Phase 6): the state of the world, and of
@@ -48,5 +50,9 @@ export function worldSample(world: World): WorldSample {
     outlaws,
     parties: world.parties.size,
     ...world.tally,
+    money: Math.round(moneyHeld(world)),
+    prices: Object.fromEntries(
+      [...world.markets.values()].map((m) => [m.townId, Math.round(priceIndex(m) * 100) / 100]),
+    ),
   };
 }

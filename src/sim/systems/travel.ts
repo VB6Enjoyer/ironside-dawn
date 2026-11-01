@@ -100,7 +100,8 @@ function beginLeg(
   destinationId: LocationId,
   remaining: readonly LocationId[],
 ): void {
-  const link = roadsFrom(ctx.world, from).find((road) => road.to === to);
+  // A road blocked since the journey was planned is braved all the same.
+  const link = roadsFrom(ctx.world, from, true).find((road) => road.to === to);
   if (!link) throw new Error(`No road from ${from} to ${to}`);
 
   const factor = Math.min(

@@ -12,23 +12,39 @@ export interface Path {
   readonly duration: number;
 }
 
-// Roads never change in Phase 1, so the adjacency index is built once per world.
-const networks = new WeakMap<World, Map<LocationId, RoadLink[]>>();
+// Roads only change when one is blocked or reopens, so the network is kept.
+const networks = new WeakMap<
+  World,
+  { open: Map<LocationId, RoadLink[]>; all: Map<LocationId, RoadLink[]> }
+>();
 
-export function roadsFrom(world: World, from: LocationId): readonly RoadLink[] {
+/**
+ * The roads out of a place. Blocked roads are left out unless `blocked` is
+ * set: journeys are planned around them, but those already on one press on.
+ */
+export function roadsFrom(world: World, from: LocationId, blocked = false): readonly RoadLink[] {
   let network = networks.get(world);
   if (!network) {
-    network = new Map();
+    const closed = new Set(world.shocks.flatMap((s) => (s.routeId ? [s.routeId] : [])));
+    network = { open: new Map(), all: new Map() };
     for (const route of world.routes.values()) {
-      addLink(network, route.a, { to: route.b, route });
-      addLink(network, route.b, { to: route.a, route });
+      for (const map of closed.has(route.id) ? [network.all] : [network.all, network.open]) {
+        addLink(map, route.a, { to: route.b, route });
+        addLink(map, route.b, { to: route.a, route });
+      }
     }
     networks.set(world, network);
   }
-  return network.get(from) ?? [];
+  return (blocked ? network.all : network.open).get(from) ?? [];
 }
 
-// Roads never change, so paths are worth remembering too.
+/** A road was blocked or reopened: forget the network and every path. */
+export function roadsChanged(world: World): void {
+  networks.delete(world);
+  pathCaches.delete(world);
+}
+
+// Paths are worth remembering too, until the roads change.
 const pathCaches = new WeakMap<World, Map<LocationId, Map<LocationId, Path | null>>>();
 
 /** Fastest path by typical travel time (Dijkstra), or null if unreachable. */

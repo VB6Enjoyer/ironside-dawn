@@ -1,16 +1,27 @@
 import { PASTIMES, type PastimeId } from '../../content';
-import { HOUR, nextTimeOfDay, timeOfDay } from '../core/time';
+import { DAY, HOUR, nextTimeOfDay, timeOfDay } from '../core/time';
 import type { SimContext } from '../context';
-import type { Character, Goal, Location, Motive } from '../model';
-import { convalescenceHours, expireStatuses, recover, type RecoveryPlace } from './condition';
-import { decideAt, sellable, type Action } from './decide';
+import type { Character, Goal, Location, LocationId, Motive } from '../model';
+import {
+  convalescenceHours,
+  expireStatuses,
+  needsRecovery,
+  recover,
+  type RecoveryPlace,
+} from './condition';
+import { decideAt, type Action } from './decide';
+import { DAILY_AT } from './ecology';
 import { delveStep, enterDelve } from './delve';
 import { weaponSkillOf } from './items';
 import { learnSpells } from './magic';
+import { payHouse } from './market';
 import { markVisited, satisfy, updateDrives } from './mind';
 import { practice } from './progress';
 import { confrontQuarry, isWantedIn } from './outlaws';
+import { carouse, lodging, visitMarket } from './shopping';
 import { followersOf, gatherParty, releaseFollowers, socialize } from './social';
+import { bestOutlet, hasCargo, notePrices, planRun, setOut, staleTown, unload } from './merchants';
+import { findPath } from './roads';
 import { finishLeg, startJourney } from './travel';
 import { wakeAt } from './wake';
 
@@ -24,8 +35,9 @@ const NIGHT_STARTS = 21 * HOUR;
 const MORNING = 6 * HOUR;
 /** How long after dawn a character may lie in. */
 const MAX_LIE_IN = 2 * HOUR;
-export const INN_PRICE = 2;
 const SELLING_TIME = HOUR;
+/** An inn is only worth it with this many nights' money in the purse. */
+const INN_RESERVE_NIGHTS = 20;
 const TRAINING_PER_HOUR = 0.25;
 /** Training stops helping at this proficiency. */
 const TRAINING_CAP = 45;
@@ -100,13 +112,97 @@ function decide(ctx: SimContext, character: Character): void {
     return;
   }
 
-  const decision = decideAt(ctx, character, location);
-  if (decision && act(ctx, character, location, decision.action, decision.why)) return;
+  if (character.calling === 'merchant' && !character.outlaw) {
+    if (trade(ctx, character, location)) return;
+  } else {
+    const decision = decideAt(ctx, character, location);
+    if (decision && act(ctx, character, location, decision.action, decision.why)) return;
+  }
 
   // Nowhere to go and nothing to do: wait an hour and think again.
   character.activity = { kind: 'idle' };
   character.goal = { kind: 'wait', locationId: location.id, why: [] };
   wakeAt(ctx, character, now + HOUR);
+}
+
+/**
+ * A merchant's day: sell the cargo where it was bound, plan the next run and
+ * load up, or go for news of prices; otherwise wait about the market.
+ */
+function trade(ctx: SimContext, character: Character, location: Location): boolean {
+  const goal = character.goal;
+  const bound = goal?.kind === 'trade' ? goal.locationId : null;
+  if (location.kind !== 'town') {
+    // Thrown off the road (robbed, or a fight): on to where they were going, or the nearest town.
+    const to = bound ?? nearestTown(ctx, location);
+    return to !== null && startJourney(ctx, character, to, 'trade', []);
+  }
+  if (needsRecovery(character)) {
+    character.goal = { kind: 'heal', locationId: location.id, why: [] };
+    convalesce(ctx, character, location, []);
+    return true;
+  }
+  // Prices only change at the morning market: nothing new since they last looked, no new plan.
+  const seen = character.priceBook[location.id]?.t ?? -Infinity;
+  const fresh = seen < lastMarketDay(ctx.world.time);
+  notePrices(ctx, character, location);
+  if (hasCargo(character) && (bound === null || bound === location.id)) {
+    unload(ctx, character, location);
+    // The house here couldn't take it all: try somewhere else.
+    const outlet = hasCargo(character) ? bestOutlet(ctx, character, location) : null;
+    if (outlet) {
+      character.goal = {
+        kind: 'trade',
+        locationId: outlet,
+        why: [{ kind: 'profit' }],
+      };
+      return startJourney(ctx, character, outlet, 'trade', character.goal.why);
+    }
+  }
+  if (hasCargo(character) && bound !== null && bound !== location.id) {
+    return startJourney(ctx, character, bound, 'trade', goal!.why);
+  }
+  const plan = fresh || hasCargo(character) ? planRun(ctx, character, location) : null;
+  if (plan && setOut(ctx, character, location, plan)) return true;
+  const stale = hasCargo(character) || !fresh ? null : staleTown(ctx, character, location);
+  if (stale) {
+    character.goal = {
+      kind: 'trade',
+      locationId: stale,
+      why: [{ kind: 'news', locationId: stale }],
+    };
+    return startJourney(ctx, character, stale, 'trade', character.goal.why);
+  }
+  if (!fresh) {
+    // Nothing new until the morning market: wait for it.
+    character.activity = { kind: 'idle' };
+    character.goal = { kind: 'wait', locationId: location.id, why: [] };
+    wakeAt(ctx, character, nextTimeOfDay(ctx.world.time, DAILY_AT) + ctx.rng.behavior.int(0, HOUR));
+    return true;
+  }
+  // A look round the market, then the tavern for news from other merchants.
+  character.goal = { kind: 'socialize', locationId: location.id, why: [] };
+  const started = startPastime(ctx, character, location, 'tavern', []);
+  if (started) {
+    carouse(ctx, character, location);
+    socialize(ctx, character, location);
+  }
+  return started;
+}
+
+/** When the markets last cleared. */
+function lastMarketDay(now: number): number {
+  return Math.floor((now - DAILY_AT) / DAY) * DAY + DAILY_AT;
+}
+
+function nearestTown(ctx: SimContext, from: Location): LocationId | null {
+  let best: { id: LocationId; duration: number } | null = null;
+  for (const market of ctx.world.markets.values()) {
+    const path = findPath(ctx.world, from.id, market.townId);
+    if (path && (!best || path.duration < best.duration))
+      best = { id: market.townId, duration: path.duration };
+  }
+  return best?.id ?? null;
 }
 
 function act(
@@ -120,7 +216,7 @@ function act(
     case 'sell':
       releaseFollowers(ctx, character);
       character.goal = { kind: 'sell', locationId: location.id, why };
-      sellLoot(ctx, character, location);
+      goToMarket(ctx, character, location);
       return true;
     case 'convalesce':
       releaseFollowers(ctx, character);
@@ -131,7 +227,10 @@ function act(
       releaseFollowers(ctx, character);
       character.goal = { kind: PASTIME_GOALS[action.pastime], locationId: location.id, why };
       const started = startPastime(ctx, character, location, action.pastime, why);
-      if (started && action.pastime === 'tavern') socialize(ctx, character, location);
+      if (started && action.pastime === 'tavern') {
+        carouse(ctx, character, location);
+        socialize(ctx, character, location);
+      }
       return started;
     }
     case 'delve':
@@ -162,9 +261,17 @@ function act(
 function rest(ctx: SimContext, character: Character, location: Location): void {
   releaseFollowers(ctx, character);
   // Wanted outlaws find every inn door shut.
+  const market = ctx.world.markets.get(location.id);
+  const price = lodging(ctx, location);
+  // Nobody spends their last coins on a bed: they sleep rough instead.
   const paid =
-    location.kind === 'town' && character.gold >= INN_PRICE && !isWantedIn(character, location.id);
-  if (paid) character.gold -= INN_PRICE;
+    location.kind === 'town' &&
+    character.gold >= price * INN_RESERVE_NIGHTS &&
+    !isWantedIn(character, location.id);
+  if (paid) {
+    if (market) payHouse(market, character, price);
+    else character.gold -= price;
+  }
   const now = ctx.world.time;
   const until = nextTimeOfDay(now, MORNING) + ctx.rng.behavior.int(0, MAX_LIE_IN);
   character.activity = { kind: 'resting', since: now, until, paid };
@@ -200,21 +307,9 @@ function convalesce(
   wakeAt(ctx, character, until);
 }
 
-function sellLoot(ctx: SimContext, character: Character, location: Location): void {
-  const items = sellable(character);
-  const gold = items.reduce((sum, item) => sum + item.value, 0);
+function goToMarket(ctx: SimContext, character: Character, location: Location): void {
+  visitMarket(ctx, character, location);
   const now = ctx.world.time;
-  character.pack = character.pack.filter((p) => !items.includes(p));
-  character.gold += gold;
-  character.goldEarned += gold;
-  ctx.emit(
-    {
-      type: 'trade.sell',
-      data: { characterId: character.id, locationId: location.id, items, gold },
-    },
-    [character.id],
-    location.id,
-  );
   character.activity = {
     kind: 'pastime',
     pastime: 'market',

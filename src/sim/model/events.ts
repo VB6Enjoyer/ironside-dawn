@@ -1,4 +1,13 @@
-import type { LanguageId, PastimeId, SkillId, SpellId, StatId, TrapId } from '../../content';
+import type {
+  Goods,
+  LanguageId,
+  PastimeId,
+  ShockId,
+  SkillId,
+  SpellId,
+  StatId,
+  TrapId,
+} from '../../content';
 import type { DeathCause, LootItem } from './character';
 import type { CreatureRef } from './encounter';
 import type { CharacterId, EntityId, EventId, LocationId } from './ids';
@@ -69,7 +78,7 @@ export type EventBody =
         readonly destinationId: LocationId;
         /** Typical duration of the whole journey, in seconds. */
         readonly expectedDuration: number;
-        readonly reason: 'wander' | 'delve' | 'heal' | 'home' | 'hunt';
+        readonly reason: 'wander' | 'delve' | 'heal' | 'home' | 'hunt' | 'trade';
         readonly why: readonly Motive[];
         /** Party members traveling along. */
         readonly companions: readonly CharacterId[];
@@ -225,16 +234,59 @@ export type EventBody =
         readonly parley: 'surrendered' | 'refused' | 'misunderstood';
       }
     >
-  | Body<'crime.robbery', CharacterAt & { readonly victimId: CharacterId; readonly gold: number }>
+  | Body<
+      'crime.robbery',
+      CharacterAt & {
+        readonly victimId: CharacterId;
+        readonly gold: number;
+        /** A merchant's cargo, taken too. */
+        readonly goods?: Goods;
+      }
+    >
   /** locationId is the town posting it. */
   | Body<'bounty.post', CharacterAt & { readonly amount: number }>
   /** characterId is the hunter. */
   | Body<'bounty.claim', CharacterAt & { readonly outlawId: CharacterId; readonly amount: number }>
   | Body<'outlaw.reform', CharacterAt>
   // Trade
+  | Body<'trade.sell', CharacterAt & { readonly items: readonly LootItem[]; readonly gold: number }>
+  /** An adventurer buys from the trading house: healing draughts, a weapon, armor. */
   | Body<
-      'trade.sell',
-      CharacterAt & { readonly items: readonly LootItem[]; readonly gold: number }
+      'trade.shop',
+      CharacterAt & { readonly potions: number; readonly item: Item | null; readonly gold: number }
+    >
+  /** A merchant loads cargo, bound for another town. */
+  | Body<
+      'trade.load',
+      CharacterAt & {
+        readonly goods: Goods;
+        readonly gold: number;
+        readonly destinationId: LocationId;
+      }
+    >
+  /** A merchant sells cargo. `profit` against what it cost, if known. */
+  | Body<
+      'trade.unload',
+      CharacterAt & { readonly goods: Goods; readonly gold: number; readonly profit: number | null }
+    >
+  | Body<'item.potion', CharacterAt & { readonly hp: number; readonly maxHp: number }>
+  /** A trouble begins: in a town, or on the road between `locationId` and `otherId`. */
+  | Body<
+      'market.shock',
+      {
+        readonly shock: ShockId;
+        readonly locationId: LocationId;
+        readonly otherId: LocationId | null;
+        readonly days: number;
+      }
+    >
+  | Body<
+      'market.recover',
+      {
+        readonly shock: ShockId;
+        readonly locationId: LocationId;
+        readonly otherId: LocationId | null;
+      }
     >;
 
 export type EventType = EventBody['type'];
@@ -300,4 +352,10 @@ export const EVENT_IMPORTANCE: Record<EventType, Importance> = {
   'bounty.claim': Importance.Notable,
   'outlaw.reform': Importance.Notable,
   'trade.sell': Importance.Normal,
+  'trade.shop': Importance.Normal,
+  'trade.load': Importance.Normal,
+  'trade.unload': Importance.Normal,
+  'item.potion': Importance.Normal,
+  'market.shock': Importance.Notable,
+  'market.recover': Importance.Normal,
 };

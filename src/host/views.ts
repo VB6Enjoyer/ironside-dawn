@@ -1,5 +1,10 @@
+import { GOODS, type ProfessionId } from '../content';
 import {
+  goingPrice,
+  houseQuote,
   Importance,
+  moneyHeld,
+  priceIndex,
   toCalendar,
   type Character,
   type CharacterId,
@@ -11,18 +16,22 @@ import {
   type Simulation,
 } from '../sim';
 import type {
+  CaravanEntry,
   CharacterSummary,
   CharacterView,
   ChronicleView,
   FallenEntry,
+  GoodQuote,
   HallsView,
   HeroEntry,
   LocationView,
+  MarketView,
   PlaceEntry,
   PlaceSummary,
   SavedGame,
   SearchView,
   StatsView,
+  TradeView,
   WantedEntry,
   WorldSlice,
 } from './protocol';
@@ -161,7 +170,80 @@ export function statsView(sim: Simulation): StatsView {
   for (const c of sim.world.characters.values()) {
     if (!c.death) levels[c.level] = (levels[c.level] ?? 0) + 1;
   }
-  return { time: sim.world.time, history: sim.world.history, levels };
+  return {
+    time: sim.world.time,
+    history: sim.world.history,
+    levels,
+    ledger: sim.world.ledger,
+    money: moneyHeld(sim.world),
+  };
+}
+
+const TRADE_EVENTS = [
+  'trade.load',
+  'trade.unload',
+  'market.shock',
+  'market.recover',
+  'crime.robbery',
+] as const;
+
+export function marketView(sim: Simulation, id: LocationId): MarketView | null {
+  const world = sim.world;
+  const market = world.markets.get(id);
+  if (!market) return null;
+  const quotes: GoodQuote[] = GOODS.map(({ id: good }) => {
+    const history = market.history[good] ?? [];
+    const price = goingPrice(market, good);
+    const then = history.length > 30 ? history[history.length - 31]! : null;
+    const quote = houseQuote(market, good);
+    return {
+      good,
+      price,
+      change: then ? price / then : null,
+      day: market.today[good] ?? null,
+      bid: quote.bid,
+      ask: quote.ask,
+      stock: market.house.stock[good] ?? 0,
+    };
+  });
+  const roads = new Set(
+    [...world.routes.values()].filter((r) => r.a === id || r.b === id).map((r) => r.id),
+  );
+  return {
+    townId: id,
+    quotes,
+    history: market.history,
+    workforce: market.agents.map((a) => ({
+      id: a.id as ProfessionId,
+      workers: a.workers,
+      income: a.income,
+      vigor: a.vigor,
+    })),
+    shocks: world.shocks.filter((s) => s.locationId === id || (s.routeId && roads.has(s.routeId))),
+    houseGold: market.house.gold,
+    priceIndex: priceIndex(market),
+  };
+}
+
+export function tradeView(sim: Simulation): TradeView {
+  const world = sim.world;
+  const merchants: CaravanEntry[] = [...world.characters.values()]
+    .filter((c) => c.calling === 'merchant' && !c.death)
+    .map((c) => ({
+      ...summarize(c),
+      gold: c.gold,
+      cargo: c.cargo,
+      cargoPaid: c.cargoPaid,
+      destinationId: c.goal?.kind === 'trade' ? c.goal.locationId : null,
+      languages: c.languages,
+    }))
+    .sort((a, b) => b.gold - a.gold);
+  return {
+    merchants,
+    shocks: world.shocks.filter((s) => s.routeId !== null),
+    events: sim.events.query({ types: TRADE_EVENTS, limit: 80 }),
+    routes: [...world.routes.values()].map((r) => ({ id: r.id, a: r.a, b: r.b })),
+  };
 }
 
 export function chronicleView(sim: Simulation, year: number | null): ChronicleView {

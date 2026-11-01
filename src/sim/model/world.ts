@@ -1,6 +1,7 @@
 import type { SchedulerState } from '../core/scheduler';
 import type { SpeciesId } from '../../content';
 import type { Character, DeathCause } from './character';
+import type { Ledger, Market, Shock } from './market';
 import type { Encounter } from './encounter';
 import type { CharacterId, EncounterId, ItemId, LocationId, PartyId, RouteId } from './ids';
 import type { Bounty, Party } from './social';
@@ -39,6 +40,11 @@ export interface World {
   readonly tally: Tally;
   /** The state of the world at the start of every season. */
   readonly history: WorldSample[];
+  /** Each town's market. */
+  readonly markets: Map<LocationId, Market>;
+  /** Troubles in progress. */
+  shocks: Shock[];
+  readonly ledger: Ledger;
 }
 
 export interface Tally {
@@ -64,4 +70,8 @@ export interface WorldSample {
   readonly murders: number;
   readonly bountiesClaimed: number;
   readonly legendsFound: number;
+  /** Gold held by everyone: adventurers, merchants, trades and trading houses. */
+  readonly money: number;
+  /** Each town's prices against where they started (1 = unchanged), for a basket of everyday goods. */
+  readonly prices: Partial<Record<LocationId, number>>;
 }

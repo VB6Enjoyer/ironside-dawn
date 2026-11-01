@@ -1,5 +1,13 @@
 import type { SimHost } from '../../host';
-import { DAY, toCalendar, type WorldSample } from '../../sim';
+import {
+  DAY,
+  toCalendar,
+  type LocationId,
+  type MoneySink,
+  type MoneySource,
+  type WorldSample,
+} from '../../sim';
+import type { StatsView } from '../../host';
 import { seasonName, SPECIES_NAMES } from '../../text';
 import { ColumnChart, LineChart, StatTile, type Series } from '../components/charts';
 import { formatCount } from '../format';
@@ -54,6 +62,8 @@ export function StatsPage({ host, time }: { host: SimHost; time: number }) {
         </div>
       )}
 
+      <Ledger stats={stats} />
+
       <div className="chart-grid-layout">
         <LineChart
           title="Adventurers by people"
@@ -107,6 +117,32 @@ export function StatsPage({ host, time }: { host: SimHost; time: number }) {
             { id: 'claims', label: 'Bounties claimed', value: (s) => s.bountiesClaimed },
           ])}
         />
+        <LineChart
+          title="Prices"
+          subtitle="Each town's everyday goods, against where they started (1 = the same)"
+          x={x}
+          xLabel={when}
+          series={[...(now ? Object.keys(now.prices) : [])].map((id, i) => ({
+            id,
+            label: host.places.get(id as LocationId)?.name ?? id,
+            color: SLOT[i % SLOT.length]!,
+            values: history.map((s) => s.prices[id as LocationId] ?? 1),
+          }))}
+        />
+        <LineChart
+          title="Money in circulation"
+          subtitle="Gold held by everyone, adventurers, merchants and townsfolk alike"
+          x={x}
+          xLabel={when}
+          series={[
+            {
+              id: 'money',
+              label: 'Gold',
+              color: 'var(--series-4)',
+              values: history.map((s) => s.money),
+            },
+          ]}
+        />
         <ColumnChart
           title="Adventurers by level, now"
           categories={levels.map(([level]) => level)}
@@ -121,3 +157,39 @@ export function StatsPage({ host, time }: { host: SimHost; time: number }) {
 }
 
 const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+const SOURCES: Record<MoneySource, string> = {
+  founding: 'held when the world began',
+  newcomers: 'brought by newcomers',
+  treasure: 'found in dungeons',
+  assay: 'treasure assayed for coin',
+};
+const SINKS: Record<MoneySink, string> = {
+  upkeep: 'tithes and wages paid out of the towns',
+  dead: 'lost with the dead',
+};
+
+/** Where the money came from, and where it went (ROADMAP.md Phase 7). */
+function Ledger({ stats }: { stats: StatsView }) {
+  const minted = Object.entries(stats.ledger.minted) as [MoneySource, number][];
+  const burned = Object.entries(stats.ledger.burned) as [MoneySink, number][];
+  return (
+    <section className="card-section ledger">
+      <h3>The money</h3>
+      <p className="muted">
+        {formatCount(Math.round(stats.money))} gold is held in the world.{' '}
+        {minted.length > 0 && 'It came from: '}
+        {minted
+          .sort((a, b) => b[1] - a[1])
+          .map(([k, n]) => `${formatCount(Math.round(n))} ${SOURCES[k]}`)
+          .join('; ')}
+        {burned.length > 0 && '. Gone: '}
+        {burned
+          .sort((a, b) => b[1] - a[1])
+          .map(([k, n]) => `${formatCount(Math.round(n))} ${SINKS[k]}`)
+          .join('; ')}
+        .
+      </p>
+    </section>
+  );
+}

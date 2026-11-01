@@ -1,4 +1,11 @@
-import type { CreatureId, CultureId, DungeonDef, LocationKind, SpeciesId } from '../../content';
+import type {
+  CreatureId,
+  CultureId,
+  DungeonDef,
+  EconomyDef,
+  LocationKind,
+  SpeciesId,
+} from '../../content';
 import type { LocationId, RouteId } from './ids';
 import type { Item } from './item';
 
@@ -12,6 +19,8 @@ export interface Location {
   readonly population: Partial<Record<SpeciesId, number>>;
   readonly academy: boolean;
   readonly dungeon: Dungeon | null;
+  /** Towns: how the commoners make a living. */
+  readonly economy: EconomyDef | null;
 }
 
 export interface Dungeon {

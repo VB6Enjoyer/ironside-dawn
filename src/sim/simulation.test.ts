@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { StreamHash } from './core/hash';
 import { createRng } from './core/rng';
 import { DAY, HOUR, MINUTE, SEASON, timeOfDay, toCalendar } from './core/time';
-import { WORLD_START } from './gen/world';
+import { merchantsFor, WORLD_START } from './gen/world';
 import type { CharacterId, LocationId, SimEvent } from './model';
 import { createSimulation, type Simulation } from './simulation';
 import { carriedGear } from './systems/items';
@@ -102,7 +102,12 @@ describe('a simulated season', () => {
   it('opens with the world and its characters', () => {
     expect(events[0]?.type).toBe('world.created');
     const founders = events.filter((e) => e.type === 'character.introduced' && !e.data.newcomer);
-    expect(founders).toHaveLength(20);
+    const calling = (e: (typeof founders)[number]) =>
+      e.type === 'character.introduced'
+        ? sim.world.characters.get(e.data.characterId)!.calling
+        : null;
+    expect(founders.filter((e) => calling(e) === 'adventurer')).toHaveLength(20);
+    expect(founders.filter((e) => calling(e) === 'merchant')).toHaveLength(merchantsFor(20));
     expect(founders.every((e) => e.t === WORLD_START)).toBe(true);
   });
 
@@ -348,7 +353,8 @@ describe('a year of danger', () => {
       for (const value of Object.values(c.drives)) expect(value).toBeGreaterThanOrEqual(0);
       for (const value of Object.values(c.drives)) expect(value).toBeLessThanOrEqual(1);
       expect(c.memories.length).toBeLessThanOrEqual(20);
-      for (const e of Object.values(c.expectations)) expect(e!.trips).toBeGreaterThan(0);
+      // Hearsay counts no trips of their own.
+      for (const e of Object.values(c.expectations)) expect(e!.trips).toBeGreaterThanOrEqual(0);
     }
   });
 
@@ -371,9 +377,11 @@ describe('a year of danger', () => {
 
   it('replaces the fallen with newcomers, never above the target population', () => {
     let living = 0;
+    const adventurer = (id: string) =>
+      sim.world.characters.get(id as CharacterId)!.calling === 'adventurer';
     for (const e of events) {
-      if (e.type === 'character.introduced') living++;
-      if (e.type === 'character.death') living--;
+      if (e.type === 'character.introduced' && adventurer(e.data.characterId)) living++;
+      if (e.type === 'character.death' && adventurer(e.data.characterId)) living--;
       expect(living).toBeLessThanOrEqual(20);
     }
     expect(living).toBeGreaterThanOrEqual(15);

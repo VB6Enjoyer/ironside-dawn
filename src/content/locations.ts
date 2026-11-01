@@ -1,4 +1,5 @@
 import type { CreatureId } from './creatures';
+import type { ProfessionId } from './economy';
 import type { CultureId } from './cultures';
 import type { LootId } from './loot';
 import type { SpeciesId } from './species';
@@ -21,6 +22,15 @@ export interface LocationDef {
   readonly academy?: boolean;
   /** Dungeons: what lives inside and what can be found. */
   readonly dungeon?: DungeonDef;
+  /** Towns: how the commoners make a living, and what the land offers. */
+  readonly economy?: EconomyDef;
+}
+
+export interface EconomyDef {
+  /** Share of the townsfolk in each trade; the shares add up to 1. */
+  readonly workforce: Partial<Record<ProfessionId, number>>;
+  /** An iron mine, for miners. */
+  readonly mine?: boolean;
 }
 
 export type RoomOutcome = 'fight' | 'treasure' | 'trap' | 'quiet';

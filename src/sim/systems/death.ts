@@ -1,6 +1,7 @@
 import type { SimContext } from '../context';
 import type { Character, DeathCause } from '../model';
 import { carriedGear } from './items';
+import { burn } from './ledger';
 import { mournDeath } from './social';
 
 /** Permanent death. The character stays in the world's records. */
@@ -20,9 +21,16 @@ export function die(ctx: SimContext, character: Character, cause: DeathCause): v
   }
 
   character.hp = 0;
+  // Whatever they carried is lost with them (a killer has already taken it).
+  burn(ctx.world, 'dead', character.gold);
+  character.gold = 0;
   character.activity = { kind: 'dead' };
   character.death = { at: ctx.world.time, locationId, cause };
   character.pack = [];
+  character.cargo = {};
+  // A dead outlaw's bounty lapses; one killed by someone is settled in onCharacterKilled.
+  if (cause.kind !== 'character') ctx.world.bounties.delete(character.id);
+  character.cargoPaid = 0;
 
   const kills = Object.values(character.kills).reduce((sum, n) => sum + n, 0);
   ctx.emit(

@@ -38,6 +38,7 @@ import {
   describeDeed,
   describeEvent,
   formatTimestamp,
+  goodsList,
   lootList,
   SKILL_NAMES,
   SPECIES_NAMES,
@@ -115,7 +116,10 @@ export function CharacterCard({
             {character.givenName} {character.familyName}
           </h2>
           <p className="card-subtitle">
-            Level {character.level} {roleOf(character)} · {species} of {home?.name ?? 'nowhere'}
+            {character.calling === 'merchant'
+              ? 'Merchant'
+              : `Level ${character.level} ${roleOf(character)}`}{' '}
+            · {species} of {home?.name ?? 'nowhere'}
             {character.gifted && ' · gifted'}
           </p>
         </div>
@@ -261,6 +265,34 @@ export function CharacterCard({
             {formatCount(character.gold)}{' '}
             <span className="muted">({formatCount(character.goldEarned)} earned)</span>
           </dd>
+          {character.calling === 'merchant' ? (
+            <>
+              <dt>Cargo</dt>
+              <dd>
+                {Object.keys(character.cargo).length > 0 ? (
+                  <>
+                    {goodsList(character.cargo)}{' '}
+                    <span className="muted">
+                      ({formatCount(Math.round(character.cargoPaid))} gold paid)
+                    </span>
+                  </>
+                ) : (
+                  <span className="muted">an empty wagon</span>
+                )}
+              </dd>
+            </>
+          ) : (
+            <>
+              <dt>Draughts</dt>
+              <dd>
+                {character.potions > 0 ? (
+                  `${character.potions} healing ${character.potions === 1 ? 'draught' : 'draughts'}`
+                ) : (
+                  <span className="muted">none</span>
+                )}
+              </dd>
+            </>
+          )}
           <dt>Pack</dt>
           <dd>
             {character.pack.length > 0 ? (
