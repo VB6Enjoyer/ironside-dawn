@@ -742,28 +742,106 @@ chronicle.
 **Goal:** Replace the hand-made world with a generated one that changes over
 time.
 
-- [ ] **Procedural world generation** from seed: regions and biomes, **peoples'
+- [x] **Procedural world generation** from seed: regions and biomes, **peoples'
       homelands** (forests for elves, mountains for dwarves, steppes for
       centaurs…), dozens of towns, dungeons, ruins, and fortresses, a few rare
       mixed border towns, and the route network.
-- [ ] **Centaurs** join as a people. **Sapient demons and undead** (demon
+- [x] **Centaurs** join as a people. **Sapient demons and undead** (demon
       warlords, liches, revenants) arrive as characters who command creature
       hordes and cults.
-- [ ] **Creature ecology**: dungeon populations breed, migrate, and spill over
+- [x] **Creature ecology**: dungeon populations breed, migrate, and spill over
       when overpopulated. Clearing a dungeon has lasting but temporary effects.
-- [ ] **Bosses**: unique, named, persistent beings with lairs. They can _level
+- [x] **Bosses**: unique, named, persistent beings with lairs. They can _level
       up from the adventurers they kill_ and become remembered threats.
-- [ ] **Raids and incursions**: creature and demon attacks on weak towns, and
+- [x] **Raids and incursions**: creature and demon attacks on weak towns, and
       town defense by the characters present.
-- [ ] **Fortresses and lords** (first pass): territory, taxes or protection,
+- [x] **Fortresses and lords** (first pass): territory, taxes or protection,
       and garrisons that patrol routes.
-- [ ] **Seasons and weather** affecting travel, harvests, and creature activity.
-- [ ] **World map view** (PixiJS canvas): locations, routes, caravans, and the
+- [x] **Seasons and weather** affecting travel, harvests, and creature activity.
+- [x] **World map view** (PixiJS canvas): locations, routes, caravans, and the
       followed character, with click-through to the DOM panels.
 
 **Exit criteria:** A brand-new seed produces a different, coherent world. A
 lich grows infamous over decades until a party finally brings it down, and
 the chronicle records it.
+
+**Status: done, with cults left for later.** Notes from building it (design in
+`ARCHITECTURE.md` §4.11):
+
+- **Generated worlds**: the seed makes the map. A world has 7, 11 or 16
+  regions (small, medium or large, by how many adventurers it holds), each
+  one land: plains, forest, hills, mountains, steppe, marsh or wastes. Each
+  people's towns sit in its homeland (humans on the plains, elves in the
+  forests, dwarves in the mountains, centaurs on the steppe), with one or more
+  border towns taking in two peoples. Dungeons lie away from the towns and
+  grow deadlier the further out, and the wastes hold no towns at all. A
+  fortress guards every five towns or so, wild places sit along the way, and
+  roads join everything (the Gabriel graph of the places, less its longest
+  detours), their hours set by the land they cross. Names come from each
+  culture's word lists. The hand-made starter map stays for tests.
+- **Centaurs** join the peoples: the steppe is their homeland, Windspeech
+  their tongue, and they travel half as fast again as anyone on foot.
+- **The dread**: liches, revenants and demon lords are characters lairing in
+  the deepest chamber of a crypt, ruin or rift, with three times a mortal's
+  health and more. They rise at the strength of the day's best adventurers,
+  grow stronger from everyone they kill, mend slowly, lead their lair's
+  creatures on raids, and count every life a raid takes. When one falls,
+  another rises somewhere in time. Cults are not built yet.
+- **Bands against the dread**: delvers turn back at a lair's door unless they
+  fancy their odds. Someone setting out from town to a master's dungeon calls
+  for companions, and whole parties may answer, up to six. Once a master has
+  claimed eight lives, a band musters in the nearest town. A band presses on
+  to the lair rather than turning back halfway.
+- **Creature ecology**: dungeons breed back with the seasons, slowly once
+  few are left, so a cleared dungeon stays quiet for months. A full one spills
+  a band of its surplus into a neighbor with room, or onto the roads, where
+  roaming bands waylay travelers, raid a town a road away, and thin out over
+  time.
+- **Raids**: whoever in town is fit to fight stands to defend it (townsfolk
+  too, unless old), the strongest eight. A lord's garrison mans the walls of
+  its towns first. A town nobody defends is plundered and loses some of its
+  folk; what a dread-led raid takes goes to the lair.
+- **Fortresses and lords**: a lord holds the towns and wild places within a
+  day's ride, takes a small tithe from their trading houses, pays the
+  garrison's wages back into them, and spends anything over a modest purse in
+  the towns. Patrols clear roaming creatures and fall on outlaws lying in
+  wait. A lord's eldest grown child inherits the seat; failing one, a renowned
+  adventurer retiring nearby may claim it, or after half a year someone of
+  the lands is raised to it.
+- **Seasons and weather**: each region's weather turns every few days by
+  season and climate (snow in the mountains in Deepwinter, heat on the steppe
+  in Highsun). Hard weather slows the roads by up to half again, farmers
+  bring in more at Harvest and less in Deepwinter, and creatures breed fastest
+  in Thaw.
+- **UI**: a **Map** page drawn with PixiJS (loaded only when opened): the
+  regions as colored land, roads, towns, fortresses, dungeons (ringed where
+  the dread lair) and wild places (ringed where creatures roam), and everyone
+  on the road moving along it, the followed character ringed. Places and
+  travelers can be clicked; drag to pan, scroll to zoom. Places are listed by
+  region; a place's page gives its land and weather, its lord and garrison,
+  its master, and what roams there. The halls list the dread, living and
+  destroyed. The headless report has a Living world section.
+- **Exit criteria, met for worlds, partly for the lich.** Every seed tried
+  makes a different world, coherent by the checks above (each people at home,
+  every place reachable, the wastes empty of towns). Over 60-year runs of 40
+  adventurers, the dread rise, grow, and fall, and the chronicle records each
+  fall as a legendary event naming the slayers. How they fall varies: young
+  liches often fall to one strong hero within a few years; in one world a
+  lich claimed 175 lives in raids before it was destroyed; in another, bands
+  of six or seven defenders cut down three demon lords while they raided the
+  same town. But a planned assault on an old master's lair by a band is still
+  uncommon. In some worlds a revenant or demon lord lurks for forty years or
+  more, claiming dozens of lives, without falling.
+- **Bugs found on the way**: fighters who died partway through a round were
+  still listed among those taking part in later blows; fixed.
+- **Performance, over budget.** 500 adventurers on a large world (28 towns,
+  72 places) take 388 s for 10 years headless, against the 300 s target and
+  Phase 8's 250 s on three towns. Each decision costs more on a big map (more
+  dungeons and bounties in reach), and 28 markets clear every day. Decisions
+  now weigh only the seven nearest places and home, merchants plan runs of at
+  most four days, and patrols look up who is where instead of scanning
+  everyone. A world of 500 on the hand-made map takes 12.3 s per half year,
+  against about 10.5 s before. The rest is for Phase 11 (Scale & Ship).
 
 ---
 

@@ -114,7 +114,7 @@ src/
   content/             # data tables: species, cultures, creatures, items, spells, names
   text/                # event → prose, calendar names. No DOM; shared by UI and CLI.
   host/                # SimHost (main thread now, worker in Phase 6) + speed tiers
-  ui/                  # React app
+  ui/                  # React app; the world map (ui/map) draws with PixiJS
 tools/
   sim-cli.ts           # headless runner
 docs/
@@ -525,6 +525,34 @@ Built in Phase 8 (`src/sim/systems/lifecycle.ts`, `death.ts`, `social.ts`).
   character whose renown passes a floor and outshines 90% of those who died
   before becomes a legend: a legendary event, a place in the halls, and a tale
   others tell in taverns. Legendary items grow rarer the more of them there are.
+
+### 4.11 A living world
+
+Built in Phase 9 (`src/sim/gen/geography.ts`, and `systems/weather.ts`,
+`wilds.ts`, `raids.ts`, `lords.ts`, `dread.ts`).
+
+- **Generation is a pure function of the seed**: `generateMap(seed, size)`
+  returns an ordinary map definition (regions, places with coordinates,
+  roads), drawn from its own random stream, so the simulation never knows
+  whether its map was made by hand or by the generator. Regions are the
+  Voronoi cells of scattered hearts; each place belongs to the nearest.
+- **Decisions look near.** A large world has seventy places; a character
+  weighs a journey only to the dozen nearest by road, and home. Roads keep,
+  per starting place, one Dijkstra search's results (times to everywhere, and
+  the way), until a road closes or opens.
+- **The dread are characters**, not creatures, with the calling `dread`: they
+  fight with the same rules, gear, spells and levels as anyone, with their
+  species' vitality multiplying their health and their level adding to their
+  blows. Like townsfolk and lords they are never scheduled; the daily round
+  mends them and sends them on raids, and they fight only when found.
+- **Creature fights generalized**: any fight can have characters and
+  creatures on side 1, and records where its creatures came from (a
+  dungeon's population, a band roaming a place, or a fortress's garrison), so
+  each one slain thins the right count. Delves, waylayings on the road, raids
+  and patrols share it.
+- **Weather and seasons only on generated maps.** The starter map has no
+  regions, so its harvests and breeding stay as they were, and the tests that
+  use it keep their numbers.
 
 ---
 

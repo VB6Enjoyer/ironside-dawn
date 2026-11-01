@@ -28,16 +28,21 @@ town's market, or watch a dungeon's population change over time.
 
 ## Status
 
-Phase 8 (Generations) is done. Characters age and die of old age, retire to
-run inns and forges or to trade, marry, raise children who take up a parent's
-weapon or grudge, and leave their gold and gear to their heirs; the greatest
-of the dead become legends that taverns tell of. Profiles show family trees,
-and the halls list legends and great houses. Phase 7 (Markets) gave each town
-a daily market where nobody sets the prices, merchants hauling goods between
-towns, and a ledger for every coin. Phase 6 made it an observatory: follow
-anyone, read life stories, look in on places, browse the chronicle,
-statistics and halls, skip years at a time, and save, load and share worlds.
-Phase 9 (A Living World) is next. The plan is in:
+Phase 9 (A Living World) is done. Every seed makes its own world: regions
+of forest, mountain, steppe and waste, each people's towns in its homeland,
+dungeons, fortresses and the roads between them, drawn on a map you can pan
+and zoom. Weather turns with the seasons; creatures spill out of crowded
+dungeons and raid towns; lords hold the lands around their fortresses; and
+liches, revenants and demon lords lair in the deepest dungeons, growing
+infamous until someone brings them down.
+
+Before that, Phase 8 (Generations) made lives run from birth to old age, with
+marriages, children, heirs and legends; Phase 7 (Markets) gave each town a
+daily market where nobody sets the prices, and merchants to haul goods
+between them; and Phase 6 made it an observatory: follow anyone, read life
+stories, browse the chronicle, statistics and halls, skip years at a time,
+and save, load and share worlds. Phase 10 (Cultures & Myths) is next. The
+plan is in:
 
 - [`docs/ROADMAP.md`](docs/ROADMAP.md): the phased development plan, with exit
   criteria for each milestone.
