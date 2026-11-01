@@ -113,6 +113,9 @@ export function hasCargo(character: Character): boolean {
  * The best run from here: a destination and the goods to take there, or null
  * if nothing is worth the road.
  */
+/** The longest haul a merchant plans, in road hours. */
+const MAX_HAUL_HOURS = 96;
+
 export function planRun(ctx: SimContext, character: Character, here: Location): TradePlan | null {
   const world = ctx.world;
   const market = world.markets.get(here.id);
@@ -121,6 +124,8 @@ export function planRun(ctx: SimContext, character: Character, here: Location): 
   const now = world.time;
   let best: { plan: TradePlan; score: number } | null = null;
   const rivalsBound = rivalCargo(ctx, character);
+  // What everything costs here, worked out once for every destination.
+  const asks = GOOD_IDS.map((good) => houseQuote(market, good).ask * buyTerms.buy);
 
   for (const [id, note] of Object.entries(character.priceBook) as [LocationId, PriceNote][]) {
     if (id === here.id) continue;
@@ -129,13 +134,15 @@ export function planRun(ctx: SimContext, character: Character, here: Location): 
     const path = findPath(world, here.id, id);
     if (!there || !sellTerms || !path) continue;
     const hours = path.duration / HOUR;
+    // On a large map, nobody hauls goods to the far side of the world.
+    if (hours > MAX_HAUL_HOURS) continue;
     const trust = 1 / (1 + (now - note.t) / DAY / STALE_DAYS);
     const destination = world.markets.get(id);
     const rivals = rivalsBound.get(id) ?? {};
 
     // The goods worth carrying there, best margin first, as far as gold and wagon allow.
-    const margins = GOOD_IDS.map((good) => {
-      const buy = houseQuote(market, good).ask * buyTerms.buy;
+    const margins = GOOD_IDS.map((good, i) => {
+      const buy = asks[i]!;
       // What rivals already haul there will have filled the house's stores.
       const room = Math.max(1, (destination?.houseTargets[good] ?? 0) * ABSORB_DAYS);
       const crowding = Math.max(0.2, 1 - (rivals[good] ?? 0) / room);

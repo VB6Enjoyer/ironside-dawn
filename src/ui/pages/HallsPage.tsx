@@ -6,7 +6,7 @@ import { Prose, type ProseLinks } from '../components/Prose';
 import { useQuery } from '../useHost';
 import type { CharacterId } from '../../sim';
 
-/** Hall of Heroes, Legends, Great Houses, Most Wanted, and the Graveyard. */
+/** Hall of Heroes, the Dread, Legends, Great Houses, Most Wanted, and the Graveyard. */
 export function HallsPage({
   host,
   names,
@@ -70,6 +70,58 @@ export function HallsPage({
           </table>
         )}
       </section>
+
+      {halls.dread.length > 0 && (
+        <section className="hall">
+          <h2>The Dread</h2>
+          <p className="muted">
+            Liches, revenants and demon lords: those who still lair, and those brought down.
+          </p>
+          <table className="hall-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Lair</th>
+                <th>Level</th>
+                <th>Lives claimed</th>
+                <th>Fate</th>
+              </tr>
+            </thead>
+            <tbody>
+              {halls.dread.map((d) => (
+                <tr key={d.id} className={d.dead ? 'muted' : undefined}>
+                  <td>
+                    {who(d.id, d.name)}{' '}
+                    <span className="muted">{SPECIES_NAMES[d.species].singular}</span>
+                  </td>
+                  <td>{place(d.lairId)}</td>
+                  <td>{d.level}</td>
+                  <td>{formatCount(d.slain)}</td>
+                  <td>
+                    {d.dead ? (
+                      d.slayers.length > 0 ? (
+                        <>
+                          destroyed by{' '}
+                          {d.slayers.map((s, i) => (
+                            <span key={s.id}>
+                              {i > 0 && (i === d.slayers.length - 1 ? ' and ' : ', ')}
+                              {who(s.id, s.name)}
+                            </span>
+                          ))}
+                        </>
+                      ) : (
+                        'destroyed'
+                      )
+                    ) : (
+                      <>lurking since {lifeYears(d.rose, null).replace('b. ', 'Year ')}</>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
 
       <section className="hall">
         <h2>Legends</h2>

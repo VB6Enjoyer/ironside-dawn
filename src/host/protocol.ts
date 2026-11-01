@@ -1,4 +1,13 @@
-import type { GoodId, Goods, ItemBaseId, LocationKind, ProfessionId, SpeciesId } from '../content';
+import type {
+  BiomeId,
+  GoodId,
+  Goods,
+  ItemBaseId,
+  LocationKind,
+  ProfessionId,
+  SpeciesId,
+  WeatherId,
+} from '../content';
 import type {
   Bounty,
   Calling,
@@ -152,6 +161,19 @@ export interface LocationView {
   /** Those who died here, most recent last. */
   readonly fallen: readonly CharacterSummary[];
   readonly events: readonly SimEvent[];
+  /** The land it lies in, and its weather today. */
+  readonly region: {
+    readonly name: string;
+    readonly biome: BiomeId;
+    readonly weather: WeatherId;
+  } | null;
+  /** Fortresses: who holds it, and the places it protects. */
+  readonly lord: CharacterSummary | null;
+  readonly territory: readonly PlaceEntry[];
+  /** The fortress whose lands it lies in. */
+  readonly heldBy: PlaceEntry | null;
+  /** Dungeons: the dread lairing there. */
+  readonly master: CharacterSummary | null;
 }
 
 /** A place at a glance, for the list of places. */
@@ -164,6 +186,8 @@ export interface PlaceSummary {
   readonly creatures: number | null;
   /** Adventurers who have died there. */
   readonly fallen: number;
+  /** The land it lies in, if the world has regions. */
+  readonly region: { readonly name: string; readonly biome: BiomeId } | null;
 }
 
 export interface StatsView {
@@ -271,6 +295,17 @@ export interface HallsView {
   readonly legends: readonly HeroEntry[];
   /** Families with several generations or great names, the most renowned first. */
   readonly houses: readonly HouseEntry[];
+  /** The dread: those who still lair, the most murderous first, and the fallen, latest first. */
+  readonly dread: readonly DreadEntry[];
+}
+
+export interface DreadEntry extends CharacterSummary {
+  /** The lives it has claimed. */
+  readonly slain: number;
+  readonly lairId: LocationId;
+  /** When it rose, and, for the fallen, who brought it down. */
+  readonly rose: number;
+  readonly slayers: readonly CharacterSummary[];
 }
 
 export interface SearchView {
@@ -316,7 +351,8 @@ export type Request =
   | { readonly kind: 'halls' }
   | { readonly kind: 'search'; readonly text: string }
   | { readonly kind: 'events'; readonly query: EventQuery }
-  | { readonly kind: 'save' };
+  | { readonly kind: 'save' }
+  | { readonly kind: 'map' };
 
 export interface Responses {
   character: CharacterView | null;
@@ -330,6 +366,54 @@ export interface Responses {
   search: SearchView;
   events: readonly SimEvent[];
   save: SavedGame;
+  map: MapView;
+}
+
+/** Everything the world map draws (ROADMAP.md Phase 9). Distances in leagues. */
+export interface MapView {
+  readonly time: number;
+  readonly width: number;
+  readonly height: number;
+  readonly regions: readonly {
+    readonly id: string;
+    readonly name: string;
+    readonly biome: BiomeId;
+    readonly x: number;
+    readonly y: number;
+    readonly weather: WeatherId;
+  }[];
+  readonly places: readonly MapPlace[];
+  readonly roads: readonly { readonly a: LocationId; readonly b: LocationId }[];
+  /** Everyone on the road, leaders only: their companions travel with them. */
+  readonly travelers: readonly MapTraveler[];
+}
+
+export interface MapPlace extends PlaceEntry {
+  readonly x: number;
+  readonly y: number;
+  /** Dungeons: how deadly, and the dread lairing there. */
+  readonly danger: number | null;
+  readonly master: string | null;
+  /** Fortresses: the lord, and how many soldiers. */
+  readonly lord: string | null;
+  readonly garrison: number | null;
+  /** Creatures loose there. */
+  readonly roaming: number;
+  /** Towns: commoners. */
+  readonly folk: number;
+}
+
+export interface MapTraveler {
+  readonly id: CharacterId;
+  readonly name: string;
+  readonly calling: Calling;
+  readonly outlaw: boolean;
+  readonly from: LocationId;
+  readonly to: LocationId;
+  readonly departedAt: number;
+  readonly arrivesAt: number;
+  /** Including companions. */
+  readonly party: number;
 }
 
 export type RequestOf<K extends Request['kind']> = Extract<Request, { kind: K }>;

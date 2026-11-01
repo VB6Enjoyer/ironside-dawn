@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 
-import type { CharacterSummary, PlaceEntry, SimHost } from '../../host';
+import type { CharacterSummary, PlaceEntry, PlaceSummary, SimHost } from '../../host';
 import { HOUR, type CharacterId, type LocationId } from '../../sim';
 import { creatureDef, type CreatureId, type SpeciesId } from '../../content';
 import {
@@ -29,7 +29,18 @@ export const placeName = (p: PlaceEntry | undefined) =>
     ? `${p.article ? `${p.article.charAt(0).toUpperCase()}${p.article.slice(1)} ` : ''}${p.name}`
     : 'Unknown';
 
-/** Every place in the world, at a glance. */
+/** Kinds of place in the order they are listed. */
+const KIND_ORDER = ['town', 'fortress', 'dungeon', 'wilderness'] as const;
+
+const WEATHER_NAMES = {
+  fair: 'fair skies',
+  rain: 'rain',
+  storm: 'storms',
+  snow: 'snow',
+  heat: 'scorching heat',
+} as const;
+
+/** Every place in the world at a glance, land by land. */
 export function PlacesPage({
   host,
   time,
@@ -37,30 +48,52 @@ export function PlacesPage({
 }: { host: SimHost; time: number } & Required<Pick<ProseLinks, 'onLocation'>>) {
   const places = useQuery(host, { kind: 'places' }, Math.floor(time / HOUR));
   if (!places) return <p className="muted page-loading">Surveying the land…</p>;
+  const lands = new Map<string, PlaceSummary[]>();
+  for (const p of places) {
+    const key = p.region ? p.region.name : '';
+    lands.set(key, [...(lands.get(key) ?? []), p]);
+  }
+  const order = (p: PlaceSummary) => KIND_ORDER.indexOf(host.places.get(p.id)?.kind ?? 'town');
   return (
     <div className="page places-page">
       <h2>Places</h2>
-      <ul className="place-list">
-        {places.map((p) => {
-          const entry = host.places.get(p.id);
-          return (
-            <li key={p.id}>
-              <button type="button" className="place-card" onClick={() => onLocation(p.id)}>
-                <span className="place-kind">{entry ? KIND_NAMES[entry.kind] : ''}</span>
-                <span className="place-name">{placeName(entry)}</span>
-                <span className="muted">
-                  {p.present} {p.present === 1 ? 'adventurer' : 'adventurers'} here
-                  {p.outlaws > 0 && ` · ${p.outlaws} ${p.outlaws === 1 ? 'outlaw' : 'outlaws'}`}
-                  {p.creatures !== null && ` · ${formatCount(p.creatures)} creatures`}
-                  {p.fallen > 0 && ` · ${p.fallen} fallen`}
-                </span>
-              </button>
-            </li>
-          );
-        })}
-      </ul>
+      {[...lands].map(([land, list]) => (
+        <section key={land || 'all'} className="land">
+          {land && (
+            <h3>
+              {capitalFirst(land)} <span className="muted">· {list[0]!.region!.biome}</span>
+            </h3>
+          )}
+          <ul className="place-list">
+            {[...list]
+              .sort((a, b) => order(a) - order(b))
+              .map((p) => {
+                const entry = host.places.get(p.id);
+                return (
+                  <li key={p.id}>
+                    <button type="button" className="place-card" onClick={() => onLocation(p.id)}>
+                      <span className="place-kind">{entry ? KIND_NAMES[entry.kind] : ''}</span>
+                      <span className="place-name">{placeName(entry)}</span>
+                      <span className="muted">
+                        {p.present} here
+                        {p.outlaws > 0 &&
+                          ` · ${p.outlaws} ${p.outlaws === 1 ? 'outlaw' : 'outlaws'}`}
+                        {p.creatures !== null && ` · ${formatCount(p.creatures)} creatures`}
+                        {p.fallen > 0 && ` · ${p.fallen} fallen`}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+          </ul>
+        </section>
+      ))}
     </div>
   );
+}
+
+function capitalFirst(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
 /** One place: who's there, what lives there, what happened there. */
@@ -87,6 +120,98 @@ export function PlacePage({
     <div className="page place-page">
       <p className="place-kind">{KIND_NAMES[location.kind]}</p>
       <h2>{placeName(host.places.get(id))}</h2>
+      {view.region && (
+        <p className="muted">
+          In {view.region.name}, {view.region.biome}; {WEATHER_NAMES[view.region.weather]} today.
+          {view.heldBy && (
+            <>
+              {' '}
+              Under the protection of{' '}
+              <button
+                type="button"
+                className="ref ref-location"
+                onClick={() => links.onLocation?.(view.heldBy!.id)}
+              >
+                {placeName(view.heldBy)}
+              </button>
+              .
+            </>
+          )}
+        </p>
+      )}
+
+      {location.fortress && (
+        <section className="card-section">
+          <h3>The seat</h3>
+          <p>
+            {view.lord ? (
+              <>
+                Held by{' '}
+                <button
+                  type="button"
+                  className="ref ref-character"
+                  onClick={() => links.onCharacter?.(view.lord!.id)}
+                >
+                  {view.lord.name}
+                </button>
+              </>
+            ) : (
+              'Standing empty, without a lord'
+            )}
+            , with {formatCount(location.fortress.garrison)} soldiers in the garrison.
+          </p>
+          {view.territory.length > 0 && (
+            <p className="muted">
+              Its lands:{' '}
+              {view.territory.map((t, i) => (
+                <span key={t.id}>
+                  {i > 0 && ', '}
+                  <button
+                    type="button"
+                    className="ref ref-location"
+                    onClick={() => links.onLocation?.(t.id)}
+                  >
+                    {placeName(t)}
+                  </button>
+                </span>
+              ))}
+              .
+            </p>
+          )}
+        </section>
+      )}
+
+      {view.master && (
+        <section className="card-section dread-lair">
+          <h3>Its master</h3>
+          <p>
+            In the deepest chamber lairs{' '}
+            <button
+              type="button"
+              className="ref ref-character"
+              onClick={() => links.onCharacter?.(view.master!.id)}
+            >
+              {view.master.name}
+            </button>
+            , {article(SPECIES_NAMES[view.master.species].singular)}{' '}
+            {SPECIES_NAMES[view.master.species].singular} of level {view.master.level}.
+          </p>
+        </section>
+      )}
+
+      {Object.keys(location.roaming).length > 0 && (
+        <section className="card-section">
+          <h3>Loose on the roads</h3>
+          <dl className="facts">
+            {(Object.entries(location.roaming) as [CreatureId, number][]).map(([creature, n]) => (
+              <div key={creature} className="fact-row">
+                <dt>{capital(creatureDef(creature).plural)}</dt>
+                <dd>about {formatCount(n)}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+      )}
 
       {location.kind === 'town' && (
         <p>

@@ -10,6 +10,7 @@ export type Route =
   | { readonly page: 'trade' }
   | { readonly page: 'stats' }
   | { readonly page: 'halls' }
+  | { readonly page: 'map' }
   | { readonly page: 'profile'; readonly id: CharacterId }
   | { readonly page: 'place'; readonly id: LocationId };
 
@@ -21,6 +22,7 @@ export function parseRoute(hash: string): Route {
     case 'trade':
     case 'stats':
     case 'halls':
+    case 'map':
       return { page };
     case 'profile':
       return id ? { page, id: decodeURIComponent(id) as CharacterId } : { page: 'log' };

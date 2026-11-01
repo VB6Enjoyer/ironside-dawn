@@ -1515,3 +1515,100 @@ button.link-button {
   text-align: left !important;
   color: var(--muted);
 }
+
+/* World map (Phase 9) */
+.map-page {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.map-frame {
+  position: relative;
+  height: min(70vh, 640px);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--bg);
+  touch-action: none;
+}
+
+.map-frame canvas {
+  display: block;
+}
+
+.map-hover {
+  min-height: 1.4em;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.map-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.map-legend li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.map-legend .swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+}
+
+.map-legend .symbol {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+}
+
+.symbol-town {
+  border-radius: 50%;
+  background: #e6e2d8;
+}
+
+.symbol-fortress {
+  background: #9aa3b0;
+}
+
+.symbol-dungeon {
+  width: 0 !important;
+  height: 0 !important;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-bottom: 10px solid #c0574d;
+}
+
+.symbol-wild {
+  transform: rotate(45deg) scale(0.8);
+  background: #c9b878;
+}
+
+.map-legend .dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+
+.dot-adventurer {
+  background: #6fa8e8;
+}
+
+.dot-merchant {
+  background: #e3b04f;
+}
+
+.dot-outlaw {
+  background: #e0604f;
+}

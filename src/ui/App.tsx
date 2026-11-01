@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 
 import { createWorkerHost, type InitOptions, type SavedGame, type SimHost } from '../host';
 import type { CharacterId, LocationId } from '../sim';
@@ -15,6 +15,9 @@ import { PlacePage, PlacesPage } from './pages/PlacesPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { StatsPage } from './pages/StatsPage';
 import { TradePage } from './pages/TradePage';
+
+// The map brings in PixiJS, so it loads only when first opened.
+const MapPage = lazy(() => import('./pages/MapPage'));
 import { useRoute, type Route } from './route';
 import {
   DEFAULT_CHARACTER_COUNT,
@@ -293,6 +296,11 @@ function Observatory({
           {route.page === 'trade' && (
             <TradePage host={host} names={names} time={snapshot.time} {...links} />
           )}
+          {route.page === 'map' && (
+            <Suspense fallback={<p className="muted page-loading">Unrolling the map…</p>}>
+              <MapPage host={host} time={snapshot.time} following={snapshot.following} {...links} />
+            </Suspense>
+          )}
           {route.page === 'stats' && <StatsPage host={host} time={snapshot.time} />}
           {route.page === 'halls' && (
             <HallsPage host={host} names={names} time={snapshot.time} {...links} />
@@ -346,6 +354,7 @@ function Observatory({
 const TABS = [
   { page: 'log', label: 'Live' },
   { page: 'chronicle', label: 'Chronicle' },
+  { page: 'map', label: 'Map' },
   { page: 'places', label: 'Places' },
   { page: 'trade', label: 'Trade' },
   { page: 'stats', label: 'Statistics' },

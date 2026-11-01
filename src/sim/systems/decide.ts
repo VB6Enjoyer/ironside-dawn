@@ -261,10 +261,10 @@ function optionsAt(ctx: SimContext, character: Character, here: Location): Optio
 }
 
 /** How many of the nearest places anyone weighs going to, besides home. */
-const HORIZON = 12;
+const HORIZON = 7;
 
 /**
- * The places worth weighing a journey to: the nearest dozen, and home. On a
+ * The places worth weighing a journey to: the nearest few, and home. On a
  * large map, nobody plans a trip to the far side of the world on a whim.
  */
 function journeysFrom(

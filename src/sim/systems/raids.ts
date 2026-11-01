@@ -93,7 +93,8 @@ function defendersOf(ctx: SimContext, town: Location): Character[] {
   return charactersAt(ctx.world, town.id)
     .filter((c) => {
       if (!isAlive(c) || !FIT.has(c.activity.kind) || c.hp < c.maxHp * 0.3) return false;
-      if (c.calling === 'child' || c.calling === 'dread') return false;
+      // Merchants keep to their wagons; children and the dread don't stand with the town.
+      if (c.calling === 'child' || c.calling === 'dread' || c.calling === 'merchant') return false;
       if (c.calling === 'townsfolk') {
         return (now - c.born) / (SPECIES[c.species].lifespan * 360 * 86_400) < TOO_OLD;
       }

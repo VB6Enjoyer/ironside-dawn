@@ -27,7 +27,10 @@ import type {
   HallsView,
   HeroEntry,
   HouseEntry,
+  DreadEntry,
   LocationView,
+  MapTraveler,
+  MapView,
   MarketView,
   PlaceEntry,
   PlaceSummary,
@@ -165,7 +168,18 @@ export function locationView(sim: Simulation, id: LocationId): LocationView | nu
   }
   fallen.sort((a, b) => a.death!.at - b.death!.at);
   const recentFallen = fallen.slice(-HALL_SIZE);
+  const living = (cid: CharacterId | null | undefined) => {
+    const c = cid ? world.characters.get(cid) : undefined;
+    return c && !c.death ? summarize(c) : null;
+  };
+  const region = location.regionId ? world.regions.get(location.regionId) : undefined;
+  const holder = [...world.locations.values()].find((l) => l.fortress?.territory.includes(id));
   return {
+    region: region ? { name: region.name, biome: region.biome, weather: region.weather } : null,
+    lord: living(location.fortress?.lordId),
+    territory: (location.fortress?.territory ?? []).map((t) => placeEntry(world.locations.get(t)!)),
+    heldBy: holder ? placeEntry(holder) : null,
+    master: living(location.dungeon?.masterId),
     slice: sliceFor(
       sim,
       [...present, ...recentFallen].map((c) => c.id),
@@ -201,7 +215,13 @@ export function placesView(sim: Simulation): PlaceSummary[] {
     creatures: l.dungeon
       ? Object.values(l.dungeon.population).reduce<number>((a, n) => a + (n ?? 0), 0)
       : null,
+    region: regionOf(sim, l),
   }));
+}
+
+function regionOf(sim: Simulation, l: Location): PlaceSummary['region'] {
+  const region = l.regionId ? sim.world.regions.get(l.regionId) : undefined;
+  return region ? { name: region.name, biome: region.biome } : null;
 }
 
 export function statsView(sim: Simulation): StatsView {
@@ -305,7 +325,7 @@ export function hallsView(sim: Simulation): HallsView {
   const legends = (c: Character) => c.deeds.filter((d) => d.kind === 'legend').length;
 
   const heroes: HeroEntry[] = everyone
-    .filter((c) => !c.death && !c.outlaw)
+    .filter((c) => !c.death && !c.outlaw && c.calling !== 'dread')
     .sort((a, b) => b.level - a.level || kills(b) - kills(a))
     .slice(0, HALL_SIZE)
     .map((c) => ({
@@ -349,7 +369,38 @@ export function hallsView(sim: Simulation): HallsView {
       goldEarned: c.goldEarned,
     }));
 
-  return { heroes, fallen, wanted, legends: legendEntries, houses: housesOf(sim) };
+  return {
+    heroes,
+    fallen,
+    wanted,
+    legends: legendEntries,
+    houses: housesOf(sim),
+    dread: dreadOf(sim),
+  };
+}
+
+/** The dread, living first (most murderous first), then the fallen (latest first). */
+function dreadOf(sim: Simulation): DreadEntry[] {
+  const world = sim.world;
+  const falls = new Map(
+    sim.events
+      .query({ types: ['dread.fall'] })
+      .flatMap((e) => (e.type === 'dread.fall' ? [[e.data.characterId, e.data.slayerIds]] : [])),
+  );
+  const entry = (c: Character): DreadEntry => ({
+    ...summarize(c),
+    slain: c.slain,
+    lairId: c.homeId,
+    rose: c.arrivedAt,
+    slayers: (falls.get(c.id) ?? []).map((id) => summarize(world.characters.get(id)!)),
+  });
+  const dread = [...world.characters.values()].filter((c) => c.calling === 'dread');
+  const living = dread.filter((c) => !c.death).sort((a, b) => b.slain - a.slain);
+  const fallen = dread
+    .filter((c) => c.death)
+    .sort((a, b) => b.death!.at - a.death!.at)
+    .slice(0, HALL_SIZE);
+  return [...living, ...fallen].map(entry);
 }
 
 /** Families by name: how many generations, how many legends, how renowned. */
@@ -421,4 +472,59 @@ export function savedGame(sim: Simulation): SavedGame {
   let living = 0;
   for (const c of sim.world.characters.values()) if (!c.death) living++;
   return { world: sim.save(), events, seed: sim.world.seed, time: sim.world.time, living };
+}
+
+export function mapView(sim: Simulation): MapView {
+  const world = sim.world;
+  const travelers: MapTraveler[] = [];
+  const companions = new Map<CharacterId, number>();
+  for (const c of world.characters.values()) {
+    if (c.death || c.activity.kind !== 'accompanying') continue;
+    companions.set(c.activity.leaderId, (companions.get(c.activity.leaderId) ?? 0) + 1);
+  }
+  for (const c of world.characters.values()) {
+    if (c.death || c.activity.kind !== 'traveling') continue;
+    const { leg } = c.activity;
+    travelers.push({
+      id: c.id,
+      name: fullName(c),
+      calling: c.calling,
+      outlaw: c.outlaw !== null,
+      from: leg.from,
+      to: leg.to,
+      departedAt: leg.departedAt,
+      arrivesAt: leg.arrivesAt,
+      party: 1 + (companions.get(c.id) ?? 0),
+    });
+  }
+  const nameOf = (id: CharacterId | null | undefined) => {
+    const c = id ? world.characters.get(id) : undefined;
+    return c && !c.death ? fullName(c) : null;
+  };
+  return {
+    time: world.time,
+    width: world.width,
+    height: world.height,
+    regions: [...world.regions.values()].map((r) => ({
+      id: r.id,
+      name: r.name,
+      biome: r.biome,
+      x: r.x,
+      y: r.y,
+      weather: r.weather,
+    })),
+    places: [...world.locations.values()].map((l) => ({
+      ...placeEntry(l),
+      x: l.x,
+      y: l.y,
+      danger: l.dungeon?.def.danger ?? null,
+      master: nameOf(l.dungeon?.masterId),
+      lord: l.fortress ? nameOf(l.fortress.lordId) : null,
+      garrison: l.fortress?.garrison ?? null,
+      roaming: Object.values(l.roaming).reduce<number>((a, n) => a + (n ?? 0), 0),
+      folk: Object.values(l.population).reduce<number>((a, n) => a + (n ?? 0), 0),
+    })),
+    roads: [...world.routes.values()].map((r) => ({ a: r.a, b: r.b })),
+    travelers,
+  };
 }

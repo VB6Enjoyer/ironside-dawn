@@ -188,10 +188,12 @@ describe('a simulated season', () => {
     const travelers = new Set(
       events.filter((e) => e.type === 'travel.depart').map((e) => e.actors[0]),
     );
-    // Lords and the dread stay at home.
+    // Lords and the dread stay at home; a raid may kill someone before they set out.
     const founders = [...sim.world.characters.values()].filter(
       (c) =>
-        c.arrivedAt === WORLD_START && (c.calling === 'adventurer' || c.calling === 'merchant'),
+        c.arrivedAt === WORLD_START &&
+        !c.death &&
+        (c.calling === 'adventurer' || c.calling === 'merchant'),
     );
     for (const founder of founders) expect(travelers.has(founder.id)).toBe(true);
     const visited = new Set(

@@ -9,7 +9,7 @@ import { generateItem } from './items';
 import { refreshMaxima, xpForLevel } from './progress';
 import { leaveParty } from './social';
 import { cancelWake } from './wake';
-import { moveTo } from './whereabouts';
+import { charactersAt, moveTo } from './whereabouts';
 
 /**
  * Fortresses and lords, a first pass (ROADMAP.md Phase 9). Each fortress
@@ -252,13 +252,9 @@ function patrol(ctx: SimContext, place: Location, fortress: Fortress): void {
       );
     }
     // Outlaws lying in wait: the patrol falls on them.
-    const lurkers = [...world.characters.values()].filter(
+    const lurkers = charactersAt(world, wild.id).filter(
       (c) =>
-        c.locationId === wild.id &&
-        c.outlaw &&
-        isAlive(c) &&
-        c.activity.kind === 'pastime' &&
-        c.activity.pastime === 'lurk',
+        c.outlaw && isAlive(c) && c.activity.kind === 'pastime' && c.activity.pastime === 'lurk',
     );
     if (lurkers.length > 0 && rng.chance(CATCH_CHANCE)) {
       const soldiers = Math.min(6, Math.max(2, Math.floor(fortress.garrison / 4)));

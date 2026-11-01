@@ -38,6 +38,7 @@ import {
   searchView,
   statsView,
   tradeView,
+  mapView,
 } from './views';
 
 /**
@@ -432,6 +433,8 @@ export function createEngine(options: EngineOptions): Engine {
           return eventsView(sim, request.query);
         case 'save':
           return savedGame(sim);
+        case 'map':
+          return mapView(sim);
       }
     }
 

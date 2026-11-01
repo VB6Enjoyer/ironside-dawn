@@ -225,6 +225,9 @@ function worldReport(
     'Bonds and crime',
     ...bondRows(world, counts, row),
     '',
+    'Living world',
+    ...worldRows(world, counts, row),
+    '',
     'Generations',
     ...generationRows(world, counts, row),
     '',
@@ -311,6 +314,58 @@ function habitRows(
     row('Delves by bravery', compare('bravery', habits.delves)),
     row('Delves by patience', compare('patience', habits.delves)),
     row('Taverns by sociability', compare('sociability', habits.taverns)),
+  ];
+}
+
+/** The land, its weather and creatures, its lords, and the dread (ROADMAP.md Phase 9). */
+function worldRows(
+  world: World,
+  counts: ReadonlyMap<string, number>,
+  row: (label: string, value: string | number) => string,
+): string[] {
+  const kinds = new Map<string, number>();
+  for (const l of world.locations.values()) kinds.set(l.kind, (kinds.get(l.kind) ?? 0) + 1);
+  const name = (id: CharacterId | null) => {
+    const c = id ? world.characters.get(id) : undefined;
+    return c ? `${c.givenName} ${c.familyName}` : 'nobody';
+  };
+  const roaming = [...world.locations.values()].reduce(
+    (sum, l) => sum + Object.values(l.roaming).reduce<number>((a, n) => a + (n ?? 0), 0),
+    0,
+  );
+  const fortresses = [...world.locations.values()]
+    .filter((l) => l.fortress)
+    .map((l) =>
+      row(
+        `  ${l.name}`,
+        `${l.fortress!.lordId ? `held by ${name(l.fortress!.lordId)}` : 'empty'}, ` +
+          `${l.fortress!.garrison} soldiers, ${l.fortress!.lineage.length} ${l.fortress!.lineage.length === 1 ? 'lord' : 'lords'} so far`,
+      ),
+    );
+  const dread = [...world.characters.values()]
+    .filter((c) => c.calling === 'dread')
+    .map((c) =>
+      row(
+        `  ${c.givenName} ${c.familyName}`,
+        `${c.species} of level ${c.level}, ${c.slain} lives claimed` +
+          (c.death ? ', destroyed' : `, in ${world.locations.get(c.homeId)?.name}`),
+      ),
+    );
+  return [
+    row('Regions', [...world.regions.values()].map((r) => r.biome).join(', ') || 'none'),
+    row('Places', [...kinds].map(([k, n]) => `${n} ${k}`).join(', ')),
+    row('Hard weather', counts.get('weather.turn') ?? 0),
+    row('Creature migrations', counts.get('creature.migrate') ?? 0),
+    row('Creatures roaming now', roaming),
+    row(
+      'Raids',
+      `${world.tally.raids} (${counts.get('raid.sack') ?? 0} sacked, ${counts.get('raid.repelled') ?? 0} repelled)`,
+    ),
+    row('Patrols clearing roads', counts.get('patrol.clear') ?? 0),
+    row('Fortresses', ''),
+    ...fortresses,
+    row('The dread', `${world.tally.dreadSlain} destroyed`),
+    ...dread,
   ];
 }
 
