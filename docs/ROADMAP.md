@@ -851,23 +851,75 @@ the chronicle records it.
 civilizations and their mythologies (`WORLD.md` §6). The culture-tag plumbing
 has been there since Phase 1, so this phase is mostly content work.
 
-- [ ] **Culture pack format**: name generators, arms and armor tables, bestiary
+- [x] **Culture pack format**: name generators, arms and armor tables, bestiary
       (region-native creatures and peoples), magic tradition (spells and cost
       flavors), myths and deities, and settlement vocabulary.
-- [ ] World generation assigns cultures to regions. A species can have local
+- [x] World generation assigns cultures to regions. A species can have local
       variants per culture (Norse _dvergar_ and _álfar_).
-- [ ] **First culture pack**, likely **Japonic**: katana, naginata, yumi;
+- [x] **First culture pack**, likely **Japonic**: katana, naginata, yumi;
       kitsune, kappa, oni, tengu, yūrei; talisman and ward magic.
 - [ ] Then more packs, one at a time (Norse, Hellenic, Slavic,
       Mesopotamian…), each playtested with the headless runner for balance.
-- [ ] **Myths in the simulation**: characters hold beliefs from their culture.
+      _Norse is done; the rest are to come._
+- [x] **Myths in the simulation**: characters hold beliefs from their culture.
       Local legends grow out of real chronicle events ("the oni of the
       northern pass" is a real boss that killed real people).
-- [ ] UI: region panel with its culture, myths, and notable figures.
+- [x] UI: region panel with its culture, myths, and notable figures.
 
 **Exit criteria:** Two regions feel distinct at a glance in the log: a ronin
 with a katana fighting a kappa at a river ford in one, and a Norse-flavored
 dwarf facing a draugr in a barrow in the other.
+
+**Status: done, with two packs of the five sketched.** Notes from building it
+(design in `ARCHITECTURE.md` §4.12):
+
+- **The pack format**: a culture can carry a pack (`src/content/cultures.ts`):
+  the peoples it raises and its names for them, the arms and armor they
+  favor, what it calls fighters, scouts and mystics, its gods, its region and
+  place names, its kinds of dungeon, a creature that haunts its wild places,
+  and how many regions it may cover. Its magic is its spells, tagged with its
+  culture, and taught only to those raised in it.
+- **Cultures on the map**: world generation gives each pack a cluster of
+  regions (one each in a small world, up to two or three in a large one)
+  whose main people it can raise. Towns there take the culture when their
+  people is among its peoples; dungeons and wild places take it too, and each
+  culture's lands hold at least one dungeon of its signature kind. Everyone
+  born or raised in such a town takes its names, arms and magic. A culture's
+  own arms turn up mostly in its own lands.
+- **Japonic**: katana, naginata and yumi (bows join the weapon skills),
+  do-maru armor, tamahagane steel; kappa haunting the fords and crossings,
+  kitsune and yūrei in haunted shrines, tengu and oni in their holds;
+  Foxfire and Ofuda Ward; Inari, Hachiman, Amaterasu, Susanoo and Benzaiten;
+  ronin, shinobi and onmyōji.
+- **Norse**: bearded axe, seax and spear, mail byrnies; humans, _dvergar_ and
+  _álfar_; draugar in barrows, jötnar in their halls; Thunder Rune and Rune of
+  Warding; Odin, Thor, Freyja, Tyr and Njord; huscarls, trackers and
+  rune-carvers.
+- **Myths**: something that kills three people at a wild place (eight in a
+  dungeon, where death is the trade), or one of the dread that claims eight
+  lives, becomes a local legend, told by the culture of the land. Folk raised
+  on a tale tell it over a drink and keep away from the place; a tale about
+  one of the dread ends when it is destroyed. The gods are believed in, and
+  prayed to at shrines; whether they answer is still an open question
+  (`WORLD.md` §7).
+- **UI**: a **region page** (from the places list, a place's page, or a
+  region's name on the map) with its land, weather, culture and gods, the
+  tales told there, its lords, dread and most renowned folk, and its places.
+  Cards and profiles give a character's local title and people ("Level 23
+  tracker · dvergr of Grimby") and the ways they were raised in. The headless
+  report lists culture lands and myths.
+- **Exit criteria, met.** In a medium world with both packs, the log reads
+  "Daichi Morikawa, a ronin with a naginata, is set upon by two kappa
+  roaming the Kawazu Crossing" in the Japonic lands, and "Sten Bearholm, a
+  dvergr huscarl with a bearded axe, comes face to face with two draugar" in a
+  Norse barrow.
+- **Still to come**: the Hellenic, Slavic and Mesopotamian packs; cults; and
+  regional tongues (people raised in a pack still speak their people's
+  language).
+- **Performance**: 500 adventurers on a large world run 10 years in 341 s
+  headless, down from 388 s at the end of Phase 9 but still over the 300 s
+  budget, which is Phase 11's to meet. (Phase 9's figure was taken before
+  its last few changes, so the gain can't all be put down to this phase.)
 
 ---
 

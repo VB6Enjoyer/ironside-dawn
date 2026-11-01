@@ -28,6 +28,12 @@ town's market, or watch a dungeon's population change over time.
 
 ## Status
 
+Phase 10 (Cultures & Myths) is done. Regions can belong to a culture drawn
+from real-world mythology, so far Japonic and Norse: ronin with naginata
+fight kappa at the river crossings, dvergr huscarls face draugar in the
+barrows, folk pray to Inari or Thor, and anything that keeps killing at a
+place becomes a legend the locals tell and fear. Each region has its own page.
+
 Phase 9 (A Living World) is done. Every seed makes its own world: regions
 of forest, mountain, steppe and waste, each people's towns in its homeland,
 dungeons, fortresses and the roads between them, drawn on a map you can pan
@@ -41,8 +47,8 @@ marriages, children, heirs and legends; Phase 7 (Markets) gave each town a
 daily market where nobody sets the prices, and merchants to haul goods
 between them; and Phase 6 made it an observatory: follow anyone, read life
 stories, browse the chronicle, statistics and halls, skip years at a time,
-and save, load and share worlds. Phase 10 (Cultures & Myths) is next. The
-plan is in:
+and save, load and share worlds. Phase 11 (Scale & Ship), the last, is
+next. The plan is in:
 
 - [`docs/ROADMAP.md`](docs/ROADMAP.md): the phased development plan, with exit
   criteria for each milestone.

@@ -554,6 +554,27 @@ Built in Phase 9 (`src/sim/gen/geography.ts`, and `systems/weather.ts`,
   regions, so its harvests and breeding stay as they were, and the tests that
   use it keep their numbers.
 
+### 4.12 Cultures and myths
+
+Built in Phase 10 (`src/content/cultures.ts`, `src/sim/systems/myths.ts`).
+
+- **A culture pack is data on a culture**: who it raises and what it calls
+  them, arms, titles, gods, place-name parts, dungeon kinds, a haunting
+  creature. Every other content table already carried culture tags, so the
+  pack only has to name its own items, creatures and spells.
+- **Culture is upbringing, and it is decided once**: a character takes the
+  culture of the town they are raised in, if its pack takes in their people,
+  else their people's own; children take a parent's. Names, starting arms
+  and which spells they can learn follow from it.
+- **Myths are world state, not text**: a myth records a place, what it tells
+  of (a kind of creature, or one of the dread), the culture that tells it,
+  and its toll. Their names are put together by the text layer. Deaths
+  toward a myth are kept as omens keyed by place and creature.
+- **Local names stay in the text layer**: the simulation knows species and
+  culture; "dvergr", "ronin" and the gods prayed to are looked up from the
+  culture when prose is written, so the same event reads differently by
+  region without the simulation knowing.
+
 ---
 
 ## 5. UI ↔ simulation boundary
