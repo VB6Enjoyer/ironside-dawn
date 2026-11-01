@@ -1,12 +1,21 @@
 import {
   creatureDef,
+  itemBase,
   LANGUAGES,
   type CreatureId,
   type ItemBaseId,
   type PastimeId,
   type WeaponId,
 } from '../content';
-import type { CharacterId, Combatant, EventOfType, EventType, LocationId, SimEvent } from '../sim';
+import type {
+  CharacterId,
+  Combatant,
+  EventOfType,
+  EventType,
+  LocationId,
+  Occupation,
+  SimEvent,
+} from '../sim';
 import { describeDuration, seasonName } from './calendar';
 import { anItem, itemName, legendTitle, SKILL_PHRASES, spellName } from './items';
 import { goodsList } from './goods';
@@ -140,6 +149,21 @@ function attackVerb(h: Helpers, attacker: Combatant): string {
   return verbs ? h.pick(verbs) : 'strikes';
 }
 
+const RETIRE_REASONS = {
+  age: 'at last, their best years behind them,',
+  wealth: 'with a fortune made',
+  family: 'for the sake of their family',
+  nerves: 'after one narrow escape too many',
+} as const;
+
+export const OCCUPATION_NAMES: Record<Occupation, string> = {
+  innkeeper: 'an innkeeper',
+  smith: 'a smith',
+  trainer: 'a weapons master',
+  farmer: 'a farmer',
+  clerk: 'a clerk of the trading house',
+};
+
 const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
   'world.created': [
     () => ['The world stirs. Year 1 begins in the season of Thaw.'],
@@ -233,6 +257,18 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
         return h.pick<Part[]>([
           [c, ' is cut down by ', h.c(cause.characterId), ' in ', l, `${legacy}.`],
           [c, ' dies at the hands of ', h.c(cause.characterId), ' in ', l, `${legacy}.`],
+        ]);
+      }
+      if (cause.kind === 'departed') {
+        return h.pick<Part[]>([
+          [c, ' leaves ', l, ' for distant lands.'],
+          [c, ' sells up and leaves ', l, ', never to return.'],
+        ]);
+      }
+      if (cause.kind === 'age') {
+        return h.pick<Part[]>([
+          [c, ` dies of old age in `, l, `, ${cause.age} years old.`],
+          [c, ` passes away peacefully in `, l, ` at the age of ${cause.age}.`],
         ]);
       }
       return h.pick<Part[]>([
@@ -693,7 +729,9 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
             h.c(e.data.leaderId),
             "'s party for a life of crime.",
           ]
-        : [h.c(e.data.characterId), ' leaves ', h.c(e.data.leaderId), "'s party in disgust."],
+        : e.data.reason === 'retire'
+          ? [h.c(e.data.characterId), ' leaves ', h.c(e.data.leaderId), "'s party to settle down."]
+          : [h.c(e.data.characterId), ' leaves ', h.c(e.data.leaderId), "'s party in disgust."],
   ],
   'party.disband': [
     (e, h) => {
@@ -704,6 +742,8 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
           return [h.c(e.data.characterId), "'s party falls apart in bitterness."];
         case 'outlaw':
           return [h.c(e.data.characterId), "'s party breaks up."];
+        case 'retire':
+          return [h.c(e.data.characterId), "'s companions go their separate ways."];
       }
     },
   ],
@@ -833,6 +873,122 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
   'item.potion': [
     (e, h) => [h.c(e.data.characterId), ' gulps down a healing draught.'],
     (e, h) => [h.c(e.data.characterId), ' drinks a healing draught mid-fight.'],
+  ],
+  'character.elder': [
+    (e, h) => [
+      h.c(e.data.characterId),
+      `'s hair is grey now; at ${e.data.age}, the years begin to tell.`,
+    ],
+    (e, h) => [
+      h.c(e.data.characterId),
+      ` turns ${e.data.age}, and is slower to rise in the mornings.`,
+    ],
+  ],
+  'character.retire': [
+    (e, h) => {
+      const c = h.c(e.data.characterId);
+      const town = h.l(e.data.locationId);
+      const why = RETIRE_REASONS[e.data.reason];
+      if (e.data.merchant)
+        return [c, ` hangs up their sword ${why} and takes up the merchant's trade in `, town, '.'];
+      return [
+        c,
+        ` hangs up their sword ${why} and settles in `,
+        town,
+        e.data.occupation ? ` as ${OCCUPATION_NAMES[e.data.occupation]}.` : '.',
+      ];
+    },
+  ],
+  'family.marry': [
+    (e, h) => [
+      h.c(e.data.characterId),
+      ' and ',
+      h.c(e.data.otherId),
+      ' are married in ',
+      h.l(e.data.locationId),
+      '.',
+    ],
+    (e, h) => [
+      h.c(e.data.characterId),
+      ' weds ',
+      h.c(e.data.otherId),
+      ' in ',
+      h.l(e.data.locationId),
+      '.',
+    ],
+  ],
+  'family.birth': [
+    (e, h) => [
+      h.c(e.data.characterId),
+      ' is born in ',
+      h.l(e.data.locationId),
+      ' to ',
+      ...h.group(e.data.parentIds),
+      '.',
+    ],
+  ],
+  'family.comeOfAge': [
+    (e, h) => {
+      const c = h.c(e.data.characterId);
+      if (e.data.calling === 'adventurer') {
+        const weapon = h.weaponOf(e.data.characterId);
+        return [
+          c,
+          ' comes of age in ',
+          h.l(e.data.locationId),
+          weapon ? ` and takes up the ${itemBase(weapon).name}.` : ' and sets out to adventure.',
+        ];
+      }
+      return [
+        c,
+        ' comes of age in ',
+        h.l(e.data.locationId),
+        e.data.occupation ? ` and goes to work as ${OCCUPATION_NAMES[e.data.occupation]}.` : '.',
+      ];
+    },
+  ],
+  'family.inherit': [
+    (e, h) => {
+      const gifts = [
+        ...(e.data.gold > 0 ? [`${e.data.gold} gold`] : []),
+        ...e.data.items.map((item) => anItem(item)),
+      ];
+      return [h.c(e.data.characterId), ` inherits ${listOf(gifts)} from `, h.c(e.data.fromId), '.'];
+    },
+  ],
+  'legend.hero': [
+    (e, h) => ['The bards begin to sing of ', h.c(e.data.characterId), '.'],
+    (e, h) => ['The deeds of ', h.c(e.data.characterId), ' pass into legend.'],
+  ],
+  'social.tale': [
+    (e, h) => [
+      h.c(e.data.characterId),
+      ' tells ',
+      h.c(e.data.otherId),
+      ' of the deeds of ',
+      h.c(e.data.heroId),
+      '.',
+    ],
+    (e, h) => [
+      h.c(e.data.characterId),
+      ' and ',
+      h.c(e.data.otherId),
+      ' drink to the memory of ',
+      h.c(e.data.heroId),
+      '.',
+    ],
+  ],
+  'character.avenger': [
+    (e, h) => [
+      h.c(e.data.characterId),
+      ' takes up the sword in ',
+      h.l(e.data.locationId),
+      ' to avenge ',
+      h.c(e.data.forId),
+      ' on ',
+      h.c(e.data.againstId),
+      '.',
+    ],
   ],
   'market.shock': [
     (e, h) => {

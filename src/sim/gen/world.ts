@@ -6,6 +6,9 @@ import type { Location, LocationId, Route, RouteId, World } from '../model';
 import { createMarket } from '../systems/market';
 import { createCharacter, townPopulation, towns } from './people';
 
+/** Towns can grow to this many times their founding size. */
+const TOWN_ROOM = 1.5;
+
 /** Worlds begin at dawn on the first day of the first year. */
 export const WORLD_START = 6 * HOUR;
 /** Characters' first actions are spread over the first hours, not all at once. */
@@ -27,6 +30,9 @@ export function createWorldState(seed: string, map: MapDef): World {
       kind: def.kind,
       culture: def.culture,
       population: { ...def.population },
+      capacity: Object.fromEntries(
+        Object.entries(def.population ?? {}).map(([s, n]) => [s, Math.round(n * TOWN_ROOM)]),
+      ),
       academy: def.academy ?? false,
       dungeon: def.dungeon ? { def: def.dungeon, population, lostItems: [] } : null,
       economy: def.economy ?? null,
@@ -66,6 +72,7 @@ export function createWorldState(seed: string, map: MapDef): World {
     markets: new Map(),
     shocks: [],
     ledger: { minted: {}, burned: {} },
+    heroes: [],
   };
   for (const location of locations.values()) {
     const market = createMarket(world, location);
@@ -88,6 +95,10 @@ export function populate(ctx: SimContext, count: number): void {
     const home = ctx.rng.people.weighted(
       homes.map((t) => [t, Math.max(1, townPopulation(t))] as const),
     );
-    createCharacter(ctx, home, false, FIRST_WAKE_SPREAD, i < count ? 'adventurer' : 'merchant');
+    createCharacter(ctx, home, {
+      newcomer: false,
+      firstWakeWithin: FIRST_WAKE_SPREAD,
+      calling: i < count ? 'adventurer' : 'merchant',
+    });
   }
 }

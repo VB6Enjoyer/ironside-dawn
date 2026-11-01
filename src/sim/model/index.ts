@@ -8,6 +8,7 @@ export type {
   DelveProgress,
   LifeSample,
   LootItem,
+  Occupation,
   TimedStatus,
   TravelLeg,
 } from './character';

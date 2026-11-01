@@ -8,7 +8,7 @@ import type {
   StatId,
   TrapId,
 } from '../../content';
-import type { DeathCause, LootItem } from './character';
+import type { DeathCause, LootItem, Occupation } from './character';
 import type { CreatureRef } from './encounter';
 import type { CharacterId, EntityId, EventId, LocationId } from './ids';
 import type { Item } from './item';
@@ -212,9 +212,15 @@ export type EventBody =
   /** characterId leaves leaderId's party. */
   | Body<
       'party.leave',
-      CharacterAt & { readonly leaderId: CharacterId; readonly reason: 'quarrel' | 'outlaw' }
+      CharacterAt & {
+        readonly leaderId: CharacterId;
+        readonly reason: 'quarrel' | 'outlaw' | 'retire';
+      }
     >
-  | Body<'party.disband', CharacterAt & { readonly reason: 'death' | 'quarrel' | 'outlaw' }>
+  | Body<
+      'party.disband',
+      CharacterAt & { readonly reason: 'death' | 'quarrel' | 'outlaw' | 'retire' }
+    >
   | Body<
       'party.share',
       CharacterAt & {
@@ -270,6 +276,46 @@ export type EventBody =
       CharacterAt & { readonly goods: Goods; readonly gold: number; readonly profit: number | null }
     >
   | Body<'item.potion', CharacterAt & { readonly hp: number; readonly maxHp: number }>
+  // Lives and generations
+  /** A character's years begin to tell. */
+  | Body<'character.elder', CharacterAt & { readonly age: number }>
+  | Body<
+      'character.retire',
+      CharacterAt & {
+        readonly occupation: Occupation | null;
+        readonly reason: 'age' | 'wealth' | 'family' | 'nerves';
+        /** Retiring to trade instead. */
+        readonly merchant: boolean;
+      }
+    >
+  | Body<'family.marry', CharacterAt & WithOther>
+  /** `characterId` is the child. */
+  | Body<'family.birth', CharacterAt & { readonly parentIds: readonly CharacterId[] }>
+  | Body<
+      'family.comeOfAge',
+      CharacterAt & {
+        readonly calling: 'adventurer' | 'townsfolk';
+        readonly occupation: Occupation | null;
+      }
+    >
+  /** `characterId` inherits from `fromId`. */
+  | Body<
+      'family.inherit',
+      CharacterAt & {
+        readonly fromId: CharacterId;
+        readonly gold: number;
+        readonly items: readonly Item[];
+      }
+    >
+  /** A dead hero's deeds pass into legend. */
+  | Body<'legend.hero', CharacterAt & { readonly renown: number }>
+  /** `characterId` tells `otherId` of the deeds of `heroId`. */
+  | Body<'social.tale', CharacterAt & WithOther & { readonly heroId: CharacterId }>
+  /** A commoner takes up the sword, for a reason: to avenge `forId`, killed by `againstId`. */
+  | Body<
+      'character.avenger',
+      CharacterAt & { readonly forId: CharacterId; readonly againstId: CharacterId }
+    >
   /** A trouble begins: in a town, or on the road between `locationId` and `otherId`. */
   | Body<
       'market.shock',
@@ -356,6 +402,15 @@ export const EVENT_IMPORTANCE: Record<EventType, Importance> = {
   'trade.load': Importance.Normal,
   'trade.unload': Importance.Normal,
   'item.potion': Importance.Normal,
+  'character.elder': Importance.Normal,
+  'character.retire': Importance.Notable,
+  'family.marry': Importance.Notable,
+  'family.birth': Importance.Notable,
+  'family.comeOfAge': Importance.Notable,
+  'family.inherit': Importance.Normal,
+  'legend.hero': Importance.Legendary,
+  'social.tale': Importance.Trivial,
+  'character.avenger': Importance.Notable,
   'market.shock': Importance.Notable,
   'market.recover': Importance.Normal,
 };

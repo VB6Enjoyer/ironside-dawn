@@ -39,6 +39,15 @@ const RIVAL_AFFINITY = -0.4;
 /** Friends who trust each other this much will adventure together. */
 const PARTY_TRUST = 0.3;
 const MAX_PARTY = 4;
+/** Affinity both ways at which friends may marry, and how well they must know each other. */
+const LOVE = 0.8;
+const LOVE_FAMILIARITY = 0.6;
+/** Chance per meeting that such a pair marries. */
+const PROPOSAL = 0.006;
+/** Chance a match across peoples goes ahead. */
+const MIXED_MARRIAGE = 0.1;
+/** Chance per meeting of a tale about a dead hero. */
+const TALE = 0.05;
 /** Below this, a member stops following their leader. */
 const LOYALTY_FLOOR = 0.1;
 /** Languages understood at least this well allow real conversation. */
@@ -219,6 +228,7 @@ function meet(ctx: SimContext, a: Character, b: Character, location: Location): 
   if (a.calling === 'merchant' && b.calling === 'merchant' && comm >= UNDERSTOOD) {
     sharePrices(a, b);
   }
+  if (comm >= UNDERSTOOD && rng.chance(TALE)) tellTale(ctx, a, b, location);
 
   for (const [self, other] of [
     [a, b],
@@ -377,6 +387,71 @@ function checkBonds(ctx: SimContext, a: Character, b: Character, location: Locat
   if (ab.bond === 'friend' && ab.trust >= PARTY_TRUST && ba.trust >= PARTY_TRUST) {
     joinUp(ctx, a, b, location.id);
   }
+  if (ab.affinity >= LOVE && ba.affinity >= LOVE) considerMarriage(ctx, a, b, location);
+}
+
+/**
+ * Close friends who love each other may marry: unwed grown-ups, not close
+ * kin, nearly always of the same people.
+ */
+function considerMarriage(ctx: SimContext, a: Character, b: Character, location: Location): void {
+  const world = ctx.world;
+  const unwed = (c: Character) => {
+    const spouse = c.spouseId ? world.characters.get(c.spouseId) : undefined;
+    return !spouse || spouse.death !== null;
+  };
+  if (a.calling === 'child' || b.calling === 'child' || !unwed(a) || !unwed(b)) return;
+  if ((a.opinions[b.id]?.familiarity ?? 0) < LOVE_FAMILIARITY) return;
+  if (Boolean(a.outlaw) !== Boolean(b.outlaw) || isKin(a, b)) return;
+  const rng = ctx.rng.social;
+  if (a.species !== b.species && !rng.chance(MIXED_MARRIAGE)) return;
+  if (!rng.chance(PROPOSAL)) return;
+  a.spouseId = b.id;
+  b.spouseId = a.id;
+  ctx.emit(
+    { type: 'family.marry', data: { characterId: a.id, otherId: b.id, locationId: location.id } },
+    [a.id, b.id],
+    location.id,
+  );
+}
+
+/**
+ * Someone tells of a dead hero's deeds, preferring their own kin or a hero
+ * of their own town; the listener is stirred to seek glory.
+ */
+function tellTale(ctx: SimContext, teller: Character, listener: Character, location: Location) {
+  const heroes = ctx.world.heroes;
+  if (heroes.length === 0) return;
+  const rng = ctx.rng.social;
+  const recent = heroes.slice(-20).map((id) => ctx.world.characters.get(id)!);
+  const own = recent.filter(
+    (h) => teller.parents.includes(h.id) || isKin(teller, h) || h.homeId === teller.homeId,
+  );
+  const hero = rng.pick(own.length > 0 ? own : recent);
+  if (hero.id === listener.id || hero.id === teller.id) return;
+  listener.drives.glory = Math.min(1, listener.drives.glory + 0.1);
+  ctx.emit(
+    {
+      type: 'social.tale',
+      data: {
+        characterId: teller.id,
+        otherId: listener.id,
+        heroId: hero.id,
+        locationId: location.id,
+      },
+    },
+    [teller.id, listener.id],
+    location.id,
+  );
+}
+
+/** Parent and child, or children of the same parent. */
+export function isKin(a: Character, b: Character): boolean {
+  return (
+    a.parents.includes(b.id) ||
+    b.parents.includes(a.id) ||
+    a.parents.some((p) => b.parents.includes(p))
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -425,8 +500,8 @@ export function partyOf(ctx: SimContext, character: Character): Party | null {
 /** Two friends who trust each other team up, or one joins the other's party. */
 function joinUp(ctx: SimContext, a: Character, b: Character, locationId: LocationId): void {
   if (Boolean(a.outlaw) !== Boolean(b.outlaw)) return;
-  // Merchants travel on business of their own.
-  if (a.calling === 'merchant' || b.calling === 'merchant') return;
+  // Only adventurers adventure together.
+  if (a.calling !== 'adventurer' || b.calling !== 'adventurer') return;
   const pa = partyOf(ctx, a);
   const pb = partyOf(ctx, b);
   if (pa && pb) return;
@@ -467,7 +542,7 @@ function joinUp(ctx: SimContext, a: Character, b: Character, locationId: Locatio
 export function leaveParty(
   ctx: SimContext,
   character: Character,
-  reason: 'quarrel' | 'outlaw' | 'death',
+  reason: 'quarrel' | 'outlaw' | 'death' | 'retire',
 ): void {
   const party = partyOf(ctx, character);
   character.partyId = null;
@@ -626,7 +701,7 @@ export function shareSpoils(
 /** Free to be interrupted: not on the road, not fighting, not already with a party. */
 function available(character: Character): boolean {
   const kind = character.activity.kind;
-  return kind === 'idle' || kind === 'pastime' || kind === 'convalescing';
+  return kind === 'idle' || kind === 'pastime' || kind === 'convalescing' || kind === 'living';
 }
 
 function clamp(value: number, min: number, max: number): number {

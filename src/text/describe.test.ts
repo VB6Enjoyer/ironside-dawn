@@ -26,8 +26,14 @@ import {
 } from './words';
 
 const events: SimEvent[] = [];
-const sim = createSimulation({ seed: 'saga', onEvent: (e) => events.push(e) });
+const sim = createSimulation({ seed: 'epic', onEvent: (e) => events.push(e) });
 sim.advance(sim.world.time + 365 * DAY);
+/** Two more worlds, so the coverage check doesn't hang on one world's luck. */
+const moreTypes = new Set<string>();
+for (const seed of ['saga', 'ink']) {
+  const other = createSimulation({ seed, onEvent: (e) => moreTypes.add(e.type) });
+  other.advance(other.world.time + 365 * DAY);
+}
 const names = worldNames(sim.world);
 const text = (e: SimEvent) => toPlainText(describeEvent(e, names));
 
@@ -41,11 +47,42 @@ const RARE: Record<string, (a: CharacterId, b: CharacterId) => object> = {
   'outlaw.reform': (a) => ({ characterId: a, locationId: where }),
   'market.shock': () => ({ shock: 'blockade', locationId: where, otherId: 'saltmere', days: 20 }),
   'market.recover': () => ({ shock: 'failed-harvest', locationId: 'concordale', otherId: null }),
+  'character.elder': (a) => ({ characterId: a, locationId: 'concordale', age: 43 }),
+  'character.retire': (a) => ({
+    characterId: a,
+    locationId: 'concordale',
+    occupation: 'trainer',
+    reason: 'age',
+    merchant: false,
+  }),
+  'family.marry': (a, b) => ({ characterId: a, otherId: b, locationId: 'saltmere' }),
+  'family.birth': (a, b) => ({ characterId: a, locationId: 'saltmere', parentIds: [a, b] }),
+  'family.comeOfAge': (a) => ({
+    characterId: a,
+    locationId: 'brindlemoor',
+    calling: 'adventurer',
+    occupation: null,
+  }),
+  'family.inherit': (a, b) => ({
+    characterId: a,
+    locationId: 'concordale',
+    fromId: b,
+    gold: 120,
+    items: [],
+  }),
+  'legend.hero': (a) => ({ characterId: a, locationId: where, renown: 52 }),
+  'social.tale': (a, b) => ({ characterId: a, otherId: b, heroId: b, locationId: 'concordale' }),
+  'character.avenger': (a, b) => ({
+    characterId: a,
+    locationId: 'concordale',
+    forId: b,
+    againstId: b,
+  }),
 };
 
 describe('describeEvent', () => {
   it('sees every event type in a year of simulation, short of the rare ones', () => {
-    const seen = new Set(events.map((e) => e.type));
+    const seen = new Set([...events.map((e) => e.type), ...moreTypes]);
     const expected = Object.keys(EVENT_IMPORTANCE).filter((t) => !(t in RARE));
     expect([...seen].filter((t) => !(t in RARE)).sort()).toEqual(expected.sort());
   });

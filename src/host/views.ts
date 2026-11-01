@@ -5,6 +5,7 @@ import {
   Importance,
   moneyHeld,
   priceIndex,
+  renownOf,
   toCalendar,
   type Character,
   type CharacterId,
@@ -21,9 +22,11 @@ import type {
   CharacterView,
   ChronicleView,
   FallenEntry,
+  FamilyTree,
   GoodQuote,
   HallsView,
   HeroEntry,
+  HouseEntry,
   LocationView,
   MarketView,
   PlaceEntry,
@@ -60,7 +63,21 @@ export function summarize(c: Character): CharacterSummary {
     locationId: c.locationId,
     outlaw: c.outlaw !== null,
     dead: c.death !== null,
+    calling: c.calling,
+    born: c.born,
+    died: c.death?.at ?? null,
+    legend: legends.has(c.id),
   };
+}
+
+/** Who is remembered in song, as a set for summaries, rebuilt when the world or its heroes change. */
+let legends: ReadonlySet<CharacterId> = new Set();
+let legendsOf: readonly CharacterId[] | null = null;
+function noteLegends(sim: Simulation): void {
+  const heroes = sim.world.heroes;
+  if (legendsOf === heroes && legends.size === heroes.length) return;
+  legendsOf = heroes;
+  legends = new Set(heroes);
 }
 
 export function placeEntry(l: Location): PlaceEntry {
@@ -70,6 +87,7 @@ export function placeEntry(l: Location): PlaceEntry {
 /** A slice of the world holding these people and what they belong to. */
 function sliceFor(sim: Simulation, ids: Iterable<CharacterId>): WorldSlice {
   const world = sim.world;
+  noteLegends(sim);
   const characters = new Map<CharacterId, CharacterSummary>();
   const parties = new Map<PartyId, Party>();
   const add = (id: CharacterId) => {
@@ -95,13 +113,22 @@ function sliceFor(sim: Simulation, ids: Iterable<CharacterId>): WorldSlice {
 export function characterView(sim: Simulation, id: CharacterId): CharacterView | null {
   const character = sim.world.characters.get(id);
   if (!character) return null;
-  const related = [id, ...(Object.keys(character.opinions) as CharacterId[])];
+  noteLegends(sim);
+  const family = familyOf(sim, character);
+  const related = [
+    id,
+    ...(Object.keys(character.opinions) as CharacterId[]),
+    ...Object.values(family)
+      .flat()
+      .filter((x): x is CharacterId => typeof x === 'string'),
+  ];
   for (const memory of character.memories) {
     if ('characterId' in memory) related.push(memory.characterId);
   }
   if (character.death?.cause.kind === 'character') related.push(character.death.cause.characterId);
   return {
     slice: sliceFor(sim, related),
+    family,
     character,
     events: sim.events.query({
       actor: id,
@@ -109,6 +136,18 @@ export function characterView(sim: Simulation, id: CharacterId): CharacterView |
       limit: STORY_LIMIT,
     }),
   };
+}
+
+function familyOf(sim: Simulation, c: Character): FamilyTree {
+  const get = (id: CharacterId) => sim.world.characters.get(id);
+  const parents = [...c.parents];
+  const grandparents = parents.flatMap((p) => get(p)?.parents ?? []);
+  const siblings = [
+    ...new Set(parents.flatMap((p) => get(p)?.children ?? []).filter((x) => x !== c.id)),
+  ];
+  const children = [...c.children];
+  const grandchildren = children.flatMap((k) => get(k)?.children ?? []);
+  return { grandparents, parents, siblings, spouse: c.spouseId, children, grandchildren };
 }
 
 export function locationView(sim: Simulation, id: LocationId): LocationView | null {
@@ -168,7 +207,7 @@ export function placesView(sim: Simulation): PlaceSummary[] {
 export function statsView(sim: Simulation): StatsView {
   const levels: Record<number, number> = {};
   for (const c of sim.world.characters.values()) {
-    if (!c.death) levels[c.level] = (levels[c.level] ?? 0) + 1;
+    if (!c.death && c.calling === 'adventurer') levels[c.level] = (levels[c.level] ?? 0) + 1;
   }
   return {
     time: sim.world.time,
@@ -260,6 +299,7 @@ export function chronicleView(sim: Simulation, year: number | null): ChronicleVi
 }
 
 export function hallsView(sim: Simulation): HallsView {
+  noteLegends(sim);
   const everyone = [...sim.world.characters.values()];
   const kills = (c: Character) => Object.values(c.kills).reduce((a, n) => a + (n ?? 0), 0);
   const legends = (c: Character) => c.deeds.filter((d) => d.kind === 'legend').length;
@@ -298,7 +338,56 @@ export function hallsView(sim: Simulation): HallsView {
     }))
     .sort((a, b) => b.bounty - a.bounty);
 
-  return { heroes, fallen, wanted };
+  const legendEntries: HeroEntry[] = [...sim.world.heroes]
+    .reverse()
+    .slice(0, HALL_SIZE)
+    .map((id) => sim.world.characters.get(id)!)
+    .map((c) => ({
+      ...summarize(c),
+      kills: kills(c),
+      legends: legends(c),
+      goldEarned: c.goldEarned,
+    }));
+
+  return { heroes, fallen, wanted, legends: legendEntries, houses: housesOf(sim) };
+}
+
+/** Families by name: how many generations, how many legends, how renowned. */
+function housesOf(sim: Simulation): HouseEntry[] {
+  const world = sim.world;
+  const depth = new Map<CharacterId, number>();
+  const generation = (c: Character): number => {
+    const known = depth.get(c.id);
+    if (known !== undefined) return known;
+    const parents = c.parents.map((p) => world.characters.get(p)!).filter(Boolean);
+    const g = parents.length === 0 ? 1 : 1 + Math.max(...parents.map(generation));
+    depth.set(c.id, g);
+    return g;
+  };
+  const houses = new Map<string, Character[]>();
+  for (const c of world.characters.values()) {
+    const list = houses.get(c.familyName);
+    if (list) list.push(c);
+    else houses.set(c.familyName, [c]);
+  }
+  const heroes = new Set(world.heroes);
+  return [...houses]
+    .map(([familyName, members]) => {
+      const greatest = members.reduce((a, b) => (renownOf(b) > renownOf(a) ? b : a));
+      return {
+        familyName,
+        living: members.filter((c) => !c.death).length,
+        members: members.length,
+        // How many generations have borne the name.
+        generations: new Set(members.map(generation)).size,
+        renown: members.reduce((sum, c) => sum + renownOf(c), 0),
+        legends: members.filter((c) => heroes.has(c.id)).length,
+        greatest: summarize(greatest),
+      };
+    })
+    .filter((h) => h.generations >= 2 || h.legends > 0)
+    .sort((a, b) => b.generations - a.generations || b.renown - a.renown)
+    .slice(0, HALL_SIZE);
 }
 
 export function searchView(sim: Simulation, text: string): SearchView {

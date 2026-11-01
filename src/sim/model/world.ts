@@ -1,6 +1,6 @@
 import type { SchedulerState } from '../core/scheduler';
 import type { SpeciesId } from '../../content';
-import type { Character, DeathCause } from './character';
+import type { Calling, Character, DeathCause } from './character';
 import type { Ledger, Market, Shock } from './market';
 import type { Encounter } from './encounter';
 import type { CharacterId, EncounterId, ItemId, LocationId, PartyId, RouteId } from './ids';
@@ -45,6 +45,8 @@ export interface World {
   /** Troubles in progress. */
   shocks: Shock[];
   readonly ledger: Ledger;
+  /** The great dead, whose deeds are told in taverns, most recent last. */
+  readonly heroes: CharacterId[];
 }
 
 export interface Tally {
@@ -56,13 +58,15 @@ export interface Tally {
 
 export interface WorldSample {
   readonly t: number;
-  /** Living adventurers by species. */
+  /** Everyone living, by species: adventurers, merchants, townsfolk and children. */
   readonly population: Partial<Record<SpeciesId, number>>;
+  /** Everyone living, by how they live. */
+  readonly callings: Partial<Record<Calling, number>>;
   /** Deaths so far, by cause. */
   readonly deaths: Partial<Record<DeathCause['kind'], number>>;
   readonly meanLevel: number;
   readonly maxLevel: number;
-  /** Gold held by living adventurers. */
+  /** Gold held by living adventurers; levels are theirs too. */
   readonly gold: number;
   readonly outlaws: number;
   readonly parties: number;

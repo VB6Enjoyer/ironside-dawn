@@ -14,9 +14,9 @@ import {
   type StatId,
 } from '../../content';
 import {
+  ageOf,
   conditionsOf,
   fearOf,
-  roleOf,
   vividMemories,
   vividness,
   statValue,
@@ -45,7 +45,7 @@ import {
   spellName,
   type NameResolver,
 } from '../../text';
-import { formatCount } from '../format';
+import { callingTitle, formatCount } from '../format';
 import { useQuery } from '../useHost';
 import { Prose, type ProseLinks } from './Prose';
 
@@ -116,10 +116,8 @@ export function CharacterCard({
             {character.givenName} {character.familyName}
           </h2>
           <p className="card-subtitle">
-            {character.calling === 'merchant'
-              ? 'Merchant'
-              : `Level ${character.level} ${roleOf(character)}`}{' '}
-            · {species} of {home?.name ?? 'nowhere'}
+            {callingTitle(character)} · {species} of {home?.name ?? 'nowhere'} · aged{' '}
+            {ageOf(character, character.death?.at ?? world.time)}
             {character.gifted && ' · gifted'}
           </p>
         </div>
@@ -164,12 +162,14 @@ export function CharacterCard({
             max={character.maxStamina}
             kind="stamina"
           />
-          <Bar
-            label="Experience"
-            value={character.xp - xpForLevel(character.level)}
-            max={xpForLevel(character.level + 1) - xpForLevel(character.level)}
-            kind="xp"
-          />
+          {character.calling === 'adventurer' && (
+            <Bar
+              label="Experience"
+              value={character.xp - xpForLevel(character.level)}
+              max={xpForLevel(character.level + 1) - xpForLevel(character.level)}
+              kind="xp"
+            />
+          )}
           <Conditions character={character} now={world.time} />
         </section>
       )}
@@ -383,6 +383,9 @@ function Bonds({
       </Fragment>
     ));
   const party = character.partyId ? world.parties.get(character.partyId) : undefined;
+  const living = (ids: readonly CharacterId[]) => ids.filter((id) => world.characters.has(id));
+  const parents = living(character.parents);
+  const children = living(character.children);
   const bonds = Object.entries(character.opinions) as [CharacterId, Opinion][];
   const friends = bonds.filter(([, o]) => o.bond === 'friend').map(([id]) => id);
   const rivals = bonds.filter(([, o]) => o.bond === 'rival').map(([id]) => id);
@@ -411,6 +414,24 @@ function Bonds({
                   : ` (led by ${leader?.name.split(' ')[0]})`}
               </span>
             </dd>
+          </>
+        )}
+        {character.spouseId && world.characters.has(character.spouseId) && (
+          <>
+            <dt>Spouse</dt>
+            <dd>{link(character.spouseId)}</dd>
+          </>
+        )}
+        {parents.length > 0 && (
+          <>
+            <dt>Parents</dt>
+            <dd>{list(parents)}</dd>
+          </>
+        )}
+        {children.length > 0 && (
+          <>
+            <dt>Children</dt>
+            <dd>{list(children)}</dd>
           </>
         )}
         <dt>Friends</dt>

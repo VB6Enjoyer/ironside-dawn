@@ -17,6 +17,8 @@ export interface Location {
   readonly culture: CultureId;
   /** Towns: commoners by people, a statistical population new adventurers come from. */
   readonly population: Partial<Record<SpeciesId, number>>;
+  /** How many of each people the town can hold; growth slows as it fills. */
+  readonly capacity: Partial<Record<SpeciesId, number>>;
   readonly academy: boolean;
   readonly dungeon: Dungeon | null;
   /** Towns: how the commoners make a living. */

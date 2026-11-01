@@ -1,11 +1,13 @@
 import { schedule } from '../core/scheduler';
 import { DAY, HOUR, nextTimeOfDay } from '../core/time';
 import type { SimContext } from '../context';
-import { createCharacter, townPopulation, towns } from '../gen/people';
+import { createCharacter, towns } from '../gen/people';
 import { merchantsFor } from '../gen/world';
+import type { SpeciesId } from '../../content';
 import type { Calling } from '../model';
 import { isAlive } from './condition';
 import { economyDay } from './economy';
+import { lifecycleDay } from './lifecycle';
 import { considerCrime } from './outlaws';
 import { hearTownLanguages } from './social';
 
@@ -42,27 +44,37 @@ export function daily(ctx: SimContext, targetPopulation: number): void {
         );
       }
     }
-    for (const [species, count] of Object.entries(location.population)) {
-      const births = stochasticRound(rng.next(), (count ?? 0) * TOWN_GROWTH_PER_DAY);
-      location.population[species as keyof typeof location.population] = (count ?? 0) + births;
+    // Commoners grow, more slowly as the town fills up.
+    for (const [species, count] of Object.entries(location.population) as [SpeciesId, number][]) {
+      const room = location.capacity[species] ?? count;
+      const growth = count * TOWN_GROWTH_PER_DAY * Math.max(0, 1 - count / Math.max(1, room));
+      location.population[species] = count + stochasticRound(rng.next(), growth);
     }
   }
+
+  lifecycleDay(ctx, targetPopulation);
 
   let living = 0;
   let merchants = 0;
   for (const character of ctx.world.characters.values()) {
     if (!isAlive(character)) continue;
     if (character.calling === 'merchant') merchants++;
-    else living++;
+    else if (character.calling === 'adventurer') living++;
     considerCrime(ctx, character);
     const here = character.locationId ? ctx.world.locations.get(character.locationId) : undefined;
     if (here?.kind === 'town') hearTownLanguages(ctx, character, here);
   }
   const newcomer = (calling: Calling) => {
-    const homes = towns(ctx).filter((t) => townPopulation(t) > 0);
+    const species = scarcestPeople(ctx, calling);
+    const homes = towns(ctx).filter((t) => (t.population[species] ?? 0) > 0);
     if (homes.length === 0) return;
-    const home = rng.weighted(homes.map((t) => [t, townPopulation(t)] as const));
-    createCharacter(ctx, home, true, NEWCOMER_FIRST_WAKE_WITHIN, calling);
+    const home = rng.weighted(homes.map((t) => [t, t.population[species] ?? 0] as const));
+    createCharacter(ctx, home, {
+      newcomer: true,
+      firstWakeWithin: NEWCOMER_FIRST_WAKE_WITHIN,
+      calling,
+      species,
+    });
   };
   const shortage = (targetPopulation - living) / targetPopulation;
   if (shortage > 0 && rng.chance(Math.min(1, NEWCOMER_CHANCE * shortage * 4))) {
@@ -75,6 +87,36 @@ export function daily(ctx: SimContext, targetPopulation: number): void {
   }
 
   schedule(ctx.world.scheduler, ctx.world.time + DAY, { kind: 'world.daily' });
+}
+
+/**
+ * The people most short of its share of adventurers (or merchants), against
+ * how many of each live in the towns. Long-lived peoples never age out of
+ * adventuring, so without this the adventurers would drift toward elves and
+ * dwarves over the generations.
+ */
+function scarcestPeople(ctx: SimContext, calling: Calling): SpeciesId {
+  const commoners = new Map<SpeciesId, number>();
+  let total = 0;
+  for (const town of towns(ctx)) {
+    for (const [species, n] of Object.entries(town.population) as [SpeciesId, number][]) {
+      commoners.set(species, (commoners.get(species) ?? 0) + n);
+      total += n;
+    }
+  }
+  const have = new Map<SpeciesId, number>();
+  let named = 0;
+  for (const c of ctx.world.characters.values()) {
+    if (c.death || c.calling !== calling) continue;
+    have.set(c.species, (have.get(c.species) ?? 0) + 1);
+    named++;
+  }
+  let best: { species: SpeciesId; shortfall: number } | null = null;
+  for (const [species, n] of commoners) {
+    const shortfall = ((named + 1) * n) / total - (have.get(species) ?? 0);
+    if (!best || shortfall > best.shortfall) best = { species, shortfall };
+  }
+  return best?.species ?? 'human';
 }
 
 /** `value` rounded up or down at random, so fractions add up correctly over time. */

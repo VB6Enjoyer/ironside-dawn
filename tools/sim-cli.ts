@@ -16,8 +16,10 @@ import {
   Importance,
   moneyHeld,
   priceIndex,
+  renownOf,
   StreamHash,
   WORLD_START,
+  type Character,
   type CharacterId,
   type SimEvent,
   type World,
@@ -172,6 +174,10 @@ function worldReport(
           return `their own ${spellName(cause.spell)}`;
         case 'character':
           return 'other people';
+        case 'age':
+          return 'old age';
+        case 'departed':
+          return 'moving on (not deaths)';
       }
     }),
   );
@@ -218,6 +224,9 @@ function worldReport(
     '',
     'Bonds and crime',
     ...bondRows(world, counts, row),
+    '',
+    'Generations',
+    ...generationRows(world, counts, row),
     '',
     'Economy',
     ...economyRows(world, counts, row),
@@ -305,7 +314,52 @@ function habitRows(
   ];
 }
 
-/** Friendships, parties, outlaws and the law. */
+/** Who lives how, how deep the families go, and who is remembered (ROADMAP.md Phase 8). */
+function generationRows(
+  world: World,
+  counts: ReadonlyMap<string, number>,
+  row: (label: string, value: string | number) => string,
+): string[] {
+  const living = [...world.characters.values()].filter((c) => !c.death);
+  const depth = new Map<CharacterId, number>();
+  const generation = (c: Character): number => {
+    let g = depth.get(c.id);
+    if (g === undefined) {
+      const parents = c.parents.flatMap((id) => world.characters.get(id) ?? []);
+      g = parents.length === 0 ? 1 : 1 + Math.max(...parents.map(generation));
+      depth.set(c.id, g);
+    }
+    return g;
+  };
+  const deepest = Math.max(1, ...[...world.characters.values()].map(generation));
+  const grid = (['human', 'elf', 'dwarf'] as const).map((species) => {
+    const folk = living.filter((c) => c.species === species);
+    const by = (calling: Character['calling']) => folk.filter((c) => c.calling === calling).length;
+    return row(
+      `  ${species}`,
+      `${folk.length}: ${by('adventurer')} adventurers, ${by('townsfolk')} townsfolk, ` +
+        `${by('child')} children, ${by('merchant')} merchants`,
+    );
+  });
+  const heroes = world.heroes.slice(-5).map((id) => {
+    const c = world.characters.get(id)!;
+    return row(`  ${c.givenName} ${c.familyName}`, `renown ${renownOf(c)}, level ${c.level}`);
+  });
+  return [
+    row('Living, by people', ''),
+    ...grid,
+    row('Deepest generation', deepest),
+    row('Births', counts.get('family.birth') ?? 0),
+    row('Marriages', counts.get('family.marry') ?? 0),
+    row('Retirements', counts.get('character.retire') ?? 0),
+    row('Came of age', counts.get('family.comeOfAge') ?? 0),
+    row('Inheritances', counts.get('family.inherit') ?? 0),
+    row('Tales told', counts.get('social.tale') ?? 0),
+    row('Legends', `${world.heroes.length}${heroes.length > 0 ? ', most recently:' : ''}`),
+    ...heroes,
+  ];
+}
+
 /** Prices in each town, the money supply, and how the merchants are doing (ROADMAP.md Phase 7). */
 function economyRows(
   world: World,
@@ -341,6 +395,7 @@ function economyRows(
   ];
 }
 
+/** Friendships, parties, outlaws and the law. */
 function bondRows(
   world: World,
   counts: ReadonlyMap<string, number>,

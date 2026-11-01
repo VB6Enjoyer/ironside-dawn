@@ -1,5 +1,7 @@
 import type { GoodId, Goods } from '../../content';
+import { HOUR } from '../core/time';
 import type { SimContext } from '../context';
+import { createCharacter } from '../gen/people';
 import type { Character, Location, LocationId } from '../model';
 import { startBrawl } from './combat';
 import { isAlive } from './condition';
@@ -26,7 +28,7 @@ import { charactersAt } from './whereabouts';
 /** Daily chance of turning outlaw, for the most susceptible and desperate. */
 const TURN_CHANCE = 0.04;
 /** Below this much gold an adventurer counts as broke. */
-const BROKE = 15;
+const BROKE = 40;
 const ROBBERY_BOUNTY = 25;
 const MURDER_BOUNTY = 60;
 /** Share of a surrendering victim's purse an outlaw takes. */
@@ -48,7 +50,8 @@ export function considerCrime(ctx: SimContext, character: Character): void {
 
   if (!character.outlaw) {
     if (character.gold >= BROKE || character.activity.kind === 'fighting') return;
-    if (character.calling === 'merchant') return; // a broke merchant borrows and tries again
+    // Only adventurers take to the road this way; a broke merchant borrows and tries again.
+    if (character.calling !== 'adventurer') return;
     const susceptibility = (1 - honor) * (0.5 + greed) * (1.2 - compassion);
     if (!rng.chance(TURN_CHANCE * susceptibility ** 2 * wealthNeed(character))) return;
     character.outlaw = {
@@ -217,7 +220,38 @@ export function onCharacterKilled(ctx: SimContext, victim: Character, killer: Ch
   if (killer.outlaw) {
     ctx.world.tally.murders++;
     registerCrime(ctx, killer, victim, 'murder', locationId);
+    if (!victim.outlaw) raiseAvenger(ctx, victim, killer);
   }
+}
+
+/** Chance that a murder moves a commoner of the victim's town to take up the sword. */
+const AVENGER_CHANCE = 0.3;
+
+/**
+ * Promotion from the commoners (ROADMAP.md Phase 8): a murder singles out
+ * someone in the victim's town, a friend or neighbor, who becomes an
+ * adventurer sworn to avenge them.
+ */
+function raiseAvenger(ctx: SimContext, victim: Character, killer: Character): void {
+  const town = ctx.world.locations.get(victim.homeId);
+  if (!town || town.kind !== 'town' || !ctx.rng.outlaws.chance(AVENGER_CHANCE)) return;
+  const avenger = createCharacter(ctx, town, { newcomer: true, firstWakeWithin: 2 * HOUR });
+  adjustOpinion(avenger, victim.id, { affinity: 0.7, familiarity: 0.6 }, ctx.world.time);
+  adjustOpinion(avenger, killer.id, { affinity: -0.9, trust: -1 }, ctx.world.time);
+  remember(avenger, ctx.world.time, { kind: 'grief', characterId: victim.id }, 0.9);
+  ctx.emit(
+    {
+      type: 'character.avenger',
+      data: {
+        characterId: avenger.id,
+        locationId: town.id,
+        forId: victim.id,
+        againstId: killer.id,
+      },
+    },
+    [avenger.id],
+    town.id,
+  );
 }
 
 /** A crime is known: the outlaw's bounty grows, and every town thinks less of them. */

@@ -52,5 +52,5 @@ export function town(ctx: SimContext, id = 'concordale'): Location {
 
 /** A fresh adventurer in Concordale. */
 export function testCharacter(ctx: SimContext): Character {
-  return createCharacter(ctx, town(ctx), false, 0);
+  return createCharacter(ctx, town(ctx), { newcomer: false, firstWakeWithin: 0 });
 }

@@ -10,6 +10,7 @@ import type { SimContext } from '../context';
 import type { Character, Item, Location, LootItem, Market } from '../model';
 import { gearScore, generateItem, takeGear } from './items';
 import { mint } from './ledger';
+import { townsfolkAt } from './lifecycle';
 import { buyFromHouse, goingPrice, payHouse, priceToBuy, sellToHouse, terms } from './market';
 
 /**
@@ -78,7 +79,9 @@ export function wantsToShop(ctx: SimContext, character: Character, town: Locatio
 /** What a night at an inn costs here: a day and a half's food. */
 export function lodging(ctx: SimContext, town: Location): number {
   const market = ctx.world.markets.get(town.id);
-  return market ? Math.max(1, Math.round(goingPrice(market, 'food') * 1.5)) : 2;
+  // A retired adventurer keeping an inn gives old comrades a fair price.
+  const inns = townsfolkAt(ctx, town.id, 'innkeeper') > 0 ? 0.75 : 1;
+  return market ? Math.max(1, Math.round(goingPrice(market, 'food') * 1.5 * inns)) : 2;
 }
 
 /** Sells the pack, then buys what's needed. */
@@ -175,8 +178,14 @@ function buyGear(
     const unit = priceToBuy(market, character, town, good, 1);
     if (unit === null) continue;
     const dwarven = (town.population.dwarf ?? 0) > (town.population.human ?? 0);
+    // A retired adventurer at a forge here knows what fighters need: better steel.
+    const smith = townsfolkAt(ctx, town.id, 'smith') > 0 ? 0.2 : 0;
     const material: MaterialId =
-      dwarven && rng.chance(0.3) ? 'dwarven-steel' : rng.chance(0.5) ? 'steel' : 'iron';
+      dwarven && rng.chance(0.3 + smith)
+        ? 'dwarven-steel'
+        : rng.chance(0.5 + smith)
+          ? 'steel'
+          : 'iron';
     const rarity: Rarity = rng.chance(0.3) ? 'fine' : 'common';
     const current = good === 'arms' ? character.equipment.weapon : character.equipment.armor;
     const item = generateItem(ctx, rng, {

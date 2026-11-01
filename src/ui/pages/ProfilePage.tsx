@@ -1,5 +1,5 @@
-import type { SimHost } from '../../host';
-import { DAY, Importance, roleOf, toCalendar, type CharacterId, type SimEvent } from '../../sim';
+import type { FamilyTree as Family, SimHost, WorldSlice } from '../../host';
+import { DAY, Importance, toCalendar, type CharacterId, type SimEvent } from '../../sim';
 import {
   biography,
   describeEvent,
@@ -9,6 +9,7 @@ import {
   type NameResolver,
 } from '../../text';
 import { LineChart } from '../components/charts';
+import { callingTitle, lifeYears } from '../format';
 import { Prose, type ProseLinks } from '../components/Prose';
 import { useQuery } from '../useHost';
 
@@ -30,6 +31,9 @@ export function ProfilePage({
     ...(c.death ? [] : [[view.slice.time, c.level, c.gold, 0] as const]),
   ];
   const x = samples.map(([t]) => t);
+  const heroes = new Set(
+    [...view.slice.characters.values()].filter((s) => s.legend).map((s) => s.id),
+  );
   const when = (t: number) => {
     const cal = toCalendar(t);
     return `Year ${cal.year}, ${seasonName(cal.season)}`;
@@ -42,20 +46,27 @@ export function ProfilePage({
           {c.givenName} {c.familyName}
         </h2>
         <p className="card-subtitle">
-          {c.death ? 'Was a' : 'A'} level {c.level} {roleOf(c)} ·{' '}
-          {SPECIES_NAMES[c.species].singular} of {home?.name ?? 'nowhere'}
+          {callingTitle(c)} · {SPECIES_NAMES[c.species].singular} of {home?.name ?? 'nowhere'}
           {c.outlaw && ' · outlaw'}
-          {c.death && ` · died ${formatTimestamp(c.death.at)}`}
+          {c.death &&
+            ` · ${c.death.cause.kind === 'departed' ? 'moved on' : 'died'} ${formatTimestamp(c.death.at)}`}
         </p>
       </header>
 
       <section className="biography">
-        {biography(c, events, names).map((paragraph, i) => (
+        {biography(c, events, names, heroes).map((paragraph, i) => (
           <p key={i}>
             <Prose segments={paragraph} {...links} />
           </p>
         ))}
       </section>
+
+      <FamilyTree
+        self={id}
+        family={view.family}
+        world={view.slice}
+        onCharacter={links.onCharacter}
+      />
 
       <div className="chart-grid-layout">
         <LineChart
@@ -88,6 +99,75 @@ export function ProfilePage({
 
       <Timeline events={events} names={names} links={links} />
     </div>
+  );
+}
+
+/** Their lineage, a generation to a row, from grandparents down to grandchildren. */
+function FamilyTree({
+  self,
+  family,
+  world,
+  onCharacter,
+}: {
+  self: CharacterId;
+  family: Family;
+  world: WorldSlice;
+  onCharacter?: (id: CharacterId) => void;
+}) {
+  const rows: [string, readonly CharacterId[]][] = [
+    ['Grandparents', family.grandparents],
+    ['Parents', family.parents],
+    ['', [self, ...(family.spouse ? [family.spouse] : []), ...family.siblings]],
+    ['Children', family.children],
+    ['Grandchildren', family.grandchildren],
+  ];
+  const kin = rows.reduce((n, [, ids]) => n + ids.length, 0);
+  if (kin <= 1) return null;
+  const chip = (id: CharacterId) => {
+    const person = world.characters.get(id);
+    if (!person) return null;
+    const role = id === self ? 'self' : id === family.spouse ? 'spouse' : null;
+    const className = [
+      'kin',
+      person.dead && 'kin-dead',
+      person.legend && 'kin-legend',
+      role && `kin-${role}`,
+    ]
+      .filter(Boolean)
+      .join(' ');
+    return (
+      <li key={id}>
+        <button
+          type="button"
+          className={className}
+          disabled={id === self || !onCharacter}
+          onClick={() => onCharacter?.(id)}
+          title={person.legend ? 'Remembered in song' : undefined}
+        >
+          <span className="kin-name">
+            {person.legend && '★ '}
+            {person.name}
+          </span>
+          <span className="kin-years">
+            {role === 'spouse' ? 'spouse · ' : ''}
+            {lifeYears(person.born, person.died)}
+          </span>
+        </button>
+      </li>
+    );
+  };
+  return (
+    <section className="family-tree" aria-label="Family tree">
+      <h3>Family</h3>
+      {rows
+        .filter(([, ids]) => ids.length > 0)
+        .map(([label, ids]) => (
+          <div key={label || 'self'} className="kin-row">
+            <span className="kin-label">{label || 'Their generation'}</span>
+            <ul>{ids.map(chip)}</ul>
+          </div>
+        ))}
+    </section>
   );
 }
 

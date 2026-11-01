@@ -20,8 +20,17 @@ import { aCreature, article, capitalize, countWord, listOf, TRAP_NAMES } from '.
  * what they did wrong, and how it ended.
  */
 
-/** "the Harvest of Year 3". */
+const OCCUPATION_PHRASES = {
+  innkeeper: 'an innkeeper',
+  smith: 'a smith',
+  trainer: 'a weapons master',
+  farmer: 'a farmer',
+  clerk: 'a clerk of the trading house',
+} as const;
+
+/** "the Harvest of Year 3", or before the chronicle began. */
 export function whenIn(time: number): string {
+  if (time < 0) return 'the years before the chronicle begins';
   const c = toCalendar(time);
   return `the ${seasonName(c.season)} of Year ${c.year}`;
 }
@@ -59,6 +68,10 @@ export function causeOfDeath(cause: DeathCause, names: NameResolver): Segment[] 
       return [{ text: `killed by ${article(TRAP_NAMES[cause.trap])} ${TRAP_NAMES[cause.trap]}` }];
     case 'magic':
       return [{ text: `killed by their own backfiring ${spellName(cause.spell)}` }];
+    case 'age':
+      return [{ text: `of old age, ${cause.age} years old` }];
+    case 'departed':
+      return [{ text: 'left for distant lands' }];
   }
 }
 
@@ -76,6 +89,8 @@ export function biography(
   c: Character,
   events: readonly SimEvent[],
   names: NameResolver,
+  /** The great dead, to say so of a parent. */
+  heroes: ReadonlySet<CharacterId> = new Set(),
 ): Segment[][] {
   const alive = c.death === null;
   const was = alive ? 'is' : 'was';
@@ -85,15 +100,30 @@ export function biography(
 
   // Origins.
   const character = listOf(personalitySummary(c.traits).split(', ').filter(Boolean).slice(0, 3));
-  paragraphs.push([
-    { text: `${name} ${was} ${article(species)} ${species} of ` },
-    place(c.homeId, names),
-    {
-      text: `, who took up the adventurer's life in ${whenIn(c.arrivedAt)}${
-        c.gifted ? ', born with the gift for magic' : ''
-      }. ${character ? `Those who knew them called them ${character}.` : ''}`,
-    },
-  ]);
+  const calledThem = character ? ` Those who knew them called them ${character}.` : '';
+  if (c.parents.length > 0) {
+    const legendary = c.parents.filter((p) => heroes.has(p));
+    paragraphs.push([
+      { text: `${name} was born in ${whenIn(c.born)} in ` },
+      place(c.homeId, names),
+      { text: ', to ' },
+      ...people(c.parents, names),
+      ...(legendary.length > 0
+        ? [{ text: ', of whom ' }, ...people(legendary, names), { text: ' is remembered in song' }]
+        : []),
+      { text: `${c.gifted ? ', with the family gift for magic' : ''}.${calledThem}` },
+    ]);
+  } else {
+    paragraphs.push([
+      { text: `${name} ${was} ${article(species)} ${species} of ` },
+      place(c.homeId, names),
+      {
+        text: `, who took up the ${c.calling === 'merchant' ? "merchant's" : "adventurer's"} life in ${whenIn(c.arrivedAt)}${
+          c.gifted ? ', born with the gift for magic' : ''
+        }.${calledThem}`,
+      },
+    ]);
+  }
 
   // The career: a merchant's is in their ledger and their tongues.
   if (c.calling === 'merchant') {
@@ -214,8 +244,33 @@ export function biography(
   if (reformed) justice.push({ text: 'They paid for their crimes and went straight.' });
   if (justice.length > 0) paragraphs.push(justice);
 
+  // Family, and settling down.
+  const family: Segment[] = [];
+  if (c.spouseId) family.push({ text: 'They married ' }, person(c.spouseId, names), { text: '. ' });
+  if (c.children.length > 0) {
+    family.push(
+      {
+        text: `${c.children.length === 1 ? 'Their child is' : `Their ${countWord(c.children.length)} children are`} `,
+      },
+      ...people(c.children, names),
+      { text: '. ' },
+    );
+  }
+  if (c.calling === 'townsfolk' && c.occupation) {
+    family.push({ text: `In time they settled in ` }, place(c.homeId, names), {
+      text: ` as ${OCCUPATION_PHRASES[c.occupation]}.`,
+    });
+  }
+  if (family.length > 0) paragraphs.push(family);
+
   // The end.
-  if (c.death) {
+  if (c.death?.cause.kind === 'departed') {
+    paragraphs.push([
+      { text: `In ${whenIn(c.death.at)}, ${c.givenName} left ` },
+      place(c.death.locationId, names),
+      { text: ' for distant lands, and was not heard of again.' },
+    ]);
+  } else if (c.death) {
     paragraphs.push([
       { text: `${c.givenName} died in ${whenIn(c.death.at)}, ` },
       ...causeOfDeath(c.death.cause, names),

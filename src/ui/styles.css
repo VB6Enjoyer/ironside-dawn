@@ -1231,6 +1231,81 @@ dialog input:not([type='checkbox']):not([type='file']) {
   line-height: 1.65;
 }
 
+.family-tree {
+  margin: 20px 0;
+}
+
+.kin-row {
+  display: grid;
+  grid-template-columns: 9rem 1fr;
+  gap: 8px;
+  align-items: start;
+  padding: 6px 0;
+  border-top: 1px solid var(--border);
+}
+
+.kin-label {
+  color: var(--muted);
+  font-size: 0.85rem;
+  padding-top: 6px;
+}
+
+.kin-row ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+button.kin {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel-raised);
+  color: var(--character);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+button.kin:hover:not(:disabled) {
+  border-color: var(--character);
+}
+
+button.kin:disabled {
+  cursor: default;
+}
+
+button.kin-self {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+button.kin-dead {
+  color: var(--dead);
+}
+
+button.kin-legend .kin-name {
+  color: var(--legendary);
+}
+
+.kin-years {
+  color: var(--faint);
+  font-size: 0.78rem;
+}
+
+@media (max-width: 640px) {
+  .kin-row {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+}
+
 .timeline h4 {
   margin: 14px 0 4px;
   font-weight: normal;

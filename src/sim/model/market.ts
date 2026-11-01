@@ -77,7 +77,9 @@ export type MoneySink =
   /** Purses lost with the dead. */
   | 'dead'
   /** Tithes and wages paid out of the towns. */
-  | 'upkeep';
+  | 'upkeep'
+  /** Purses taken away by those who moved on. */
+  | 'departed';
 
 /** Every coin made or destroyed, so a run's report can catch inflation (ROADMAP.md Phase 7). */
 export interface Ledger {

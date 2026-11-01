@@ -1,12 +1,12 @@
 import type { SimHost } from '../../host';
 import { DAY } from '../../sim';
 import { deathLine, formatTimestamp, SPECIES_NAMES, type NameResolver } from '../../text';
-import { formatCount } from '../format';
+import { formatCount, lifeYears } from '../format';
 import { Prose, type ProseLinks } from '../components/Prose';
 import { useQuery } from '../useHost';
 import type { CharacterId } from '../../sim';
 
-/** Hall of Heroes, the Graveyard, and Most Wanted. */
+/** Hall of Heroes, Legends, Great Houses, Most Wanted, and the Graveyard. */
 export function HallsPage({
   host,
   names,
@@ -64,6 +64,76 @@ export function HallsPage({
                   <td>{formatCount(h.kills)}</td>
                   <td>{h.legends || '—'}</td>
                   <td>{formatCount(h.goldEarned)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </section>
+
+      <section className="hall">
+        <h2>Legends</h2>
+        <p className="muted">The great dead, whose tales are still told in the taverns.</p>
+        {halls.legends.length === 0 ? (
+          <p className="muted">No legends yet. They take a lifetime.</p>
+        ) : (
+          <table className="hall-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Lived</th>
+                <th>Level</th>
+                <th>Kills</th>
+                <th>Legends</th>
+              </tr>
+            </thead>
+            <tbody>
+              {halls.legends.map((h) => (
+                <tr key={h.id}>
+                  <td>
+                    ★ {who(h.id, h.name)}{' '}
+                    <span className="muted">{SPECIES_NAMES[h.species].singular}</span>
+                  </td>
+                  <td>{lifeYears(h.born, h.died)}</td>
+                  <td>{h.level}</td>
+                  <td>{formatCount(h.kills)}</td>
+                  <td>{h.legends || '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </section>
+
+      <section className="hall">
+        <h2>Great Houses</h2>
+        <p className="muted">Families that have lasted generations, or bred legends.</p>
+        {halls.houses.length === 0 ? (
+          <p className="muted">No family has yet seen its grandchildren.</p>
+        ) : (
+          <table className="hall-table">
+            <thead>
+              <tr>
+                <th>House</th>
+                <th>Generations</th>
+                <th>Living</th>
+                <th>Legends</th>
+                <th>Greatest</th>
+              </tr>
+            </thead>
+            <tbody>
+              {halls.houses.map((h) => (
+                <tr key={h.familyName}>
+                  <td>{h.familyName}</td>
+                  <td>{h.generations}</td>
+                  <td>
+                    {h.living} <span className="muted">of {h.members}</span>
+                  </td>
+                  <td>{h.legends || '—'}</td>
+                  <td>
+                    {h.greatest.legend && '★ '}
+                    {who(h.greatest.id, h.greatest.name)}
+                  </td>
                 </tr>
               ))}
             </tbody>

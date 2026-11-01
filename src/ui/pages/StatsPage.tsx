@@ -45,7 +45,9 @@ export function StatsPage({ host, time }: { host: SimHost; time: number }) {
   const levels = Object.entries(stats.levels)
     .map(([level, n]) => [Number(level), n] as const)
     .sort((a, b) => a[0] - b[0]);
-  const deaths = (s: WorldSample) => Object.values(s.deaths).reduce((a, n) => a + (n ?? 0), 0);
+  // Those who moved on are not dead.
+  const deaths = (s: WorldSample) =>
+    Object.entries(s.deaths).reduce((a, [kind, n]) => a + (kind === 'departed' ? 0 : (n ?? 0)), 0);
   const living = levels.reduce((a, [, n]) => a + n, 0);
 
   return (
@@ -66,7 +68,8 @@ export function StatsPage({ host, time }: { host: SimHost; time: number }) {
 
       <div className="chart-grid-layout">
         <LineChart
-          title="Adventurers by people"
+          title="Folk by people"
+          subtitle="Everyone with a name, of every calling"
           x={x}
           xLabel={when}
           series={series(
@@ -79,6 +82,17 @@ export function StatsPage({ host, time }: { host: SimHost; time: number }) {
           )}
         />
         <LineChart
+          title="Folk by calling"
+          x={x}
+          xLabel={when}
+          series={series(history, [
+            { id: 'adventurer', label: 'Adventurers', value: (s) => s.callings.adventurer ?? 0 },
+            { id: 'townsfolk', label: 'Townsfolk', value: (s) => s.callings.townsfolk ?? 0 },
+            { id: 'child', label: 'Children', value: (s) => s.callings.child ?? 0 },
+            { id: 'merchant', label: 'Merchants', value: (s) => s.callings.merchant ?? 0 },
+          ])}
+        />
+        <LineChart
           title="Deaths by cause"
           subtitle="All told, since the world began"
           x={x}
@@ -86,8 +100,12 @@ export function StatsPage({ host, time }: { host: SimHost; time: number }) {
           series={series(history, [
             { id: 'creature', label: 'Creatures', value: (s) => s.deaths.creature ?? 0 },
             { id: 'character', label: 'Other people', value: (s) => s.deaths.character ?? 0 },
-            { id: 'trap', label: 'Traps', value: (s) => s.deaths.trap ?? 0 },
-            { id: 'magic', label: 'Their own magic', value: (s) => s.deaths.magic ?? 0 },
+            {
+              id: 'mishap',
+              label: 'Traps and magic',
+              value: (s) => (s.deaths.trap ?? 0) + (s.deaths.magic ?? 0),
+            },
+            { id: 'age', label: 'Old age', value: (s) => s.deaths.age ?? 0 },
           ])}
         />
         <LineChart
@@ -167,6 +185,7 @@ const SOURCES: Record<MoneySource, string> = {
 const SINKS: Record<MoneySink, string> = {
   upkeep: 'tithes and wages paid out of the towns',
   dead: 'lost with the dead',
+  departed: 'taken away by those who moved on',
 };
 
 /** Where the money came from, and where it went (ROADMAP.md Phase 7). */

@@ -1,6 +1,7 @@
 import type { GoodId, Goods, ItemBaseId, LocationKind, ProfessionId, SpeciesId } from '../content';
 import type {
   Bounty,
+  Calling,
   Character,
   CharacterId,
   EventQuery,
@@ -104,6 +105,22 @@ export interface CharacterSummary {
   readonly locationId: LocationId | null;
   readonly outlaw: boolean;
   readonly dead: boolean;
+  readonly calling: Calling;
+  readonly born: number;
+  /** When they died or moved on. */
+  readonly died: number | null;
+  /** Remembered in song. */
+  readonly legend: boolean;
+}
+
+/** A character's close family, for the family tree. */
+export interface FamilyTree {
+  readonly grandparents: readonly CharacterId[];
+  readonly parents: readonly CharacterId[];
+  readonly siblings: readonly CharacterId[];
+  readonly spouse: CharacterId | null;
+  readonly children: readonly CharacterId[];
+  readonly grandchildren: readonly CharacterId[];
 }
 
 export interface CharacterView {
@@ -111,6 +128,20 @@ export interface CharacterView {
   readonly character: Character;
   /** Their story so far, most recent last: everything kept above the trivial. */
   readonly events: readonly SimEvent[];
+  readonly family: FamilyTree;
+}
+
+/** A family name and everyone who has borne it. */
+export interface HouseEntry {
+  readonly familyName: string;
+  readonly living: number;
+  readonly members: number;
+  /** Generations born in the world, plus the founder's. */
+  readonly generations: number;
+  readonly renown: number;
+  readonly legends: number;
+  /** The most renowned who bore the name. */
+  readonly greatest: CharacterSummary;
 }
 
 export interface LocationView {
@@ -236,6 +267,10 @@ export interface HallsView {
   readonly heroes: readonly HeroEntry[];
   readonly fallen: readonly FallenEntry[];
   readonly wanted: readonly WantedEntry[];
+  /** The great dead, most recent first. */
+  readonly legends: readonly HeroEntry[];
+  /** Families with several generations or great names, the most renowned first. */
+  readonly houses: readonly HouseEntry[];
 }
 
 export interface SearchView {

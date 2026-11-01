@@ -281,9 +281,10 @@ describe('engine', () => {
 
     const stats = await host.request({ kind: 'stats' });
     expect(stats.history.length).toBeGreaterThan(1);
-    expect(Object.values(stats.levels).reduce((a, b) => a + b, 0)).toBe(
-      host.getSnapshot().livingCount,
-    );
+    // Levels are the adventurers'; the living count takes in merchants and townsfolk too.
+    const adventurers = Object.values(stats.levels).reduce((a, b) => a + b, 0);
+    expect(adventurers).toBeGreaterThan(0);
+    expect(adventurers).toBeLessThanOrEqual(host.getSnapshot().livingCount);
 
     const chronicle = await host.request({ kind: 'chronicle', year: null });
     expect(chronicle.events.every((e) => e.importance >= Importance.Notable)).toBe(true);

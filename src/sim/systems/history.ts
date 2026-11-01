@@ -1,5 +1,5 @@
 import type { SpeciesId } from '../../content';
-import type { DeathCause, World, WorldSample } from '../model';
+import type { Calling, DeathCause, World, WorldSample } from '../model';
 import { moneyHeld } from './ledger';
 import { priceIndex } from './market';
 
@@ -21,6 +21,7 @@ export function sampleHistory(world: World): void {
 export function worldSample(world: World): WorldSample {
   const population: Partial<Record<SpeciesId, number>> = {};
   const deaths: Partial<Record<DeathCause['kind'], number>> = {};
+  const callings: Partial<Record<Calling, number>> = {};
   let living = 0;
   let levels = 0;
   let maxLevel = 0;
@@ -32,8 +33,10 @@ export function worldSample(world: World): WorldSample {
       deaths[c.death.cause.kind] = (deaths[c.death.cause.kind] ?? 0) + 1;
       continue;
     }
-    living++;
     population[c.species] = (population[c.species] ?? 0) + 1;
+    callings[c.calling] = (callings[c.calling] ?? 0) + 1;
+    if (c.calling !== 'adventurer') continue;
+    living++;
     levels += c.level;
     maxLevel = Math.max(maxLevel, c.level);
     gold += c.gold;
@@ -43,6 +46,7 @@ export function worldSample(world: World): WorldSample {
   return {
     t: world.time,
     population,
+    callings,
     deaths,
     meanLevel: living > 0 ? Math.round((levels / living) * 10) / 10 : 0,
     maxLevel,

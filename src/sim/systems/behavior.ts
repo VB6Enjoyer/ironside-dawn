@@ -13,6 +13,7 @@ import { decideAt, type Action } from './decide';
 import { DAILY_AT } from './ecology';
 import { delveStep, enterDelve } from './delve';
 import { weaponSkillOf } from './items';
+import { townsfolkAt } from './lifecycle';
 import { learnSpells } from './magic';
 import { payHouse } from './market';
 import { markVisited, satisfy, updateDrives } from './mind';
@@ -41,6 +42,8 @@ const INN_RESERVE_NIGHTS = 20;
 const TRAINING_PER_HOUR = 0.25;
 /** Training stops helping at this proficiency. */
 const TRAINING_CAP = 45;
+/** How much further a weapons master in town can take training. */
+const MASTER_EXTRA = 10;
 /** Arcana per hour of study; the gifted learn twice as fast. */
 const STUDY_PER_HOUR = 0.25;
 /** Companionship eased per hour at a tavern. */
@@ -363,9 +366,11 @@ function learnFromPastime(
       return;
     case 'training': {
       // Sparring teaches the basics; mastery only comes from real fights.
+      // A retired master in town teaches faster, and further.
+      const master = townsfolkAt(ctx, locationId, 'trainer') > 0;
       const skill = weaponSkillOf(character.equipment.weapon);
-      if (skill && character.skills[skill] < TRAINING_CAP) {
-        practice(ctx, character, skill, TRAINING_PER_HOUR * hours, locationId);
+      if (skill && character.skills[skill] < TRAINING_CAP + (master ? MASTER_EXTRA : 0)) {
+        practice(ctx, character, skill, TRAINING_PER_HOUR * hours * (master ? 1.5 : 1), locationId);
       }
       return;
     }

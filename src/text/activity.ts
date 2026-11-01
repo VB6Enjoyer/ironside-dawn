@@ -1,5 +1,5 @@
 import type { PastimeId } from '../content';
-import type { Character, Deed, LocationId } from '../sim';
+import type { Character, Deed, LocationId, Occupation } from '../sim';
 import type { NameResolver } from './names';
 import type { Segment } from './describe';
 import { SKILL_PHRASES, spellName } from './items';
@@ -17,6 +17,15 @@ const PASTIME_PLACES: Record<PastimeId, string> = {
   lurk: 'Lying in wait by the road in ',
 };
 
+/** What townsfolk do with their days. */
+export const OCCUPATION_PLACES: Record<Occupation, string> = {
+  innkeeper: 'Keeping an inn in ',
+  smith: 'Working a forge in ',
+  trainer: 'Training young fighters in ',
+  farmer: 'Farming the fields of ',
+  clerk: 'Keeping accounts at the trading house in ',
+};
+
 /** What a character is doing right now, for the character card. */
 export function describeActivity(character: Character, names: NameResolver): Segment[] {
   const place = (id: LocationId | null): Segment => {
@@ -31,6 +40,12 @@ export function describeActivity(character: Character, names: NameResolver): Seg
   switch (activity.kind) {
     case 'idle':
       return [{ text: 'In ' }, here];
+    case 'living':
+      if (character.calling === 'child') return [{ text: 'Growing up in ' }, here];
+      return [
+        { text: character.occupation ? OCCUPATION_PLACES[character.occupation] : 'Living in ' },
+        here,
+      ];
     case 'pastime':
       return [{ text: PASTIME_PLACES[activity.pastime] }, here];
     case 'resting':
@@ -79,6 +94,10 @@ export function describeActivity(character: Character, names: NameResolver): Seg
         }
         case 'creature':
           return [{ text: `Slain by ${aCreature(death.cause.creature)} in ` }, where];
+        case 'age':
+          return [{ text: `Died of old age, ${death.cause.age} years old, in ` }, where];
+        case 'departed':
+          return [{ text: 'Left for distant lands from ' }, where];
       }
     }
   }

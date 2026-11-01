@@ -20,7 +20,15 @@ import type { Equipment, Item } from './item';
 import type { Drives, Expectation, Goal, Memory } from './mind';
 import type { PriceNote } from './market';
 
-export type Calling = 'adventurer' | 'merchant';
+/**
+ * What a character does with their life: adventurers delve, merchants trade,
+ * townsfolk (the retired, and those who never took up the sword) live and
+ * work in town, and children grow up there.
+ */
+export type Calling = 'adventurer' | 'merchant' | 'townsfolk' | 'child';
+
+/** Townsfolk's work, mostly taken up on retiring. */
+export type Occupation = 'innkeeper' | 'smith' | 'trainer' | 'farmer' | 'clerk';
 
 export interface Character {
   readonly id: CharacterId;
@@ -30,11 +38,20 @@ export interface Character {
   readonly familyName: string;
   readonly species: SpeciesId;
   readonly culture: CultureId;
-  readonly homeId: LocationId;
+  homeId: LocationId;
+  /** World time of birth; before the world began for those who were already grown. */
+  readonly born: number;
+  /** Townsfolk's work. */
+  occupation: Occupation | null;
+  /** Married to, living or dead. */
+  spouseId: CharacterId | null;
+  /** Mother and father, for those born in the world. */
+  readonly parents: readonly CharacterId[];
+  readonly children: CharacterId[];
   /** World time the character entered the world. */
   readonly arrivedAt: number;
 
-  readonly stats: Stats;
+  stats: Stats;
   /** Personality, 0 to 1 each. Mostly fixed; bravery drifts with experience. */
   traits: Traits;
   /** Born with the gift for magic (WORLD.md §4). */
@@ -138,7 +155,10 @@ export type DeathCause =
   | { readonly kind: 'creature'; readonly creature: CreatureRef }
   | { readonly kind: 'character'; readonly characterId: CharacterId }
   | { readonly kind: 'trap'; readonly trap: TrapId }
-  | { readonly kind: 'magic'; readonly spell: SpellId };
+  | { readonly kind: 'magic'; readonly spell: SpellId }
+  | { readonly kind: 'age'; readonly age: number }
+  /** Not a death: they left for distant lands, and the world stopped following them. */
+  | { readonly kind: 'departed' };
 
 export interface DelveProgress {
   readonly locationId: LocationId;
@@ -155,6 +175,8 @@ export interface DelveProgress {
 export type Activity =
   /** At a location, about to decide what to do next. */
   | { readonly kind: 'idle' }
+  /** Townsfolk and children: living their lives in town, not deciding moment to moment. */
+  | { readonly kind: 'living' }
   /** Passing time at a location from `since` until `until`. */
   | {
       readonly kind: 'pastime';

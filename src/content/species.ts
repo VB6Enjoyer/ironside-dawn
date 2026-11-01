@@ -10,8 +10,16 @@ export interface SpeciesDef {
   /** The culture its people are usually raised in. */
   readonly culture: CultureId;
   readonly statModifiers: Partial<Record<StatId, number>>;
-  /** Typical lifespan in years. Aging arrives in Phase 8. */
+  /** Typical lifespan in years: past three-quarters of it, death from old age grows likely. */
   readonly lifespan: number;
+  /** Age at which a child comes of age. */
+  readonly adultAge: number;
+  /** Ages (years) of those who take up adventuring when the world begins. */
+  readonly startingAge: readonly [number, number];
+  /** Yearly chance a couple in their fertile years has a child, before crowding. */
+  readonly fertility: number;
+  /** Undead and the like don't age (none yet). */
+  readonly ageless?: boolean;
   /** Baseline feelings toward other peoples, -1 (hostile) to 1 (friendly). Used from Phase 5. */
   readonly attitudes: Readonly<Record<string, number>>;
   /** Relative preference among starting weapons and armor. */
@@ -30,6 +38,9 @@ export const SPECIES = {
     culture: 'generic',
     statModifiers: {},
     lifespan: 70,
+    adultAge: 16,
+    startingAge: [17, 34],
+    fertility: 0.45,
     attitudes: { human: 0.3, elf: 0, dwarf: 0 },
     weapons: { longsword: 3, shortsword: 2, spear: 2, mace: 2, axe: 1 },
     armor: { padded: 1, leather: 2, scale: 1 },
@@ -42,6 +53,9 @@ export const SPECIES = {
     culture: 'sylvan',
     statModifiers: { agility: 2, wits: 1, spirit: 1, toughness: -1, might: -1 },
     lifespan: 600,
+    adultAge: 50,
+    startingAge: [55, 160],
+    fertility: 0.05,
     attitudes: { elf: 0.5, human: -0.1, dwarf: -0.3 },
     weapons: { leafblade: 4, longsword: 2, spear: 1 },
     armor: { padded: 1, leather: 3 },
@@ -54,6 +68,9 @@ export const SPECIES = {
     culture: 'deephold',
     statModifiers: { toughness: 2, might: 1, agility: -1, presence: -1 },
     lifespan: 250,
+    adultAge: 30,
+    startingAge: [32, 80],
+    fertility: 0.15,
     attitudes: { dwarf: 0.5, human: 0, elf: -0.3 },
     weapons: { axe: 4, warhammer: 3, mace: 1 },
     armor: { leather: 1, scale: 2 },
