@@ -54,6 +54,11 @@ choices make them dangerous.
 | **Demons**           | Malevolent by nature   | Blighted wastes, rifts        | Strong, cruel, often magically gifted. Mostly appear as raiders, cult masters, and bosses. |
 | **Undead (sapient)** | Malevolent by nature   | Barrows, ruined cities        | Liches and revenants: ageless, patient, and they remember everything.                      |
 
+As built (Phase 8), humans live about 70 years and come of age at 16, dwarves
+250 years and 30, elves 600 years and 50. The longer a people lives, the fewer
+children it has: a human couple is about three times as likely to have a child
+in a year as a dwarven one, and nine times as likely as an elven one.
+
 The **lesser undead** (skeletons, zombies) and **lesser demons** (imps,
 hounds) are _creatures_, not characters. They are often under the command of a
 sapient one.

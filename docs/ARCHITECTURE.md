@@ -489,6 +489,43 @@ Built in Phase 7 (`src/sim/systems/market.ts`, `economy.ts`, `merchants.ts`,
   of the towns) through the ledger; everything else is a transfer. A test
   checks that the gold held equals what was minted less what was burned.
 
+### 4.10 Generations: lives with a beginning and an end
+
+Built in Phase 8 (`src/sim/systems/lifecycle.ts`, `death.ts`, `social.ts`).
+
+- **Callings.** Every named character is an adventurer, a merchant, one of the
+  townsfolk, or a child. Only adventurers and merchants are scheduled. Townsfolk
+  and children have the activity `living` and are handled in one daily round,
+  so a town full of retired heroes and their children costs next to nothing.
+- **Ages.** Each people has a lifespan, an age of adulthood, the age range its
+  first adventurers start at, and a fertility. From 60% of a lifespan the years
+  tell (might, agility and toughness wane a little each birthday); from 75%,
+  the yearly risk of death of old age climbs steeply. A people can be marked
+  `ageless` (undead, later).
+- **Promotion and demotion.** Adventurers and merchants are still promoted
+  from a town's commoners (§4.2), from the people most short of its share, so
+  the long-lived peoples don't take over the adventurers as humans age out.
+  Adventurers retire, through age, wealth, a family, or broken nerve, to a trade
+  in town (innkeeper, smith, weapons master, farmer, clerk) or to the merchant's
+  life; they keep their memories and friends. Lone townsfolk of a crowded
+  people may move on, which takes them out of the world without a death.
+- **Families.** Two characters who love each other (high mutual affinity and
+  familiarity, a friend bond) may marry; across peoples only rarely, never
+  close kin. A married couple in its fertile years has children at its people's
+  fertility, less the fuller the people's settled young already are (that
+  density dependence is what keeps each people's numbers level). Children
+  blend their parents' stats and traits with a mutation, take a parent's family
+  name and weapon, are likelier to have the gift if a parent did, and come of
+  age as adventurers (while the world needs them; with a parent's grudges, and
+  a vow against a parent's killer) or in a parent's trade.
+- **Inheritance.** Someone who dies at home with a living spouse or children
+  leaves them their purse and gear, legendary items included; elsewhere,
+  legendary items stay where they fell. A purse with no heir is burned.
+- **Legends.** Renown is level, legendary finds and fearsome kills. A dead
+  character whose renown passes a floor and outshines 90% of those who died
+  before becomes a legend: a legendary event, a place in the halls, and a tale
+  others tell in taverns. Legendary items grow rarer the more of them there are.
+
 ---
 
 ## 5. UI ↔ simulation boundary

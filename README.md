@@ -28,16 +28,16 @@ town's market, or watch a dungeon's population change over time.
 
 ## Status
 
-Phase 7 (Markets) is done. Each town runs a daily market where nobody sets
-the prices: farmers, miners, smiths, alchemists and the rest bid and ask from
-their own beliefs, and drift toward the trades that pay. Adventurers sell
-their finds and buy healing draughts and gear; merchants haul goods between
-towns, learn the townsfolk's tongues to get better prices, and risk the
-bandits on the Ironpass. Harvests fail, mines collapse, wargs close roads, and
-every coin is accounted for. Phase 6 made it an observatory: follow anyone,
-read life stories, look in on places, browse the chronicle, statistics and
-halls, skip years at a time, and save, load and share worlds. Phase 8
-(Generations) is next. The plan is in:
+Phase 8 (Generations) is done. Characters age and die of old age, retire to
+run inns and forges or to trade, marry, raise children who take up a parent's
+weapon or grudge, and leave their gold and gear to their heirs; the greatest
+of the dead become legends that taverns tell of. Profiles show family trees,
+and the halls list legends and great houses. Phase 7 (Markets) gave each town
+a daily market where nobody sets the prices, merchants hauling goods between
+towns, and a ledger for every coin. Phase 6 made it an observatory: follow
+anyone, read life stories, look in on places, browse the chronicle,
+statistics and halls, skip years at a time, and save, load and share worlds.
+Phase 9 (A Living World) is next. The plan is in:
 
 - [`docs/ROADMAP.md`](docs/ROADMAP.md): the phased development plan, with exit
   criteria for each milestone.

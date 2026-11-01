@@ -651,26 +651,89 @@ makes money from it.
 **Goal:** Lives have a beginning, middle, and end, and the world continues past
 any single character.
 
-- [ ] **Aging** per species lifespan: stats change with age, and characters die
+- [x] **Aging** per species lifespan: stats change with age, and characters die
       of old age. Undead don't age.
-- [ ] **Retirement**: older or wealthy or wounded or traumatized adventurers
+- [x] **Retirement**: older or wealthy or wounded or traumatized adventurers
       settle down and take a town job (innkeeper, smith, trainer, merchant).
       Their memories and relationships stay.
-- [ ] **Courtship and marriage** from high mutual affinity and compatible
+- [x] **Courtship and marriage** from high mutual affinity and compatible
       traits, mostly within a species.
-- [ ] **Children**: inherited traits (blend + mutation), the gift sometimes
+- [x] **Children**: inherited traits (blend + mutation), the gift sometimes
       runs in families, and family names. Children grow up in town and come of
       age as new adventurers who may take up a parent's weapon or grudge.
-- [ ] **Promotion** from statistical populations: notable commoners become named
+- [x] **Promotion** from statistical populations: notable commoners become named
       characters when events single them out.
-- [ ] **Inheritance**: gold, items, and houses pass to heirs.
-- [ ] **Dynasties and legends**: family trees, famous lineages, and dead heroes
+- [x] **Inheritance**: gold, items, and houses pass to heirs.
+- [x] **Dynasties and legends**: family trees, famous lineages, and dead heroes
       who become legends that others mention.
-- [ ] UI: family tree view, and a lineage section in profiles.
+- [x] UI: family tree view, and a lineage section in profiles.
 
 **Exit criteria:** A 100-year headless run produces three or more generations,
 with a stable population for each people and family sagas visible in the
 chronicle.
+
+**Status: done.** Notes from building it (design in `ARCHITECTURE.md` §4.10):
+
+- **Ages**: humans live about 70 years, dwarves 250, elves 600, each with an
+  age of adulthood and a range their first adventurers start at. From 60% of
+  a lifespan strength, agility and toughness wane each birthday; from 75%,
+  death of old age grows likely. Peoples can be marked ageless, for the undead
+  to come.
+- **Callings**: adventurer, merchant, townsfolk, child. Townsfolk and children
+  are never scheduled, only visited in the daily round, so they cost almost
+  nothing; they still go to the tavern of an evening, make friends and court.
+- **Retirement** comes with age, wealth (not for the young of a long-lived
+  people), a young family, or broken nerve. Retired adventurers become
+  innkeepers (cheaper rooms in their town), smiths (better steel for sale),
+  weapons masters (faster training, to a higher cap), farmers or clerks, or,
+  if greedy and rich while the roads have room, merchants.
+- **Families**: friends who love each other marry, rarely across peoples and
+  never close kin; couples in their fertile years have up to five children.
+  Children blend their parents' stats and traits with a mutation, take a family
+  name (with "II" or "III" after the given name when the whole name is taken), and have a one in three chance
+  of the gift with a gifted parent. They come of age as adventurers (with a
+  parent's weapon and grudges) while the world needs them, else in a parent's
+  trade. A murder may raise an avenger among the victim's kin.
+- **Promotion** from the commoners is still how adventurers and merchants
+  appear, now from the people most short of its share.
+- **Keeping numbers level**: births slow as a people's young settled folk
+  fill the room its commoners give it, and townsfolk of a crowded people
+  (couples together, never those with children to raise or the famous) may
+  move on, leaving the world without a death. Those leaving pass their purse
+  to their family.
+- **Inheritance**: whoever dies at home leaves gold and gear (legendary items
+  included) to a spouse, or else shared among the children.
+- **Legends**: a dead character becomes a legend when their renown (level,
+  legendary finds, memorable kills, kills) outshines 90% of the dead before them.
+  The bards sing of them (a legendary event), taverns tell their tales, and
+  their children's life stories note whose child they were.
+- **UI**: a family tree on every profile (grandparents to grandchildren, the
+  dead and the legendary marked), spouse, parents and children on the card,
+  ages and callings ("Retired smith"), Legends and Great Houses in the halls,
+  folk by calling and deaths of old age on the statistics page, and a
+  Generations section in the headless report.
+- **Exit criteria, met for generations and sagas, mostly for numbers.** Three
+  100-year runs of 40 adventurers (seeds `ages`, `saga`, `ink`) reached five or
+  six generations, with 83–100 births, about 130–145 marriages, 100–110 deaths
+  of old age and 30–36 legends. The living levelled off at 120–145 from the
+  thirtieth year; humans stay between about 67 and 92 with no trend, while
+  dwarves (25 to 32–35 from year 30 to 100) and elves (14–16 to 24–26) still
+  edge up by about one a decade, since none of them has grown old within a
+  century. The chronicle tells the family stories: in `saga`, Godwin Rookfield
+  marries in the first year and retires as a smith for the family; their
+  daughter Gunnora comes of age with a leaf-bladed sword, finds three
+  legendary items, marries and has children, the youngest coming of age in
+  year 39.
+- **Balance changes on the way**: commoners now grow logistically toward a
+  town's room (1.5× its founding size); legendary items grow rarer as more
+  exist; adventurers turn to crime from 40 gold rather than 15, since with
+  merchants and inns they were rarely that poor. Veterans still rarely die to
+  creatures (about 20 a century in a world of 40), and legendary finds are
+  still many (about 220 a century).
+- **Performance**: 500 adventurers (with their merchants, and the townsfolk
+  and children they become and raise) run 10 years in 250 s headless, against
+  217 s before; the daily round of the townsfolk costs about 3%, the rest is
+  a busier world.
 
 ---
 
