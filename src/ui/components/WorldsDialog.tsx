@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { SavedGame } from '../../host';
 import { formatDate, SPECIES_NAMES } from '../../text';
 import { exportSave, importSave } from '../files';
+import { addPack, availablePacks, BUNDLED_PACKS, removePack } from '../packs';
 import { CHARACTER_COUNTS, randomSeed, shareLink, withHumans, type WorldSpec } from '../seed';
 import { PEOPLES, type PeopleId } from '../../content';
 import type { WorldSettings } from '../../sim';
@@ -34,6 +35,8 @@ export function WorldsDialog({
   const [cap, setCap] = useState<string>(
     current.settings.populationCap ? String(current.settings.populationCap) : '',
   );
+  const [packs, setPacks] = useState<readonly string[]>(current.packs);
+  const [known, setKnown] = useState(availablePacks);
   const settings = (): Partial<WorldSettings> => ({
     ...(size !== 'auto' ? { size } : {}),
     danger,
@@ -127,7 +130,12 @@ export function WorldsDialog({
           onSubmit={(e) => {
             e.preventDefault();
             if (seed.trim())
-              onNew({ seed: seed.trim(), characterCount: count, settings: settings() });
+              onNew({
+                seed: seed.trim(),
+                characterCount: count,
+                settings: settings(),
+                packs: packs.filter((id) => known.some((p) => p.id === id)),
+              });
           }}
         >
           <label>
@@ -206,6 +214,59 @@ export function WorldsDialog({
                     {SPECIES_NAMES[p].plural}
                   </label>
                 ))}
+              </fieldset>
+              <fieldset>
+                <legend>Content packs</legend>
+                {known.map((pack) => (
+                  <span key={pack.id} className="pack">
+                    <label title={pack.description ?? undefined}>
+                      <input
+                        type="checkbox"
+                        checked={packs.includes(pack.id)}
+                        onChange={(e) =>
+                          setPacks(
+                            e.target.checked
+                              ? [...packs, pack.id]
+                              : packs.filter((id) => id !== pack.id),
+                          )
+                        }
+                      />{' '}
+                      {pack.name}
+                    </label>
+                    {!BUNDLED_PACKS.includes(pack) && (
+                      <button
+                        type="button"
+                        className="link-button"
+                        aria-label={`Forget ${pack.name}`}
+                        onClick={() => {
+                          removePack(pack.id);
+                          setPacks(packs.filter((id) => id !== pack.id));
+                          setKnown(availablePacks());
+                        }}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </span>
+                ))}
+                <label className="import">
+                  Add a pack{' '}
+                  <input
+                    type="file"
+                    accept=".json,application/json"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      e.target.value = '';
+                      if (file)
+                        run(async () => {
+                          const pack = addPack(await file.text());
+                          setKnown(availablePacks());
+                          setPacks((ids) => (ids.includes(pack.id) ? ids : [...ids, pack.id]));
+                          setMessage(`Added ${pack.name}.`);
+                        });
+                    }}
+                  />
+                </label>
               </fieldset>
             </div>
           </details>

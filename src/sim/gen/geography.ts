@@ -4,7 +4,7 @@ import {
   CULTURES,
   DUNGEON_TEMPLATES,
   HOMELANDS,
-  PACK_CULTURES,
+  packCultures,
   packOf,
   PEOPLES,
   SPECIES,
@@ -205,7 +205,7 @@ export function generateMap(seed: string, size: WorldSize, options: MapOptions =
   }
 
   // Every culture's lands hold at least one dungeon of its own kind (a barrow, a haunted shrine).
-  for (const culture of PACK_CULTURES) {
+  for (const culture of packCultures()) {
     const lands = regions.filter((r) => r.culture === culture);
     if (lands.length === 0) continue;
     const pack = packOf(culture)!;
@@ -267,7 +267,7 @@ function assignCultures(
   size: WorldSize,
 ): (CultureId | null)[] {
   const cultures: (CultureId | null)[] = hearts.map(() => null);
-  for (const id of PACK_CULTURES) {
+  for (const id of packCultures()) {
     const pack = packOf(id)!;
     const fits = (i: number) =>
       cultures[i] === null && biomes[i] !== 'wastes' && mainPeople(biomes[i]!) in pack.peoples;

@@ -1642,6 +1642,16 @@ button.link-button {
   border-radius: 6px;
 }
 
+.settings-grid .pack {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.settings-grid .pack button {
+  color: var(--muted);
+}
+
 .settings-grid legend {
   color: var(--muted);
   font-size: 0.85rem;

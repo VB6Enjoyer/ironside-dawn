@@ -199,6 +199,7 @@ export function createEngine(options: EngineOptions): Engine {
           seed: init.seed,
           characterCount: init.characterCount,
           ...(init.settings ? { settings: init.settings } : {}),
+          ...(init.packs ? { packs: init.packs } : {}),
           watch: currentWatch(),
           onEvent: intake,
         });

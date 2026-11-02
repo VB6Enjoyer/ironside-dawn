@@ -1,5 +1,6 @@
 import type {
   BiomeId,
+  ContentPack,
   CreatureId,
   CultureId,
   Role,
@@ -466,6 +467,8 @@ export interface InitOptions {
   readonly characterCount?: number;
   /** Choices for a new world; anything left out takes its default. */
   readonly settings?: Partial<WorldSettings>;
+  /** Content packs to add before the world is made. */
+  readonly packs?: readonly ContentPack[];
   readonly restore?: SavedGame;
 }
 

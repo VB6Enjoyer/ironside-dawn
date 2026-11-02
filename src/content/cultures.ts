@@ -276,10 +276,10 @@ export const CULTURES = {
 export type CultureId =
   'generic' | 'sylvan' | 'deephold' | 'steppe' | 'japonic' | 'norse' | 'grave' | 'infernal';
 
-/** The regional culture packs, in the order worlds place them. */
-export const PACK_CULTURES = (Object.keys(CULTURES) as CultureId[]).filter(
-  (id) => (CULTURES[id] as CultureDef).pack,
-);
+/** The regional culture packs, in the order worlds place them (content packs' last). */
+export function packCultures(): CultureId[] {
+  return (Object.keys(CULTURES) as CultureId[]).filter((id) => (CULTURES[id] as CultureDef).pack);
+}
 
 export function packOf(culture: CultureId): CulturePack | null {
   return (CULTURES[culture] as CultureDef).pack ?? null;

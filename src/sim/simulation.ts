@@ -1,4 +1,4 @@
-import type { MapDef } from '../content';
+import { installPack, type ContentPack, type MapDef } from '../content';
 import { EventStore, type EventListener, type Retention } from './core/event-store';
 import { createRng, restoreRng, type Rng } from './core/rng';
 import { peekNext, popNext } from './core/scheduler';
@@ -52,6 +52,11 @@ export interface SimulationOptions {
   readonly worldSize?: WorldSize;
   /** Choices for a new world (Phase 11); anything left out takes its default. */
   readonly settings?: Partial<WorldSettings>;
+  /**
+   * Content packs to add before the world is made (Phase 11). They change the
+   * content tables for the whole process, so a host runs one world's packs at a time.
+   */
+  readonly packs?: readonly ContentPack[];
   /**
    * Called for every event, including those emitted while the world is
    * created. Use this rather than `events.subscribe()` to see the full history.
@@ -134,6 +139,8 @@ const STREAMS = [
 
 export function createSimulation(options: SimulationOptions): Simulation {
   const restore = options.restore ? checkSave(options.restore) : null;
+  // Packs go in before anything is made or loaded: the world may name what they add.
+  const packs = (restore?.packs ?? options.packs ?? []).map((p) => installPack(p));
   const settings: WorldSettings = {
     ...defaultSettings(options.characterCount ?? DEFAULT_ADVENTURERS),
     ...(options.worldSize ? { size: options.worldSize } : {}),
@@ -255,6 +262,7 @@ export function createSimulation(options: SimulationOptions): Simulation {
         version: SAVE_VERSION,
         characterCount: targetPopulation,
         settings: world.settings,
+        packs,
         rng: Object.fromEntries(STREAMS.map((name) => [name, rng[name].getState()])),
         world: encodeWorld(world),
       };

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { CULTURES, packOf, PACK_CULTURES, WEAPONS, type CultureDef } from '../../content';
+import { CULTURES, packCultures, packOf, WEAPONS, type CultureDef } from '../../content';
 import { generateMap } from '../gen/geography';
 import { createCharacter } from '../gen/people';
 import { testCharacter, testContext } from '../test-support';
@@ -30,7 +30,7 @@ describe('culture packs', () => {
   it('each take a cluster of a medium world’s regions, never the wastes', () => {
     for (const seed of ['one', 'two', 'three']) {
       const { map } = world(seed);
-      for (const culture of PACK_CULTURES) {
+      for (const culture of packCultures()) {
         const lands = map.regions!.filter((r) => r.culture === culture);
         expect(lands.length, `${seed} ${culture}`).toBeGreaterThan(0);
         expect(lands.every((r) => r.biome !== 'wastes')).toBe(true);

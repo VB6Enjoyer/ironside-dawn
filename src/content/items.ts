@@ -89,10 +89,11 @@ export type TrinketId = (typeof TRINKETS)[number]['id'];
 export type ItemBaseId = WeaponId | ArmorId | TrinketId;
 export type ItemBase = WeaponBase | ArmorBase | TrinketBase;
 
-const BASES: readonly ItemBase[] = [...WEAPONS, ...ARMORS, ...TRINKETS];
-
 export function itemBase(id: ItemBaseId): ItemBase {
-  return BASES.find((b) => b.id === id)!;
+  // Looked up afresh each time: content packs may have added to the tables.
+  return (WEAPONS.find((b) => b.id === id) ??
+    ARMORS.find((b) => b.id === id) ??
+    TRINKETS.find((b) => b.id === id))!;
 }
 
 export function weaponBase(id: WeaponId): WeaponBase {

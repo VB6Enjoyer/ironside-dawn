@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 
 import { createWorkerHost, type InitOptions, type SavedGame, type SimHost } from '../host';
+import { installPack, type ContentPack } from '../content';
 import { defaultSettings, type CharacterId, type LocationId, type WorldSettings } from '../sim';
 import { CharacterCard } from './components/CharacterCard';
 import { Controls } from './components/Controls';
@@ -27,6 +28,7 @@ import {
   writeSpecToUrl,
   type WorldSpec,
 } from './seed';
+import { packsByIds } from './packs';
 import { autosaveId, readSave, writeSave } from './storage';
 import { useHostSnapshot } from './useHost';
 
@@ -77,32 +79,66 @@ function useWorldHost(session: Session): SimHost {
   return entry.host;
 }
 
+/**
+ * The world's content packs go into this page's tables as well as the
+ * worker's, so its creatures, arms and spells can be named here. A pack can
+ * go in only once per page; one changed since needs a reload.
+ */
+function installHere(packs: readonly ContentPack[]): string | null {
+  for (const pack of packs) {
+    try {
+      installPack(pack);
+    } catch (e) {
+      return `${e instanceof Error ? e.message : String(e)} Reload the page to use it.`;
+    }
+  }
+  return null;
+}
+
 function freshSession(spec: WorldSpec): Session {
+  const packs = packsByIds(spec.packs);
+  const missing = spec.packs.filter((id) => !packs.some((p) => p.id === id));
+  const trouble = installHere(packs);
   return {
     key: nextSessionKey++,
-    spec,
-    init: { seed: spec.seed, characterCount: spec.characterCount, settings: spec.settings },
-    note: null,
+    spec: { ...spec, packs: packs.map((p) => p.id) },
+    init: {
+      seed: spec.seed,
+      characterCount: spec.characterCount,
+      settings: spec.settings,
+      ...(packs.length > 0 ? { packs } : {}),
+    },
+    note:
+      trouble ??
+      (missing.length > 0
+        ? `This world was made with content packs you haven't added here (${missing.join(', ')}), so it has turned out differently.`
+        : null),
   };
 }
 
 function savedSession(game: SavedGame, note: string): Session {
+  const packs = game.world.packs;
   return {
     key: nextSessionKey++,
     spec: {
       seed: game.seed,
       characterCount: game.world.characterCount,
       settings: game.world.settings,
+      packs: packs.map((p) => p.id),
     },
     init: { seed: game.seed, restore: game },
-    note,
+    note: installHere(packs) ?? note,
   };
 }
 
-/** Whether a saved world was made with the settings a link asks for. */
-function sameSettings(saved: WorldSettings, spec: WorldSpec): boolean {
-  const wanted = { ...defaultSettings(spec.characterCount), ...spec.settings };
-  return JSON.stringify(saved) === JSON.stringify(wanted);
+/** Whether a saved world was made with the settings and packs a link asks for. */
+function sameSettings(saved: SavedGame['world'], spec: WorldSpec): boolean {
+  const wanted: WorldSettings = { ...defaultSettings(spec.characterCount), ...spec.settings };
+  const packs = saved.packs.map((p) => p.id);
+  return (
+    JSON.stringify(saved.settings) === JSON.stringify(wanted) &&
+    packs.join(',') === spec.packs.join(',')
+  );
 }
 
 export function App() {
@@ -116,6 +152,7 @@ export function App() {
       seed: randomSeed(),
       characterCount: DEFAULT_CHARACTER_COUNT,
       settings: {},
+      packs: [],
     };
     let current = true;
     readSave(autosaveId(spec.seed))
@@ -125,7 +162,7 @@ export function App() {
         const fits =
           game &&
           game.world.characterCount === spec.characterCount &&
-          sameSettings(game.world.settings, spec);
+          sameSettings(game.world, spec);
         setSession(
           fits
             ? savedSession(game, 'Carried on from where you left this world.')

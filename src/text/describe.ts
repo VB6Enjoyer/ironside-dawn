@@ -3,6 +3,7 @@ import {
   itemBase,
   LANGUAGES,
   packOf,
+  spellDef,
   type CreatureId,
   type ItemBaseId,
   type LocationKind,
@@ -174,7 +175,10 @@ function herd(creature: CreatureId, count: number): string {
 }
 
 function attackVerb(h: Helpers, attacker: Combatant): string {
-  if (attacker.kind === 'creature') return h.pick(CREATURE_VERBS[attacker.ref.species]);
+  if (attacker.kind === 'creature') {
+    // Creatures from content packs have no verbs of their own.
+    return h.pick(CREATURE_VERBS[attacker.ref.species] ?? ['strikes', 'attacks']);
+  }
   const weapon = h.weaponOf(attacker.id);
   const verbs = weapon ? WEAPON_VERBS[weapon as WeaponId] : undefined;
   return verbs ? h.pick(verbs) : 'strikes';
@@ -726,6 +730,17 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
           ];
         case 'rune-of-warding':
           return [c, ` carves a Rune of Warding${weak ? ', crooked and faint' : ''} (${amount}).`];
+      }
+      // Spells from content packs, by what they do.
+      switch (spellDef(e.data.spell).effect.kind) {
+        case 'damage':
+          return [c, ` casts ${spell} at `, target, ` for ${amount} damage.`];
+        case 'heal':
+          return [c, ` casts ${spell} and heals ${amount}.`];
+        case 'ward':
+          return [c, ` casts ${spell}${weak ? ', weakly' : ''} (${amount}).`];
+        default:
+          return [c, ` casts ${spell}.`];
       }
     },
   ],
