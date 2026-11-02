@@ -1,7 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 
 import { createWorkerHost, type InitOptions, type SavedGame, type SimHost } from '../host';
-import type { CharacterId, LocationId } from '../sim';
+import { defaultSettings, type CharacterId, type LocationId, type WorldSettings } from '../sim';
 import { CharacterCard } from './components/CharacterCard';
 import { Controls } from './components/Controls';
 import { DigestPanel } from './components/DigestPanel';
@@ -81,7 +81,7 @@ function freshSession(spec: WorldSpec): Session {
   return {
     key: nextSessionKey++,
     spec,
-    init: { seed: spec.seed, characterCount: spec.characterCount },
+    init: { seed: spec.seed, characterCount: spec.characterCount, settings: spec.settings },
     note: null,
   };
 }
@@ -89,10 +89,20 @@ function freshSession(spec: WorldSpec): Session {
 function savedSession(game: SavedGame, note: string): Session {
   return {
     key: nextSessionKey++,
-    spec: { seed: game.seed, characterCount: game.world.characterCount },
+    spec: {
+      seed: game.seed,
+      characterCount: game.world.characterCount,
+      settings: game.world.settings,
+    },
     init: { seed: game.seed, restore: game },
     note,
   };
+}
+
+/** Whether a saved world was made with the settings a link asks for. */
+function sameSettings(saved: WorldSettings, spec: WorldSpec): boolean {
+  const wanted = { ...defaultSettings(spec.characterCount), ...spec.settings };
+  return JSON.stringify(saved) === JSON.stringify(wanted);
 }
 
 export function App() {
@@ -102,13 +112,20 @@ export function App() {
   // On arrival: the world named in the link, carried on from its autosave if
   // you've watched it here before; otherwise a new world.
   useEffect(() => {
-    const spec = specFromUrl() ?? { seed: randomSeed(), characterCount: DEFAULT_CHARACTER_COUNT };
+    const spec = specFromUrl() ?? {
+      seed: randomSeed(),
+      characterCount: DEFAULT_CHARACTER_COUNT,
+      settings: {},
+    };
     let current = true;
     readSave(autosaveId(spec.seed))
       .catch(() => null)
       .then((game) => {
         if (!current) return;
-        const fits = game && game.world.characterCount === spec.characterCount;
+        const fits =
+          game &&
+          game.world.characterCount === spec.characterCount &&
+          sameSettings(game.world.settings, spec);
         setSession(
           fits
             ? savedSession(game, 'Carried on from where you left this world.')

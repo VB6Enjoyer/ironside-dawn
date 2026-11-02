@@ -6,7 +6,7 @@ export { StreamHash } from './core/hash';
 export { createRng, restoreRng } from './core/rng';
 export type { Rng, RngState } from './core/rng';
 export * from './core/time';
-export { merchantsFor, WORLD_START } from './gen/world';
+export { defaultSettings, merchantsFor, WORLD_START } from './gen/world';
 export { generateMap, sizeFor } from './gen/geography';
 export type { WorldSize } from './gen/geography';
 export * from './model';

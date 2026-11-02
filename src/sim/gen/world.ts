@@ -1,8 +1,18 @@
-import type { CreatureId, MapDef } from '../../content';
+import { PEOPLES, type CreatureId, type MapDef } from '../../content';
 import { createScheduler } from '../core/scheduler';
 import { HOUR } from '../core/time';
 import type { SimContext } from '../context';
-import type { Location, LocationId, Region, RegionId, Route, RouteId, World } from '../model';
+import type {
+  Location,
+  LocationId,
+  Region,
+  RegionId,
+  Route,
+  RouteId,
+  World,
+  WorldSettings,
+} from '../model';
+import { sizeFor } from './geography';
 import { createMarket } from '../systems/market';
 import { createCharacter, townPopulation, towns } from './people';
 
@@ -14,7 +24,22 @@ export const WORLD_START = 6 * HOUR;
 /** Characters' first actions are spread over the first hours, not all at once. */
 const FIRST_WAKE_SPREAD = 3 * HOUR;
 
-export function createWorldState(seed: string, map: MapDef): World {
+/** Settings for a world of this many adventurers, where none were chosen. */
+export function defaultSettings(adventurers = 20): WorldSettings {
+  return {
+    size: sizeFor(adventurers),
+    danger: 'normal',
+    magic: 'normal',
+    peoples: PEOPLES,
+    populationCap: null,
+  };
+}
+
+export function createWorldState(
+  seed: string,
+  map: MapDef,
+  settings: WorldSettings = defaultSettings(),
+): World {
   const ids = new Set<string>();
   for (const def of map.locations) {
     if (ids.has(def.id)) throw new Error(`Duplicate location ID: ${def.id}`);
@@ -85,6 +110,7 @@ export function createWorldState(seed: string, map: MapDef): World {
 
   const world: World = {
     seed,
+    settings,
     time: WORLD_START,
     characters: new Map(),
     locations,

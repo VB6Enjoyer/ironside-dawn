@@ -45,6 +45,9 @@ export function lifecycleDay(ctx: SimContext, targetPopulation: number): void {
   const world = ctx.world;
   const living = [...world.characters.values()].filter(isAlive);
   const fullness = fullnessBySpecies(ctx, living, targetPopulation);
+  // A world at its population cap has no room for children.
+  const cap = world.settings.populationCap;
+  const roomForChildren = cap === null || living.length < cap;
   const famous = famousRenown(world);
   // Retired adventurers take up trading only while the roads have room for more merchants.
   const merchants = living.filter((c) => c.calling === 'merchant').length;
@@ -67,7 +70,7 @@ export function lifecycleDay(ctx: SimContext, targetPopulation: number): void {
       considerMovingOn(ctx, c, fullness.settled.get(c.species) ?? 0, famous);
       if (!isAlive(c)) continue;
     }
-    considerChildren(ctx, c, fullness.young);
+    if (roomForChildren) considerChildren(ctx, c, fullness.young);
   }
 }
 

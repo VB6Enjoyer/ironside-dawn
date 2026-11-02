@@ -38,7 +38,8 @@ const XP_PER_VICTIM_LEVEL = 40;
 /** How many of the dread a world holds at once. */
 function dreadFor(ctx: SimContext): number {
   const towns = [...ctx.world.locations.values()].filter((l) => l.kind === 'town').length;
-  return Math.max(1, Math.round(towns / TOWNS_PER_DREAD));
+  const danger = { gentle: 0.5, normal: 1, deadly: 1.5 }[ctx.world.settings.danger];
+  return Math.max(1, Math.round((towns / TOWNS_PER_DREAD) * danger));
 }
 
 /** At the world's beginning, the deadliest lairs have masters already. */

@@ -13,6 +13,7 @@ import type {
 } from '../content';
 import type {
   Bounty,
+  WorldSettings,
   Calling,
   Character,
   CharacterId,
@@ -463,6 +464,8 @@ export type RequestOf<K extends Request['kind']> = Extract<Request, { kind: K }>
 export interface InitOptions {
   readonly seed: string;
   readonly characterCount?: number;
+  /** Choices for a new world; anything left out takes its default. */
+  readonly settings?: Partial<WorldSettings>;
   readonly restore?: SavedGame;
 }
 

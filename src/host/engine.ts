@@ -198,6 +198,7 @@ export function createEngine(options: EngineOptions): Engine {
       : createSimulation({
           seed: init.seed,
           characterCount: init.characterCount,
+          ...(init.settings ? { settings: init.settings } : {}),
           watch: currentWatch(),
           onEvent: intake,
         });

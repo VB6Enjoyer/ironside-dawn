@@ -24,6 +24,7 @@ import {
   type SpeciesId,
 } from '../../content';
 import { createRng, type Rng } from '../core/rng';
+import type { WorldSettings, WorldSize } from '../model';
 
 /**
  * Procedural world generation (ROADMAP.md Phase 9): a map of regions, each one
@@ -34,7 +35,7 @@ import { createRng, type Rng } from '../core/rng';
  * Distances are in leagues: about an hour's walk on open plains.
  */
 
-export type WorldSize = 'small' | 'medium' | 'large';
+export type { WorldSize } from '../model';
 
 interface SizeDef {
   readonly width: number;
@@ -89,8 +90,18 @@ interface Placed extends Point {
   readonly template?: DungeonTemplateId;
 }
 
-export function generateMap(seed: string, size: WorldSize): MapDef {
+/** What else a world's creator chose, as it bears on the map. */
+export interface MapOptions {
+  readonly danger?: WorldSettings['danger'];
+  readonly peoples?: readonly PeopleId[];
+}
+
+const DANGER_SHIFT = { gentle: -1, normal: 0, deadly: 1 } as const;
+
+export function generateMap(seed: string, size: WorldSize, options: MapOptions = {}): MapDef {
   const rng = createRng(seed).fork('geography');
+  const included: readonly PeopleId[] = options.peoples?.length ? options.peoples : PEOPLES;
+  const shift = DANGER_SHIFT[options.danger ?? 'normal'];
   const spec = SIZES[size];
   const { width, height } = spec;
   const names = new Set<string>();
@@ -140,14 +151,18 @@ export function generateMap(seed: string, size: WorldSize): MapDef {
   // Towns: each people's homeland first, then wherever the land is settled.
   const townRegions = regions.filter((r) => BIOMES[r.biome].settled > 0);
   const plannedTowns: { region: RegionDef; people: PeopleId }[] = [];
-  for (const people of PEOPLES) {
+  for (const people of included) {
     const homes = regions.filter((r) => r.biome === HOMELANDS[people]);
     if (homes.length > 0) plannedTowns.push({ region: rng.pick(homes), people });
   }
   while (plannedTowns.length < spec.towns) {
     const region = rng.weighted(townRegions.map((r) => [r, BIOMES[r.biome].settled] as const));
-    const peoples = Object.entries(BIOMES[region.biome].peoples) as [PeopleId, number][];
-    plannedTowns.push({ region, people: rng.weighted(peoples) });
+    // Only the peoples in this world; where none of the land's own live, others settle it.
+    const peoples = (Object.entries(BIOMES[region.biome].peoples) as [PeopleId, number][]).filter(
+      ([p]) => included.includes(p),
+    );
+    const people = peoples.length > 0 ? rng.weighted(peoples) : rng.pick(included);
+    plannedTowns.push({ region, people });
   }
   for (const { region, people } of plannedTowns) {
     let p = spot(region, (q) => !tooClose(q, TOWN_SPACING, ['town']));
@@ -157,7 +172,7 @@ export function generateMap(seed: string, size: WorldSize): MapDef {
   }
 
   // A few towns on the border between two peoples' lands take in both.
-  mixBorderTowns(rng, placed, regions, regionAt, spec.borderTowns);
+  mixBorderTowns(rng, placed, regions, regionAt, spec.borderTowns, included);
 
   // Fortresses guard the more settled lands.
   const fortresses = Math.max(1, Math.round(spec.towns / 5));
@@ -184,7 +199,7 @@ export function generateMap(seed: string, size: WorldSize): MapDef {
     const template = pickTemplate(rng, region);
     placed.push({
       ...p,
-      def: dungeonDef(rng, names, region, p, nearestTown, template),
+      def: dungeonDef(rng, names, region, p, nearestTown, template, shift),
       template,
     });
   }
@@ -211,7 +226,7 @@ export function generateMap(seed: string, size: WorldSize): MapDef {
     );
     placed.push({
       ...p,
-      def: dungeonDef(rng, names, region, p, nearestTown, signature),
+      def: dungeonDef(rng, names, region, p, nearestTown, signature, shift),
       template: signature,
     });
   }
@@ -360,6 +375,7 @@ function mixBorderTowns(
   regions: readonly RegionDef[],
   regionAt: (p: Point) => RegionDef,
   count: number,
+  included: readonly PeopleId[],
 ): void {
   const candidates: { index: number; margin: number; other: PeopleId }[] = [];
   placed.forEach((town, index) => {
@@ -369,7 +385,7 @@ function mixBorderTowns(
     for (const r of regions) {
       if (r.id === own.id) continue;
       const theirs = homelandPeople(r.biome);
-      if (!theirs || theirs === people) continue;
+      if (!theirs || theirs === people || !included.includes(theirs)) continue;
       // How much nearer their own heart is than the other land's.
       candidates.push({ index, margin: dist(town, r) - dist(town, own), other: theirs });
     }
@@ -399,13 +415,14 @@ function dungeonDef(
   p: Point,
   nearestTown: number,
   id: DungeonTemplateId,
+  shift: number,
 ): LocationDef {
   const template = DUNGEON_TEMPLATES[id];
   const danger = Math.max(
     1,
     Math.min(
       5,
-      Math.round(1 + nearestTown / 10 + (region.biome === 'wastes' ? 1 : 0) + rng.next()),
+      Math.round(1 + nearestTown / 10 + (region.biome === 'wastes' ? 1 : 0) + rng.next()) + shift,
     ),
   );
   const scale = 0.6 + 0.2 * danger;

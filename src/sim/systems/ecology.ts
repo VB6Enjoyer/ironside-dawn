@@ -4,7 +4,7 @@ import type { SimContext } from '../context';
 import { createCharacter, towns } from '../gen/people';
 import { merchantsFor } from '../gen/world';
 import type { SpeciesId } from '../../content';
-import type { Calling } from '../model';
+import type { Calling, World } from '../model';
 import { isAlive } from './condition';
 import { economyDay } from './economy';
 import { dreadDay } from './dread';
@@ -74,17 +74,28 @@ export function daily(ctx: SimContext, targetPopulation: number): void {
       species,
     });
   };
+  // Past the world's population cap, nobody new takes up the road.
+  const crowded = atCap(ctx.world);
   const shortage = (targetPopulation - living) / targetPopulation;
-  if (shortage > 0 && rng.chance(Math.min(1, NEWCOMER_CHANCE * shortage * 4))) {
+  if (!crowded && shortage > 0 && rng.chance(Math.min(1, NEWCOMER_CHANCE * shortage * 4))) {
     newcomer('adventurer');
   }
   // Merchants who fall on the road, or give up the trade, are replaced in time.
   const merchantTarget = merchantsFor(targetPopulation);
-  if (merchants < merchantTarget && rng.chance(0.2 * (merchantTarget - merchants))) {
+  if (!crowded && merchants < merchantTarget && rng.chance(0.2 * (merchantTarget - merchants))) {
     newcomer('merchant');
   }
 
   schedule(ctx.world.scheduler, ctx.world.time + DAY, { kind: 'world.daily' });
+}
+
+/** Whether the world holds as many named characters as its settings allow. */
+export function atCap(world: World): boolean {
+  const cap = world.settings.populationCap;
+  if (cap === null) return false;
+  let living = 0;
+  for (const c of world.characters.values()) if (!c.death && ++living >= cap) return true;
+  return false;
 }
 
 /**

@@ -3,8 +3,8 @@ import { EventStore, type EventListener, type Retention } from './core/event-sto
 import { createRng, restoreRng, type Rng } from './core/rng';
 import { peekNext, popNext } from './core/scheduler';
 import type { SimContext } from './context';
-import { generateMap, sizeFor, type WorldSize } from './gen/geography';
-import { createWorldState, populate } from './gen/world';
+import { generateMap, type WorldSize } from './gen/geography';
+import { createWorldState, defaultSettings, populate } from './gen/world';
 import {
   EVENT_IMPORTANCE,
   Importance,
@@ -14,6 +14,7 @@ import {
   type LocationId,
   type SimEvent,
   type World,
+  type WorldSettings,
 } from './model';
 import { wakeCharacter } from './systems/behavior';
 import { raiseInitialDread } from './systems/dread';
@@ -49,6 +50,8 @@ export interface SimulationOptions {
   readonly map?: MapDef;
   /** How big a world to generate. Defaults to one that suits `characterCount`. */
   readonly worldSize?: WorldSize;
+  /** Choices for a new world (Phase 11); anything left out takes its default. */
+  readonly settings?: Partial<WorldSettings>;
   /**
    * Called for every event, including those emitted while the world is
    * created. Use this rather than `events.subscribe()` to see the full history.
@@ -131,15 +134,17 @@ const STREAMS = [
 
 export function createSimulation(options: SimulationOptions): Simulation {
   const restore = options.restore ? checkSave(options.restore) : null;
+  const settings: WorldSettings = {
+    ...defaultSettings(options.characterCount ?? DEFAULT_ADVENTURERS),
+    ...(options.worldSize ? { size: options.worldSize } : {}),
+    ...options.settings,
+  };
   const world = restore
     ? decodeWorld(restore.world)
     : createWorldState(
         String(options.seed),
-        options.map ??
-          generateMap(
-            String(options.seed),
-            options.worldSize ?? sizeFor(options.characterCount ?? DEFAULT_ADVENTURERS),
-          ),
+        options.map ?? generateMap(String(options.seed), settings.size, settings),
+        settings,
       );
   const events = new EventStore(options.retention);
   let watch: Watch = options.watch ?? 'all';
@@ -249,6 +254,7 @@ export function createSimulation(options: SimulationOptions): Simulation {
         format: SAVE_FORMAT,
         version: SAVE_VERSION,
         characterCount: targetPopulation,
+        settings: world.settings,
         rng: Object.fromEntries(STREAMS.map((name) => [name, rng[name].getState()])),
         world: encodeWorld(world),
       };

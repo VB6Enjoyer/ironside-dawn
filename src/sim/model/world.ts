@@ -16,6 +16,7 @@ import type { Bounty, Party } from './social';
 import type { Legend } from './item';
 import type { Job } from './jobs';
 import type { Location, Region, Route } from './location';
+import type { WorldSettings } from './settings';
 
 /**
  * The whole world state: plain data, entities referring to each other by ID
@@ -23,6 +24,8 @@ import type { Location, Region, Route } from './location';
  */
 export interface World {
   readonly seed: string;
+  /** What was chosen when it was created. */
+  readonly settings: WorldSettings;
   /** Current world time, in seconds. */
   time: number;
   /** Every character who ever lived, including the dead. */

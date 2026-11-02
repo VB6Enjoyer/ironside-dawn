@@ -39,6 +39,9 @@ const GIFT_IN_FAMILY = 0.35;
 /** How far a child's traits may stray from their parents' average. */
 const TRAIT_MUTATION = 0.1;
 
+/** How much likelier the gift is, by the world's magic setting. */
+const MAGIC = { rare: 0.4, normal: 1, common: 2.5 } as const;
+
 /** How a character comes into the world. */
 export interface Arrival {
   /** Taken up adventuring after the world began, rather than with it. */
@@ -103,9 +106,13 @@ export function createCharacter(ctx: SimContext, home: Location, arrival: Arriva
   ) as Stats;
 
   // The gift runs in families.
+  // The gift runs in families, and is rarer or commoner as the world was made.
+  const magic = MAGIC[world.settings.magic];
   const gifted = parents
-    ? rng.chance(parents.some((p) => p.gifted) ? GIFT_IN_FAMILY : def.giftChance)
-    : rng.chance(def.giftChance);
+    ? rng.chance(
+        Math.min(1, (parents.some((p) => p.gifted) ? GIFT_IN_FAMILY : def.giftChance) * magic),
+      )
+    : rng.chance(Math.min(1, def.giftChance * magic));
   const weaponId = parents
     ? (rng.pick(parents).equipment.weapon.base as WeaponId)
     : rng.weighted(Object.entries(pack?.weapons ?? def.weapons) as [WeaponId, number][]);

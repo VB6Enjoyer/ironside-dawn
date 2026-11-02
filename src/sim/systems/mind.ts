@@ -150,21 +150,71 @@ export function learnFromDelve(
  * them, plus vivid memories of nearly dying or fleeing there.
  */
 export function fearOf(character: Character, locationId: LocationId, now: number): number {
-  let fear = character.expectations[locationId]?.danger ?? 0;
-  for (const memory of character.memories) {
+  const remembered = fearsRemembered(character, now).get(locationId) ?? 0;
+  return Math.min(1.5, (character.expectations[locationId]?.danger ?? 0) + remembered);
+}
+
+/**
+ * What a character's memories make them fear, place by place, worked out once
+ * per moment: a decision asks about every dungeon in reach, and the memories
+ * are the same for each.
+ */
+const fearCache = new WeakMap<
+  Character,
+  {
+    now: number;
+    memories: readonly Memory[];
+    length: number;
+    last: Memory | undefined;
+    fears: Map<LocationId, number>;
+  }
+>();
+
+function fearsRemembered(character: Character, now: number): Map<LocationId, number> {
+  const memories = character.memories;
+  const cached = fearCache.get(character);
+  if (
+    cached &&
+    cached.now === now &&
+    cached.memories === memories &&
+    cached.length === memories.length &&
+    cached.last === memories[memories.length - 1]
+  ) {
+    return cached.fears;
+  }
+  const fears = new Map<LocationId, number>();
+  for (const memory of memories) {
     if (memory.kind !== 'near-death' && memory.kind !== 'fled' && memory.kind !== 'wronged') {
       continue;
     }
-    if (memory.locationId !== locationId) continue;
     const weight = memory.kind === 'near-death' ? 0.6 : memory.kind === 'fled' ? 0.3 : 0.4;
-    fear += vividness(memory, now) * weight;
+    fears.set(
+      memory.locationId,
+      (fears.get(memory.locationId) ?? 0) + vividness(memory, now) * weight,
+    );
   }
-  return Math.min(1.5, fear);
+  fearCache.set(character, {
+    now,
+    memories,
+    length: memories.length,
+    last: memories[memories.length - 1],
+    fears,
+  });
+  return fears;
 }
 
 export function hasVisited(character: Character, locationId: LocationId): boolean {
-  return character.visited.includes(locationId);
+  // The list only grows, so a set of it is good until it does.
+  const visited = character.visited;
+  let known = visitedSets.get(visited);
+  if (!known || known.size !== visited.length) {
+    known = new Set(visited);
+    visitedSets.set(visited, known);
+  }
+  return known.has(locationId);
 }
+
+const visitedSets = new WeakMap<readonly LocationId[], Set<LocationId>>();
 
 export function markVisited(character: Character, locationId: LocationId): void {
   if (!character.visited.includes(locationId)) character.visited.push(locationId);
