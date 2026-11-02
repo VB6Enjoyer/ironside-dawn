@@ -42,7 +42,7 @@ Every technical decision below follows from these five pillars.
 | Tests           | **Vitest**                                       | Same config as Vite. Also used for determinism and statistical tests.                                                                |
 | Headless runner | **tsx** (Node)                                   | Runs `npm run sim -- --seed 42 --years 50` for balancing and debugging.                                                              |
 | Persistence     | **IndexedDB** (via `idb`)                        | Saves are larger than `localStorage` allows.                                                                                         |
-| Desktop (later) | **Tauri**                                        | Wraps the same web build as a native app for Windows, macOS, and Linux.                                                              |
+| Desktop         | **Tauri**                                        | Wraps the same web build as a native app for Windows, macOS, and Linux (`src-tauri/`).                                               |
 
 ### Why HTML/React rather than a non-HTML GUI?
 
@@ -117,6 +117,8 @@ src/
   ui/                  # React app; the world map (ui/map) draws with PixiJS
 tools/
   sim-cli.ts           # headless runner
+packs/                 # example content packs (JSON)
+src-tauri/             # the desktop app: a Tauri window around the web build
 docs/
 ```
 
@@ -575,6 +577,36 @@ Built in Phase 10 (`src/content/cultures.ts`, `src/sim/systems/myths.ts`).
   culture when prose is written, so the same event reads differently by
   region without the simulation knowing.
 
+### 4.13 World settings and content packs
+
+Built in Phase 11 (`src/sim/model/settings.ts`, `src/content/packs.ts`).
+
+- **Settings are chosen once, when a world is made**: size, danger, magic,
+  the peoples included (humans always are) and a cap on how many may be alive
+  at once. They live in the world and its saves and travel in links
+  (`?danger=deadly&peoples=human,dwarf&cap=400`). Danger makes every dungeon a
+  step gentler or deadlier and sets how many of the dread rise; magic scales the odds of
+  being born gifted; the cap holds back newcomers and children. Anything left
+  out is the default, so old links make the same worlds.
+- **A content pack is a JSON file** (format `ironside-dawn/content-pack`) that
+  adds creatures, loot, weapons, armor, trinkets, spells, dungeon kinds,
+  cultures with their culture packs, and more names for existing cultures.
+  `packs/slavic.json` is the example.
+- **Packs only add.** Everything is checked before anything goes in: the
+  format, ids (no clashes with what is there), dice notation, and every
+  reference (drops to loot, dungeons to creatures, culture packs to arms,
+  peoples and dungeons). A pack that fails is refused whole, with the reason.
+- **Packs go into the content tables for the whole process**, before the
+  world is made, so the generators and systems need no new code paths. A
+  worker runs one world, so that is safe; the page installs the same packs
+  so its text can name what they add. A pack id can be installed once per
+  process: the same pack again is a no-op, a different one with that id is
+  refused until a reload.
+- **Worlds remember their packs**: a save carries the packs themselves, so
+  it loads anywhere; a link names them by id (`packs=slavic`), and works
+  wherever those packs have been added. Packs added from a file are kept in
+  the browser. The headless runner takes `--pack <file>`.
+
 ---
 
 ## 5. UI ↔ simulation boundary
@@ -629,7 +661,8 @@ stopping; a test compares the two. A 500-adventurer world a year in is about
 3.5 MB of JSON, 0.7 MB gzipped. Saves live in two IndexedDB stores (a list and
 the data), so listing them is cheap. While a world runs it is autosaved once a
 minute and whenever the tab is hidden, one autosave per seed; opening a link to
-a world you've watched carries on from its autosave. Files are gzipped JSON
+a world you've watched carries on from its autosave, and opening the app with
+no world named (Phase 11) carries on the last one watched. Files are gzipped JSON
 where the browser can compress.
 
 ---
