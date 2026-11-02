@@ -44,6 +44,7 @@ export function WorldsDialog({
     peoples: withHumans(peoples),
     populationCap: Number(cap) > 0 ? Math.round(Number(cap)) : null,
   });
+  const link = shareLink(current);
   const [saves, setSaves] = useState<SaveInfo[] | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -85,28 +86,32 @@ export function WorldsDialog({
       <section>
         <h3>This world</h3>
         <p className="muted">
-          Seed <code>{current.seed}</code>, {current.characterCount} adventurers. Anyone opening
-          this link gets the same world from its beginning:
+          Seed <code>{current.seed}</code>, {current.characterCount} adventurers.{' '}
+          {link
+            ? 'Anyone opening this link gets the same world from its beginning:'
+            : 'A world begun with the same seed and settings is the same world.'}
         </p>
         <div className="row">
-          <input
-            readOnly
-            value={shareLink(current)}
-            aria-label="Link to this world"
-            onFocus={(e) => e.target.select()}
-          />
-          <button
-            type="button"
-            onClick={() =>
-              run(async () =>
-                navigator.clipboard
-                  .writeText(shareLink(current))
-                  .then(() => setMessage('Link copied.')),
-              )
-            }
-          >
-            Copy
-          </button>
+          {link && (
+            <>
+              <input
+                readOnly
+                value={link}
+                aria-label="Link to this world"
+                onFocus={(e) => e.target.select()}
+              />
+              <button
+                type="button"
+                onClick={() =>
+                  run(async () =>
+                    navigator.clipboard.writeText(link).then(() => setMessage('Link copied.')),
+                  )
+                }
+              >
+                Copy
+              </button>
+            </>
+          )}
           <button
             type="button"
             disabled={busy}

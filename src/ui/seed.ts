@@ -102,8 +102,21 @@ export function writeSpecToUrl({ seed, characterCount, settings, packs }: WorldS
   window.history.replaceState(null, '', url);
 }
 
-export function shareLink(spec: WorldSpec): string {
-  const url = new URL(window.location.href);
+/**
+ * Where links to a world should point: the hosted web build if one is set at
+ * build time (`VITE_SHARE_URL`), else this page when it is on the web. The
+ * desktop app has no web address of its own, so without one it has no links.
+ */
+function shareBase(): URL | null {
+  const configured = import.meta.env.VITE_SHARE_URL as string | undefined;
+  if (configured) return new URL(configured);
+  const here = new URL(window.location.href);
+  return here.protocol === 'http:' || here.protocol === 'https:' ? here : null;
+}
+
+export function shareLink(spec: WorldSpec): string | null {
+  const url = shareBase();
+  if (!url) return null;
   url.hash = '';
   url.search = '';
   url.searchParams.set('seed', spec.seed);

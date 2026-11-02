@@ -46,6 +46,9 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Where links to a world point, since the app has no web address of
+          # its own: set the SHARE_URL repository variable to the hosted site.
+          VITE_SHARE_URL: ${{ vars.SHARE_URL }}
         with:
           args: ${{ matrix.args }}
           tagName: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || '' }}

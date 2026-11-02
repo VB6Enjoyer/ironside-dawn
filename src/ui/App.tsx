@@ -29,7 +29,7 @@ import {
   type WorldSpec,
 } from './seed';
 import { packsByIds } from './packs';
-import { autosaveId, readSave, writeSave } from './storage';
+import { autosaveId, listSaves, readSave, writeSave } from './storage';
 import { useHostSnapshot } from './useHost';
 
 /** Real time between autosaves while the world runs. */
@@ -146,29 +146,35 @@ export function App() {
   const [dialogOpen, setDialogOpen] = useState(false);
 
   // On arrival: the world named in the link, carried on from its autosave if
-  // you've watched it here before; otherwise a new world.
+  // you've watched it here before. With no world named (a bare address, or
+  // opening the desktop app), the world last watched here; else a new one.
   useEffect(() => {
-    const spec = specFromUrl() ?? {
-      seed: randomSeed(),
-      characterCount: DEFAULT_CHARACTER_COUNT,
-      settings: {},
-      packs: [],
-    };
     let current = true;
-    readSave(autosaveId(spec.seed))
-      .catch(() => null)
-      .then((game) => {
-        if (!current) return;
-        const fits =
-          game &&
-          game.world.characterCount === spec.characterCount &&
-          sameSettings(game.world, spec);
-        setSession(
-          fits
-            ? savedSession(game, 'Carried on from where you left this world.')
-            : freshSession(spec),
-        );
-      });
+    const linked = specFromUrl();
+    const arrive = async (): Promise<Session> => {
+      if (!linked) {
+        const last = (await listSaves().catch(() => [])).find((s) => s.auto);
+        const game = last ? await readSave(last.id).catch(() => null) : null;
+        if (game) return savedSession(game, 'Carried on with the world you last watched.');
+        return freshSession({
+          seed: randomSeed(),
+          characterCount: DEFAULT_CHARACTER_COUNT,
+          settings: {},
+          packs: [],
+        });
+      }
+      const game = await readSave(autosaveId(linked.seed)).catch(() => null);
+      const fits =
+        game &&
+        game.world.characterCount === linked.characterCount &&
+        sameSettings(game.world, linked);
+      return fits
+        ? savedSession(game, 'Carried on from where you left this world.')
+        : freshSession(linked);
+    };
+    void arrive().then((session) => {
+      if (current) setSession(session);
+    });
     return () => {
       current = false;
     };
