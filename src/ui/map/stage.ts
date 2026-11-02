@@ -1,3 +1,6 @@
+// Pixi without eval, so the map runs under a strict content security policy
+// (the desktop build has one).
+import 'pixi.js/unsafe-eval';
 import {
   Application,
   Container,
