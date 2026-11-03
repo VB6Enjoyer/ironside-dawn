@@ -153,9 +153,11 @@ export function App() {
     const linked = specFromUrl();
     const arrive = async (): Promise<Session> => {
       if (!linked) {
-        const last = (await listSaves().catch(() => [])).find((s) => s.auto);
-        const game = last ? await readSave(last.id).catch(() => null) : null;
-        if (game) return savedSession(game, 'Carried on with the world you last watched.');
+        // The latest autosave that this version can load; older ones are passed over.
+        for (const save of (await listSaves().catch(() => [])).filter((s) => s.auto)) {
+          const game = await readSave(save.id).catch(() => null);
+          if (game) return savedSession(game, 'Carried on with the world you last watched.');
+        }
         return freshSession({
           seed: randomSeed(),
           characterCount: DEFAULT_CHARACTER_COUNT,
@@ -172,9 +174,20 @@ export function App() {
         ? savedSession(game, 'Carried on from where you left this world.')
         : freshSession(linked);
     };
-    void arrive().then((session) => {
-      if (current) setSession(session);
-    });
+    // Whatever goes wrong carrying on, a new world beats a page stuck opening.
+    void arrive()
+      .catch((e: unknown) => {
+        console.error('Could not carry on a saved world', e);
+        return freshSession({
+          seed: randomSeed(),
+          characterCount: DEFAULT_CHARACTER_COUNT,
+          settings: {},
+          packs: [],
+        });
+      })
+      .then((session) => {
+        if (current) setSession(session);
+      });
     return () => {
       current = false;
     };
