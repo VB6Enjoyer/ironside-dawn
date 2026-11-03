@@ -199,7 +199,7 @@ describe('engine', () => {
     host.follow([hero]);
     host.setSpeed('day'); // floor: notable
     host.start();
-    runTicks(200);
+    runTicks(500);
     const events = host.getSnapshot().log.filter((e) => !isDigest(e)) as SimEvent[];
     const theirs = events.filter((e) => e.actors.includes(hero));
     expect(theirs.some((e) => e.importance === Importance.Trivial)).toBe(true);

@@ -19,6 +19,8 @@ export interface LocationDef {
   readonly y?: number;
   /** The region it lies in (generated worlds). */
   readonly region?: string;
+  /** Wild places: a creature that haunts it, regrowing to `max` (a kappa at a ford). */
+  readonly haunt?: { readonly creature: CreatureId; readonly max: number };
   /**
    * Towns: the commoners who live here, by people. A statistical population
    * (ARCHITECTURE.md §4.2) that new adventurers are drawn from.
@@ -76,6 +78,8 @@ export interface RegionDef {
   readonly id: string;
   readonly name: string;
   readonly biome: BiomeId;
+  /** A regional culture (Phase 10), if its lands have one. */
+  readonly culture?: CultureId;
   /** Its heart, in leagues; places belong to the nearest heart. */
   readonly x: number;
   readonly y: number;

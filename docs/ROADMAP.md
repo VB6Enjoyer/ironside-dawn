@@ -851,38 +851,147 @@ the chronicle records it.
 civilizations and their mythologies (`WORLD.md` §6). The culture-tag plumbing
 has been there since Phase 1, so this phase is mostly content work.
 
-- [ ] **Culture pack format**: name generators, arms and armor tables, bestiary
+- [x] **Culture pack format**: name generators, arms and armor tables, bestiary
       (region-native creatures and peoples), magic tradition (spells and cost
       flavors), myths and deities, and settlement vocabulary.
-- [ ] World generation assigns cultures to regions. A species can have local
+- [x] World generation assigns cultures to regions. A species can have local
       variants per culture (Norse _dvergar_ and _álfar_).
-- [ ] **First culture pack**, likely **Japonic**: katana, naginata, yumi;
+- [x] **First culture pack**, likely **Japonic**: katana, naginata, yumi;
       kitsune, kappa, oni, tengu, yūrei; talisman and ward magic.
 - [ ] Then more packs, one at a time (Norse, Hellenic, Slavic,
       Mesopotamian…), each playtested with the headless runner for balance.
-- [ ] **Myths in the simulation**: characters hold beliefs from their culture.
+      _Norse is done; the rest are to come._
+- [x] **Myths in the simulation**: characters hold beliefs from their culture.
       Local legends grow out of real chronicle events ("the oni of the
       northern pass" is a real boss that killed real people).
-- [ ] UI: region panel with its culture, myths, and notable figures.
+- [x] UI: region panel with its culture, myths, and notable figures.
 
 **Exit criteria:** Two regions feel distinct at a glance in the log: a ronin
 with a katana fighting a kappa at a river ford in one, and a Norse-flavored
 dwarf facing a draugr in a barrow in the other.
+
+**Status: done, with two packs of the five sketched.** Notes from building it
+(design in `ARCHITECTURE.md` §4.12):
+
+- **The pack format**: a culture can carry a pack (`src/content/cultures.ts`):
+  the peoples it raises and its names for them, the arms and armor they
+  favor, what it calls fighters, scouts and mystics, its gods, its region and
+  place names, its kinds of dungeon, a creature that haunts its wild places,
+  and how many regions it may cover. Its magic is its spells, tagged with its
+  culture, and taught only to those raised in it.
+- **Cultures on the map**: world generation gives each pack a cluster of
+  regions (one each in a small world, up to two or three in a large one)
+  whose main people it can raise. Towns there take the culture when their
+  people is among its peoples; dungeons and wild places take it too, and each
+  culture's lands hold at least one dungeon of its signature kind. Everyone
+  born or raised in such a town takes its names, arms and magic. A culture's
+  own arms turn up mostly in its own lands.
+- **Japonic**: katana, naginata and yumi (bows join the weapon skills),
+  do-maru armor, tamahagane steel; kappa haunting the fords and crossings,
+  kitsune and yūrei in haunted shrines, tengu and oni in their holds;
+  Foxfire and Ofuda Ward; Inari, Hachiman, Amaterasu, Susanoo and Benzaiten;
+  ronin, shinobi and onmyōji.
+- **Norse**: bearded axe, seax and spear, mail byrnies; humans, _dvergar_ and
+  _álfar_; draugar in barrows, jötnar in their halls; Thunder Rune and Rune of
+  Warding; Odin, Thor, Freyja, Tyr and Njord; huscarls, trackers and
+  rune-carvers.
+- **Myths**: something that kills three people at a wild place (eight in a
+  dungeon, where death is the trade), or one of the dread that claims eight
+  lives, becomes a local legend, told by the culture of the land. Folk raised
+  on a tale tell it over a drink and keep away from the place; a tale about
+  one of the dread ends when it is destroyed. The gods are believed in, and
+  prayed to at shrines; whether they answer is still an open question
+  (`WORLD.md` §7).
+- **UI**: a **region page** (from the places list, a place's page, or a
+  region's name on the map) with its land, weather, culture and gods, the
+  tales told there, its lords, dread and most renowned folk, and its places.
+  Cards and profiles give a character's local title and people ("Level 23
+  tracker · dvergr of Grimby") and the ways they were raised in. The headless
+  report lists culture lands and myths.
+- **Exit criteria, met.** In a medium world with both packs, the log reads
+  "Daichi Morikawa, a ronin with a naginata, is set upon by two kappa
+  roaming the Kawazu Crossing" in the Japonic lands, and "Sten Bearholm, a
+  dvergr huscarl with a bearded axe, comes face to face with two draugar" in a
+  Norse barrow.
+- **Still to come**: the Hellenic, Slavic and Mesopotamian packs; cults; and
+  regional tongues (people raised in a pack still speak their people's
+  language).
+- **Performance**: 500 adventurers on a large world run 10 years in 341 s
+  headless, down from 388 s at the end of Phase 9 but still over the 300 s
+  budget, which is Phase 11's to meet. (Phase 9's figure was taken before
+  its last few changes, so the gain can't all be put down to this phase.)
 
 ---
 
 ## Phase 11 — Scale & Ship
 
 - [ ] Profile with the headless runner and hit the targets in
-      `ARCHITECTURE.md` §8 (1,000+ characters).
-- [ ] World-based level of detail for quiet regions, if profiling shows it's
-      needed (never observer-based).
-- [ ] **Tauri desktop build** (Windows, macOS, Linux) from the same codebase.
-- [ ] **Content packs**: load extra creatures, items, cultures, and names from
+      `ARCHITECTURE.md` §8 (1,000+ characters). _Two of four met; see
+      below._
+- [x] World-based level of detail for quiet regions, if profiling shows it's
+      needed (never observer-based). _Not needed: see below._
+- [x] **Tauri desktop build** (Windows, macOS, Linux) from the same codebase.
+- [x] **Content packs**: load extra creatures, items, cultures, and names from
       JSON.
-- [ ] Settings: world size, danger, magic rarity, peoples included, and
+- [x] Settings: world size, danger, magic rarity, peoples included, and
       population caps at world creation.
-- [ ] A final project name, an icon, and a hosted web build.
+- [ ] A final project name, an icon, and a hosted web build. _The icon is
+      done and the web build is hosted from `main`; the name is still to be
+      chosen._
+
+**Status: built, with the name to choose and two performance targets
+missed.** Notes from building it (design in `ARCHITECTURE.md` §4.13):
+
+- **Settings** go in the Worlds dialog under _Settings_, in links, in saves
+  and in the headless runner (`--size`, `--danger`, `--magic`, `--peoples`,
+  `--cap`). A world with nothing chosen is the same world as before.
+- **Content packs**: a JSON format checked whole before anything goes in,
+  with the reason given when a pack is refused. `packs/slavic.json` is the
+  example and the third culture: leshies in the woods, rusalki at the fords,
+  upyri in the crypts, druzhinniki with sabres, volkhvy of Perun and Veles.
+  Packs come with the app or are added from a file, kept in the browser,
+  named in links and carried whole in saves.
+- **Desktop**: `src-tauri/` wraps the web build in a Tauri window with a
+  strict content security policy (the map's PixiJS now runs without `eval`
+  to allow it). The _Desktop_ workflow builds installers for Windows, macOS
+  (universal) and Linux, by hand or on a `v*` tag.
+  Built and run here on Linux (a 1.7 MB `.deb`, a 77 MB AppImage): the
+  world runs, the map draws, saves persist between launches, and exported
+  saves go to the Downloads folder. Windows and macOS are built only by the
+  workflow and haven't been tried by hand. The app has no web address, so
+  links to a world point to the hosted site if `SHARE_URL` is set as a
+  repository variable, and aren't offered otherwise.
+- **Arrival**: with no world named in the address (a bare address, or
+  opening the desktop app), the world last watched carries on from its
+  autosave, instead of a new one starting every time.
+- **Icon**: a sun rising behind mountains, in the app's colors
+  (`public/icon.svg`, also the favicon), rendered to every size the desktop
+  bundles need.
+- **Performance**, measured in this cloud container:
+
+  | Scale                       | Target              | Measured                                             |
+  | --------------------------- | ------------------- | ---------------------------------------------------- |
+  | 200 characters, small world | 1 year in < 5 s     | 7.0–7.7 s: **missed**                                |
+  | 1,000 characters, browser   | Smooth up to Season | 60 fps at every tier; the world keeps up to Day      |
+  | 500 characters, large world | 10 years in ≤ 300 s | 312 s, from 341 s at the end of Phase 10: **missed** |
+  | UI                          | 60 fps regardless   | 60 fps, worst frame 17 ms, with 1,000 at Season      |
+
+  The gains came from cheaper random numbers and dice, cached fears and
+  visits, a road plan that holds for six hours while nothing changes, and
+  less garbage in scoring choices. The profile is now flat: deciding what to
+  do is about 60% of the time, spread across many small pieces, with no one
+  hot spot left. With 1,000 people at Season the world runs about 6.5 days
+  a second, not the 90 asked for; the engine slows time rather than letting
+  a backlog build, so the page stays smooth.
+
+- **What didn't work**: letting the content spend longer at each pastime in
+  town cut decisions but barely the time, and a third of friendships went
+  with it; skipping the road for the content made no net difference. Both
+  were taken out.
+- **Level of detail was not needed** in the sense planned: the cost is where
+  people are (towns, dungeons, roads), not in quiet regions, so there is no
+  idle region to simplify. Cutting deeper would mean simulating people more
+  coarsely, which changes the stories; that is left for later, if wanted.
 
 ---
 

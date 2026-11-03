@@ -251,6 +251,15 @@ Each region is defined by a **culture pack** (pure data):
 | **Slavic**       | Axe, sabre, flail                  | Leshy, rusalka, domovoi, witches of the deep woods | Folk charms, hexes                            |
 | **Mesopotamian** | Sickle-sword, spear, composite bow | Lamassu, utukku, lilitu                            | Incantations, clay-tablet wards               |
 
+As built (Phase 10), the **Japonic** and **Norse** packs exist; the others
+are sketches still. Culture packs cover clusters of regions in a generated
+world, and the peoples living there take up their ways: Norse dwarves are
+_dvergar_ and elves _álfar_, while a Japonic land raises humans only. The gods
+are believed in and prayed to at shrines, but don't answer (question 4 below
+stays open). Local legends grow out of what happens: a creature that keeps
+killing at a place becomes "the kappa of the Kawazu Crossing" to the folk of
+the land, who keep away.
+
 A species can appear in several cultures with local variation. Norse
 _dvergar_ and _álfar_ are local takes on dwarves and elves, and centaurs
 naturally belong to a Hellenic-inspired region.

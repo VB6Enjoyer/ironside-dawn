@@ -1,7 +1,15 @@
 import { PASTIMES, type PastimeId } from '../../content';
 import { HOUR } from '../core/time';
 import type { SimContext } from '../context';
-import type { Character, CharacterId, Location, LocationId, LootItem, Motive } from '../model';
+import type {
+  Character,
+  CharacterId,
+  DriveId,
+  Location,
+  LocationId,
+  LootItem,
+  Motive,
+} from '../model';
 import { isDizzy, isFitToDelve, needsRecovery } from './condition';
 import { fearOf, hasVisited, healthNeed, wealthNeed } from './mind';
 import { isWantedIn } from './outlaws';
@@ -9,6 +17,7 @@ import { roleOf } from './progress';
 import { canTrade, wantsToShop } from './shopping';
 import { lairOdds } from './delve';
 import { mustersOf } from './dread';
+import { mythFear } from './myths';
 import { CRUSADE_SIZE, willingRecruits } from './social';
 import { findPath, nearbyPlaces } from './roads';
 import type { TravelReason } from './travel';
@@ -41,7 +50,7 @@ export interface Decision {
 
 /** One part of an option's appeal, and the motive it stands for (if worth naming). */
 interface Term {
-  readonly value: number;
+  value: number;
   readonly motive: Motive | null;
 }
 
@@ -49,6 +58,17 @@ interface Option {
   readonly action: Action;
   readonly terms: readonly Term[];
 }
+
+/** Motives that never change, made once: decisions run millions of times. */
+const DRIVE = {
+  purpose: { kind: 'drive', drive: 'purpose' },
+  glory: { kind: 'drive', drive: 'glory' },
+  wealth: { kind: 'drive', drive: 'wealth' },
+  companionship: { kind: 'drive', drive: 'companionship' },
+  health: { kind: 'drive', drive: 'health' },
+} as const satisfies Record<DriveId, Motive>;
+const LOOT: Motive = { kind: 'loot' };
+const HOME: Motive = { kind: 'home' };
 
 /** Only the best few options are considered; the rest are never chosen. */
 const SHORTLIST = 3;
@@ -77,7 +97,8 @@ export function decideAt(ctx: SimContext, character: Character, here: Location):
   const scored: { option: Option; score: number }[] = [];
   for (const option of options) {
     let raw = 0;
-    for (const t of option.terms) raw += t.value;
+    const terms = option.terms;
+    for (let i = 0; i < terms.length; i++) raw += terms[i]!.value;
     // Uniform noise with the same spread as a gaussian of NOISE_SD, but cheaper.
     const noise = (rng.next() - 0.5) * NOISE_SD * Math.sqrt(12);
     const score = Math.max(0.01, raw * (1 + noise));
@@ -87,14 +108,42 @@ export function decideAt(ctx: SimContext, character: Character, here: Location):
     scored.splice(i, 0, { option, score });
     if (scored.length > SHORTLIST) scored.pop();
   }
-  const chosen = rng.weighted(scored.map((s) => [s, s.score ** SHARPNESS] as const));
+  const chosen = scored.length === 1 ? scored[0]! : pick(rng, scored);
+  return { action: chosen.option.action, why: reasons(chosen.option.terms), score: chosen.score };
+}
 
-  const why = chosen.option.terms
-    .filter((t): t is Term & { motive: Motive } => t.motive !== null && t.value >= NAMED_REASON)
-    .sort((a, b) => b.value - a.value)
-    .slice(0, 2)
-    .map((t) => t.motive);
-  return { action: chosen.option.action, why, score: chosen.score };
+/** One of the shortlist, likelier the higher it scored (as `rng.weighted`, without the garbage). */
+function pick(
+  rng: SimContext['rng']['behavior'],
+  scored: readonly { option: Option; score: number }[],
+): { option: Option; score: number } {
+  const weights = scored.map((s) => s.score ** SHARPNESS);
+  let total = 0;
+  for (const w of weights) total += w;
+  let remaining = rng.next() * total;
+  for (let i = 0; i < scored.length; i++) {
+    if (remaining < weights[i]!) return scored[i]!;
+    remaining -= weights[i]!;
+  }
+  // Only reachable through floating-point rounding at the very top of the range.
+  return scored[scored.length - 1]!;
+}
+
+/** The two weightiest named motives behind a choice, weightiest first. */
+function reasons(terms: readonly Term[]): Motive[] {
+  let first: Term | null = null;
+  let second: Term | null = null;
+  for (const t of terms) {
+    if (t.motive === null || t.value < NAMED_REASON) continue;
+    if (!first || t.value > first.value) {
+      second = first;
+      first = t;
+    } else if (!second || t.value > second.value) {
+      second = t;
+    }
+  }
+  if (!first) return [];
+  return second ? [first.motive!, second.motive!] : [first.motive!];
 }
 
 function optionsAt(ctx: SimContext, character: Character, here: Location): Option[] {
@@ -116,43 +165,39 @@ function optionsAt(ctx: SimContext, character: Character, here: Location): Optio
           action: { kind: 'sell' },
           terms: [
             // Back from a trip with a full pack, selling comes first.
-            { value: 1.6, motive: { kind: 'loot' } },
-            { value: 0.3 * wealth, motive: { kind: 'drive', drive: 'wealth' } },
+            { value: 1.6, motive: LOOT },
+            { value: 0.3 * wealth, motive: DRIVE.wealth },
           ],
         });
       } else if (trading && shopping) {
         // Out of healing draughts, with coin to buy more.
         options.push({
           action: { kind: 'sell' },
-          terms: [{ value: 0.45, motive: { kind: 'drive', drive: 'health' } }],
+          terms: [{ value: 0.45, motive: DRIVE.health }],
         });
       }
       if (recovering) {
         options.push({
           action: { kind: 'convalesce' },
-          terms: [{ value: 1.2 + health, motive: { kind: 'drive', drive: 'health' } }],
+          terms: [{ value: 1.2 + health, motive: DRIVE.health }],
         });
       }
+      const wanted = isWantedIn(character, here.id);
       for (const pastime of pastimesAt(here, character)) {
-        options.push({
-          action: { kind: 'pastime', pastime },
-          // A quiet day in town has its own appeal.
-          terms: [
-            { value: TOWN_COMFORT * (1 - drives.purpose), motive: null },
-            ...pastimeTerms(character, pastime),
-            // A wanted outlaw is not welcome to linger.
-            ...(isWantedIn(character, here.id) ? [{ value: -0.25, motive: null }] : []),
-          ],
-        });
+        // A quiet day in town has its own appeal.
+        const terms: Term[] = [{ value: TOWN_COMFORT * (1 - drives.purpose), motive: null }];
+        addPastimeTerms(terms, character, pastime);
+        // A wanted outlaw is not welcome to linger.
+        if (wanted) terms.push({ value: -0.25, motive: null });
+        options.push({ action: { kind: 'pastime', pastime }, terms });
       }
       break;
     }
     case 'dungeon': {
       if (isFitToDelve(character, now)) {
-        options.push({
-          action: { kind: 'delve' },
-          terms: [...delveTerms(ctx, character, here.id, 1), { value: 0.05, motive: null }],
-        });
+        const terms = delveTerms(ctx, character, here.id, 1);
+        terms.push({ value: 0.05, motive: null });
+        options.push({ action: { kind: 'delve' }, terms });
       } else if (isDizzy(character, now) && !recovering) {
         // Only dizzy: wait outside for the head to clear.
         options.push({
@@ -168,7 +213,7 @@ function optionsAt(ctx: SimContext, character: Character, here: Location): Optio
           action: { kind: 'pastime', pastime: 'lurk' },
           terms: [
             { value: 0.35, motive: null },
-            { value: 0.6 * wealth, motive: { kind: 'drive', drive: 'wealth' } },
+            { value: 0.6 * wealth, motive: DRIVE.wealth },
             { value: 0.2 * traits.greed, motive: null },
             // Where they were run to ground or nearly killed, they are wary of lingering.
             { value: -0.5 * fearOf(character, here.id, now), motive: null },
@@ -181,7 +226,7 @@ function optionsAt(ctx: SimContext, character: Character, here: Location): Optio
             action: { kind: 'pastime', pastime },
             terms: [
               { value: 0.15, motive: null },
-              { value: 0.2 * wealth, motive: { kind: 'drive', drive: 'wealth' } },
+              { value: 0.2 * wealth, motive: DRIVE.wealth },
               { value: 0.1 * traits.curiosity, motive: null },
             ],
           });
@@ -191,41 +236,99 @@ function optionsAt(ctx: SimContext, character: Character, here: Location): Optio
     }
   }
 
+  // The road: journeys and hunts, as planned a little while ago if nothing has changed.
+  const road = roadOptions(ctx, character, here, recovering, loot, health);
+  for (let i = 0; i < road.length; i++) options.push(road[i]!);
+  return options;
+}
+
+/** How long someone's weighing of the road holds while they stay in one place. */
+const PLAN_HOURS = 6;
+
+/**
+ * Someone staying in town doesn't reconsider every road out every hour or
+ * two: their weighing of journeys and hunts holds for a few hours, unless
+ * they pick up loot, get hurt, or join or leave a party.
+ */
+const plans = new WeakMap<
+  Character,
+  {
+    readonly at: number;
+    readonly here: LocationId;
+    readonly recovering: boolean;
+    readonly loot: boolean;
+    readonly partyId: string | null;
+    readonly outlaw: boolean;
+    readonly options: Option[];
+  }
+>();
+
+function roadOptions(
+  ctx: SimContext,
+  character: Character,
+  here: Location,
+  recovering: boolean,
+  loot: boolean,
+  health: number,
+): Option[] {
+  const now = ctx.world.time;
+  const partyId = character.partyId ?? null;
+  const outlaw = Boolean(character.outlaw);
+  const plan = plans.get(character);
+  if (
+    plan &&
+    plan.here === here.id &&
+    now - plan.at < PLAN_HOURS * HOUR &&
+    plan.recovering === recovering &&
+    plan.loot === loot &&
+    plan.partyId === partyId &&
+    plan.outlaw === outlaw
+  ) {
+    return plan.options;
+  }
+  const options: Option[] = [];
+  const { traits, drives } = character;
   // Journeys elsewhere: anywhere within the nearest few places, and home.
   for (const { id, duration } of journeysFrom(ctx, character, here)) {
     const there = ctx.world.locations.get(id)!;
     const hours = duration / HOUR;
     const nearness = 1 / (1 + hours / DISTANCE_HALVING_HOURS);
+    if (!recovering && there.kind === 'dungeon') {
+      const terms = delveTerms(ctx, character, there.id, nearness);
+      options.push({ action: { kind: 'travel', to: there.id, reason: 'delve' }, terms });
+      continue;
+    }
     const terms: Term[] = [];
     let reason: TravelReason = 'wander';
 
     if (recovering) {
       // Hurt: only towns appeal, the nearer the better, and only if not in one already.
       if (there.kind !== 'town' || here.kind === 'town') continue;
-      terms.push({ value: (1 + health) * nearness, motive: { kind: 'drive', drive: 'health' } });
+      terms.push({ value: (1 + health) * nearness, motive: DRIVE.health });
       reason = 'heal';
-    } else if (there.kind === 'dungeon') {
-      terms.push(...delveTerms(ctx, character, there.id, nearness));
-      reason = 'delve';
     } else {
       if (there.id === character.homeId) {
         terms.push({
           value: (0.1 + 0.3 * drives.companionship) * nearness,
-          motive: { kind: 'home' },
+          motive: HOME,
         });
         if (loot) {
-          terms.push({ value: 0.7 * nearness, motive: { kind: 'loot' } });
+          terms.push({ value: 0.7 * nearness, motive: LOOT });
           reason = 'home';
         }
       } else if (there.kind === 'town') {
         terms.push({ value: 0.1 * drives.companionship * nearness, motive: null });
-        if (loot && here.kind !== 'town')
-          terms.push({ value: 0.5 * nearness, motive: { kind: 'loot' } });
+        if (loot && here.kind !== 'town') terms.push({ value: 0.5 * nearness, motive: LOOT });
       } else {
         terms.push({ value: 0.06 * nearness, motive: null });
       }
+      // The tales of a wild place keep the folk raised on them away.
+      if (there.kind === 'wilderness') {
+        const dread = mythFear(ctx.world, character, there.id);
+        if (dread > 0) terms.push({ value: -0.3 * dread * (1.2 - traits.bravery), motive: null });
+      }
       if (character.outlaw && there.kind === 'wilderness') {
-        terms.push({ value: 0.4 * nearness, motive: { kind: 'drive', drive: 'wealth' } });
+        terms.push({ value: 0.4 * nearness, motive: DRIVE.wealth });
       }
       if (there.kind === 'town' && isWantedIn(character, there.id)) {
         terms.push({ value: -0.3, motive: null });
@@ -257,6 +360,7 @@ function optionsAt(ctx: SimContext, character: Character, here: Location): Optio
   if (here.kind === 'town' && !character.outlaw && !recovering) {
     options.push(...huntOptions(ctx, character, here));
   }
+  plans.set(character, { at: now, here: here.id, recovering, loot, partyId, outlaw, options });
   return options;
 }
 
@@ -294,12 +398,12 @@ function delveTerms(
   const { traits, drives } = character;
   const expectation = character.expectations[place];
   const terms: Term[] = [
-    { value: 1.4 * drives.purpose ** 1.5, motive: { kind: 'drive', drive: 'purpose' } },
+    { value: 1.4 * drives.purpose ** 1.5, motive: DRIVE.purpose },
     {
       value: 0.4 * drives.glory * (0.5 + traits.bravery),
-      motive: { kind: 'drive', drive: 'glory' },
+      motive: DRIVE.glory,
     },
-    { value: 0.4 * wealthNeed(character), motive: { kind: 'drive', drive: 'wealth' } },
+    { value: 0.4 * wealthNeed(character), motive: DRIVE.wealth },
   ];
   if (expectation) {
     const payoff = Math.min(1, expectation.reward / 60);
@@ -310,7 +414,8 @@ function delveTerms(
   } else {
     terms.push({ value: 0.25 * traits.curiosity, motive: { kind: 'novelty', locationId: place } });
   }
-  const fear = fearOf(character, place, ctx.world.time);
+  // What they fear there: what befell them, and the tales they grew up on.
+  const fear = fearOf(character, place, ctx.world.time) + mythFear(ctx.world, character, place);
   if (fear > 0) terms.push({ value: -0.8 * fear * (1.2 - traits.bravery), motive: null });
   // One of the dread lairs there: a call to the brave who stand a chance, a
   // dread to everyone else.
@@ -335,10 +440,8 @@ function delveTerms(
   // Glory and gold only call once restlessness has built up: nobody goes
   // straight back in for the sake of it.
   const eagerness = Math.min(1, drives.purpose / RESTLESS);
-  return terms.map((t) => ({
-    motive: t.motive,
-    value: t.value * nearness * (t.value > 0 ? eagerness : 1),
-  }));
+  for (const t of terms) t.value = t.value * nearness * (t.value > 0 ? eagerness : 1);
+  return terms;
 }
 
 /**
@@ -401,35 +504,40 @@ function followersOrMembers(ctx: SimContext, character: Character): number {
   return (ctx.world.parties.get(character.partyId)?.members.length ?? 1) - 1;
 }
 
-function pastimeTerms(character: Character, pastime: PastimeId): Term[] {
+function addPastimeTerms(terms: Term[], character: Character, pastime: PastimeId): void {
   const { traits, drives } = character;
   switch (pastime) {
     case 'tavern':
-      return [
+      terms.push(
         { value: 0.08, motive: null },
-        { value: 1.1 * drives.companionship, motive: { kind: 'drive', drive: 'companionship' } },
-      ];
+        { value: 1.1 * drives.companionship, motive: DRIVE.companionship },
+      );
+      return;
     case 'market':
-      return [{ value: 0.1 + 0.08 * traits.curiosity, motive: null }];
+      terms.push({ value: 0.1 + 0.08 * traits.curiosity, motive: null });
+      return;
     case 'training':
-      return [
+      terms.push(
         {
           value: 0.08 + 0.1 * traits.patience + (roleOf(character) === 'fighter' ? 0.05 : 0),
           motive: null,
         },
-        { value: 0.25 * drives.glory, motive: { kind: 'drive', drive: 'glory' } },
-      ];
+        { value: 0.25 * drives.glory, motive: DRIVE.glory },
+      );
+      return;
     case 'shrine': {
       const shaken = character.memories.some((m) => m.kind === 'near-death');
-      return [{ value: 0.06 + 0.08 * traits.compassion + (shaken ? 0.1 : 0), motive: null }];
+      terms.push({ value: 0.06 + 0.08 * traits.compassion + (shaken ? 0.1 : 0), motive: null });
+      return;
     }
     case 'study': {
       // Books are hard going: worth it for the gifted, now and then for the clever.
       const aptitude = character.gifted ? 0.3 : 0.15;
-      return [{ value: aptitude * (0.5 + traits.curiosity) - STUDY_EFFORT, motive: null }];
+      terms.push({ value: aptitude * (0.5 + traits.curiosity) - STUDY_EFFORT, motive: null });
+      return;
     }
     default:
-      return [{ value: 0.1, motive: null }];
+      terms.push({ value: 0.1, motive: null });
   }
 }
 

@@ -1,5 +1,6 @@
 import type { RngState } from './core/rng';
-import type { World } from './model';
+import type { ContentPack } from '../content';
+import type { World, WorldSettings } from './model';
 
 /**
  * Saves (ARCHITECTURE.md §6): the whole world as plain data, plus where every
@@ -9,13 +10,17 @@ import type { World } from './model';
 
 export const SAVE_FORMAT = 'ironside-dawn/world';
 /** Bump when the world's shape changes in a way old saves can't be read as. */
-export const SAVE_VERSION = 4;
+export const SAVE_VERSION = 6;
 
 export interface WorldSave {
   readonly format: typeof SAVE_FORMAT;
   readonly version: number;
   /** The adventurer population the world keeps topping up to. */
   readonly characterCount: number;
+  /** What was chosen when the world was created, so a link to it can say so. */
+  readonly settings: WorldSettings;
+  /** Content packs the world was made with, installed again before it is loaded. */
+  readonly packs: readonly ContentPack[];
   /** Each random stream's state, by stream name. */
   readonly rng: Readonly<Record<string, RngState>>;
   /** The world, with its maps and sets encoded as plain data (see `encode`). */

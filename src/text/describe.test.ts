@@ -92,6 +92,23 @@ const RARE: Record<string, (a: CharacterId, b: CharacterId) => object> = {
     slain: 12,
     since: 0,
   }),
+  'myth.end': (a) => ({ characterId: a, locationId: 'dungeon-of-misery', mythId: 1 }),
+  'myth.born': () => ({
+    locationId: where,
+    mythId: 1,
+    creature: 'kappa',
+    characterId: null,
+    deaths: 3,
+  }),
+  'social.myth': (a, b) => ({
+    characterId: a,
+    otherId: b,
+    locationId: 'concordale',
+    mythId: 1,
+    placeId: where,
+    creature: 'wolf',
+    subjectId: null,
+  }),
   'character.avenger': (a, b) => ({
     characterId: a,
     locationId: 'concordale',

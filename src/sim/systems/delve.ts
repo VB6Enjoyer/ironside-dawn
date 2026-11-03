@@ -128,9 +128,7 @@ export function delveStep(ctx: SimContext, character: Character): void {
     return;
   }
 
-  const outcome = rng.weighted(
-    (Object.entries(dungeon.def.rooms) as [RoomOutcome, number][]).filter(([, w]) => w > 0),
-  );
+  const outcome = rng.weighted(roomOdds(dungeon));
   switch (outcome) {
     case 'fight': {
       const species = pickInhabitant(ctx, dungeon, room);
@@ -160,6 +158,18 @@ export function delveStep(ctx: SimContext, character: Character): void {
       quietChamber(ctx, character, location, progress);
       return;
   }
+}
+
+/** What a chamber may hold and how likely, worked out once per kind of dungeon. */
+const roomOddsCache = new WeakMap<Dungeon['def'], readonly (readonly [RoomOutcome, number])[]>();
+
+function roomOdds(dungeon: Dungeon): readonly (readonly [RoomOutcome, number])[] {
+  let odds = roomOddsCache.get(dungeon.def);
+  if (!odds) {
+    odds = (Object.entries(dungeon.def.rooms) as [RoomOutcome, number][]).filter(([, w]) => w > 0);
+    roomOddsCache.set(dungeon.def, odds);
+  }
+  return odds;
 }
 
 /** Leaves the dungeon and stands at its entrance, deciding what next shortly after. */

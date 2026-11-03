@@ -7,6 +7,7 @@ export const SKILLS = [
   'axes',
   'blunt',
   'polearms',
+  'bows',
   'stealth',
   'lockpicking',
   'awareness',
@@ -14,7 +15,7 @@ export const SKILLS = [
 ] as const;
 export type SkillId = (typeof SKILLS)[number];
 
-export type WeaponSkill = Extract<SkillId, 'blades' | 'axes' | 'blunt' | 'polearms'>;
+export type WeaponSkill = Extract<SkillId, 'blades' | 'axes' | 'blunt' | 'polearms' | 'bows'>;
 
 /** What a character's best skills make them, as others would describe them. */
 export type Role = 'fighter' | 'scout' | 'mystic';
@@ -24,6 +25,7 @@ export const SKILL_ROLE: Record<SkillId, Role> = {
   axes: 'fighter',
   blunt: 'fighter',
   polearms: 'fighter',
+  bows: 'fighter',
   stealth: 'scout',
   lockpicking: 'scout',
   awareness: 'scout',

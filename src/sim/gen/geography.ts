@@ -4,8 +4,12 @@ import {
   CULTURES,
   DUNGEON_TEMPLATES,
   HOMELANDS,
+  packCultures,
+  packOf,
   PEOPLES,
   SPECIES,
+  type CultureDef,
+  type CultureId,
   type BiomeId,
   type DungeonDef,
   type DungeonTemplateId,
@@ -20,6 +24,7 @@ import {
   type SpeciesId,
 } from '../../content';
 import { createRng, type Rng } from '../core/rng';
+import type { WorldSettings, WorldSize } from '../model';
 
 /**
  * Procedural world generation (ROADMAP.md Phase 9): a map of regions, each one
@@ -30,7 +35,7 @@ import { createRng, type Rng } from '../core/rng';
  * Distances are in leagues: about an hour's walk on open plains.
  */
 
-export type WorldSize = 'small' | 'medium' | 'large';
+export type { WorldSize } from '../model';
 
 interface SizeDef {
   readonly width: number;
@@ -81,10 +86,22 @@ interface Point {
 
 interface Placed extends Point {
   readonly def: LocationDef;
+  /** Dungeons: what kind. */
+  readonly template?: DungeonTemplateId;
 }
 
-export function generateMap(seed: string, size: WorldSize): MapDef {
+/** What else a world's creator chose, as it bears on the map. */
+export interface MapOptions {
+  readonly danger?: WorldSettings['danger'];
+  readonly peoples?: readonly PeopleId[];
+}
+
+const DANGER_SHIFT = { gentle: -1, normal: 0, deadly: 1 } as const;
+
+export function generateMap(seed: string, size: WorldSize, options: MapOptions = {}): MapDef {
   const rng = createRng(seed).fork('geography');
+  const included: readonly PeopleId[] = options.peoples?.length ? options.peoples : PEOPLES;
+  const shift = DANGER_SHIFT[options.danger ?? 'normal'];
   const spec = SIZES[size];
   const { width, height } = spec;
   const names = new Set<string>();
@@ -98,10 +115,20 @@ export function generateMap(seed: string, size: WorldSize): MapDef {
     Math.sqrt((width * height) / spec.regions) * 0.7,
   );
   const biomes = assignBiomes(rng, hearts, width, height);
+  const cultures = assignCultures(rng, hearts, biomes, size);
   const regions: RegionDef[] = hearts.map((p, i) => {
     const biome = biomes[i]!;
-    const name = uniqueName(rng, names, () => `the ${compose(rng, BIOMES[biome].regionNames)}`);
-    return { id: slug(name), name, biome, x: round(p.x), y: round(p.y) };
+    const culture = cultures[i] ?? undefined;
+    const parts = culture ? packOf(culture)!.regionNames : BIOMES[biome].regionNames;
+    const name = uniqueName(rng, names, () => `the ${compose(rng, parts)}`);
+    return {
+      id: slug(name),
+      name,
+      biome,
+      ...(culture ? { culture } : {}),
+      x: round(p.x),
+      y: round(p.y),
+    };
   });
   const regionAt = (p: Point): RegionDef => nearest(regions, p);
 
@@ -124,14 +151,18 @@ export function generateMap(seed: string, size: WorldSize): MapDef {
   // Towns: each people's homeland first, then wherever the land is settled.
   const townRegions = regions.filter((r) => BIOMES[r.biome].settled > 0);
   const plannedTowns: { region: RegionDef; people: PeopleId }[] = [];
-  for (const people of PEOPLES) {
+  for (const people of included) {
     const homes = regions.filter((r) => r.biome === HOMELANDS[people]);
     if (homes.length > 0) plannedTowns.push({ region: rng.pick(homes), people });
   }
   while (plannedTowns.length < spec.towns) {
     const region = rng.weighted(townRegions.map((r) => [r, BIOMES[r.biome].settled] as const));
-    const peoples = Object.entries(BIOMES[region.biome].peoples) as [PeopleId, number][];
-    plannedTowns.push({ region, people: rng.weighted(peoples) });
+    // Only the peoples in this world; where none of the land's own live, others settle it.
+    const peoples = (Object.entries(BIOMES[region.biome].peoples) as [PeopleId, number][]).filter(
+      ([p]) => included.includes(p),
+    );
+    const people = peoples.length > 0 ? rng.weighted(peoples) : rng.pick(included);
+    plannedTowns.push({ region, people });
   }
   for (const { region, people } of plannedTowns) {
     let p = spot(region, (q) => !tooClose(q, TOWN_SPACING, ['town']));
@@ -141,7 +172,7 @@ export function generateMap(seed: string, size: WorldSize): MapDef {
   }
 
   // A few towns on the border between two peoples' lands take in both.
-  mixBorderTowns(rng, placed, regions, regionAt, spec.borderTowns);
+  mixBorderTowns(rng, placed, regions, regionAt, spec.borderTowns, included);
 
   // Fortresses guard the more settled lands.
   const fortresses = Math.max(1, Math.round(spec.towns / 5));
@@ -165,7 +196,39 @@ export function generateMap(seed: string, size: WorldSize): MapDef {
     const nearestTown = Math.min(
       ...placed.filter((q) => q.def.kind === 'town').map((q) => dist(p, q)),
     );
-    placed.push({ ...p, def: dungeonDef(rng, names, region, p, nearestTown) });
+    const template = pickTemplate(rng, region);
+    placed.push({
+      ...p,
+      def: dungeonDef(rng, names, region, p, nearestTown, template, shift),
+      template,
+    });
+  }
+
+  // Every culture's lands hold at least one dungeon of its own kind (a barrow, a haunted shrine).
+  for (const culture of packCultures()) {
+    const lands = regions.filter((r) => r.culture === culture);
+    if (lands.length === 0) continue;
+    const pack = packOf(culture)!;
+    const signature = (Object.entries(pack.dungeons) as [DungeonTemplateId, number][]).sort(
+      (a, b) => b[1] - a[1],
+    )[0]![0];
+    const has = placed.some(
+      (q) => q.def.kind === 'dungeon' && q.def.culture === culture && q.template === signature,
+    );
+    if (has) continue;
+    const region = rng.pick(lands);
+    const p =
+      spot(region, (q) => !tooClose(q, DUNGEON_SPACING, ['town', 'fortress']) && !tooClose(q, 4)) ??
+      spot(region, (q) => !tooClose(q, 3));
+    if (!p) continue;
+    const nearestTown = Math.min(
+      ...placed.filter((q) => q.def.kind === 'town').map((q) => dist(p, q)),
+    );
+    placed.push({
+      ...p,
+      def: dungeonDef(rng, names, region, p, nearestTown, signature, shift),
+      template: signature,
+    });
   }
 
   // Wild places along the way: forests, passes, fens.
@@ -174,12 +237,13 @@ export function generateMap(seed: string, size: WorldSize): MapDef {
     const p = spot(null, (q) => !tooClose(q, 6));
     if (!p) continue;
     const region = regionAt(p);
-    const name = uniqueName(
-      rng,
-      names,
-      () => `the ${compose(rng, BIOMES[region.biome].wildNames)}`,
-    );
-    placed.push({ ...p, def: base(name.slice(4), 'wilderness', region, p, 'generic', true) });
+    const pack = region.culture ? packOf(region.culture) : null;
+    const parts = pack ? pack.wildNames : BIOMES[region.biome].wildNames;
+    const name = uniqueName(rng, names, () => `the ${compose(rng, parts)}`);
+    const def = base(name.slice(4), 'wilderness', region, p, region.culture ?? 'generic', true);
+    // Something native haunts the wild places of a culture's lands.
+    const haunted = pack?.haunt && rng.chance(0.7) ? { haunt: pack.haunt } : {};
+    placed.push({ ...p, def: { ...def, ...haunted } });
   }
 
   return {
@@ -189,6 +253,41 @@ export function generateMap(seed: string, size: WorldSize): MapDef {
     width,
     height,
   };
+}
+
+/**
+ * Culture packs (Phase 10) each take a cluster of regions: a heart region
+ * whose people they raise, and its nearest neighbors of the same kind. Two
+ * packs never share a region, and the wastes belong to nobody.
+ */
+function assignCultures(
+  rng: Rng,
+  hearts: readonly Point[],
+  biomes: readonly BiomeId[],
+  size: WorldSize,
+): (CultureId | null)[] {
+  const cultures: (CultureId | null)[] = hearts.map(() => null);
+  for (const id of packCultures()) {
+    const pack = packOf(id)!;
+    const fits = (i: number) =>
+      cultures[i] === null && biomes[i] !== 'wastes' && mainPeople(biomes[i]!) in pack.peoples;
+    const candidates = hearts.map((_, i) => i).filter(fits);
+    if (candidates.length === 0) continue;
+    const heart = rng.pick(candidates);
+    const reach = size === 'small' ? 1 : size === 'medium' ? Math.min(2, pack.reach) : pack.reach;
+    const cluster = candidates
+      .filter((i) => i !== heart)
+      .sort((a, b) => dist(hearts[a]!, hearts[heart]!) - dist(hearts[b]!, hearts[heart]!))
+      .slice(0, reach - 1);
+    for (const i of [heart, ...cluster]) cultures[i] = id;
+  }
+  return cultures;
+}
+
+/** The people most at home in a land. */
+function mainPeople(biome: BiomeId): PeopleId | 'none' {
+  const peoples = Object.entries(BIOMES[biome].peoples) as [PeopleId, number][];
+  return peoples.sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'none';
 }
 
 /** Spreads `count` points over the map, no two closer than `spacing` if it can. */
@@ -244,8 +343,10 @@ function townDef(
   p: Point,
 ): LocationDef {
   const biome = biomeDef(region.biome);
-  const culture = SPECIES[people].culture;
-  const parts = CULTURES[culture];
+  // A people living in a culture's lands is raised in its ways, if the culture takes them in.
+  const local = region.culture && packOf(region.culture)?.peoples[people];
+  const culture: CultureId = local ? region.culture! : SPECIES[people].culture;
+  const parts = CULTURES[culture] as CultureDef;
   const name = uniqueName(rng, names, () =>
     compose(rng, { first: parts.townPrefixes ?? [], second: parts.townSuffixes ?? [], join: '' }),
   );
@@ -274,6 +375,7 @@ function mixBorderTowns(
   regions: readonly RegionDef[],
   regionAt: (p: Point) => RegionDef,
   count: number,
+  included: readonly PeopleId[],
 ): void {
   const candidates: { index: number; margin: number; other: PeopleId }[] = [];
   placed.forEach((town, index) => {
@@ -283,7 +385,7 @@ function mixBorderTowns(
     for (const r of regions) {
       if (r.id === own.id) continue;
       const theirs = homelandPeople(r.biome);
-      if (!theirs || theirs === people) continue;
+      if (!theirs || theirs === people || !included.includes(theirs)) continue;
       // How much nearer their own heart is than the other land's.
       candidates.push({ index, margin: dist(town, r) - dist(town, own), other: theirs });
     }
@@ -312,15 +414,15 @@ function dungeonDef(
   region: RegionDef,
   p: Point,
   nearestTown: number,
+  id: DungeonTemplateId,
+  shift: number,
 ): LocationDef {
-  const biome = biomeDef(region.biome);
-  const id = rng.weighted(Object.entries(biome.dungeons) as [DungeonTemplateId, number][]);
   const template = DUNGEON_TEMPLATES[id];
   const danger = Math.max(
     1,
     Math.min(
       5,
-      Math.round(1 + nearestTown / 10 + (region.biome === 'wastes' ? 1 : 0) + rng.next()),
+      Math.round(1 + nearestTown / 10 + (region.biome === 'wastes' ? 1 : 0) + rng.next()) + shift,
     ),
   );
   const scale = 0.6 + 0.2 * danger;
@@ -344,7 +446,22 @@ function dungeonDef(
     treasure: COMMON_TREASURE,
     masters: template.masters,
   };
-  return { ...base(name, 'dungeon', region, p, 'generic', template.article), dungeon };
+  return {
+    ...base(name, 'dungeon', region, p, region.culture ?? 'generic', template.article),
+    dungeon,
+  };
+}
+
+/** A culture's own kinds of dungeon, mostly, among the land's. */
+function pickTemplate(rng: Rng, region: RegionDef): DungeonTemplateId {
+  const pack = region.culture ? packOf(region.culture) : null;
+  const weights = new Map(
+    Object.entries(biomeDef(region.biome).dungeons) as [DungeonTemplateId, number][],
+  );
+  for (const [t, w] of Object.entries(pack?.dungeons ?? {}) as [DungeonTemplateId, number][]) {
+    weights.set(t, (weights.get(t) ?? 0) + 3 * w);
+  }
+  return rng.weighted([...weights]);
 }
 
 function fortressName(rng: Rng, region: RegionDef): string {

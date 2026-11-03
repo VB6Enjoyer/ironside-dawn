@@ -1,0 +1,233 @@
+{
+  "format": "ironside-dawn/content-pack",
+  "id": "slavic",
+  "name": "Slavic lands",
+  "description": "Birch forests and river fords of the old Slavic tales: leshies, rusalki and upyri, druzhinniki with sabres, and the volkhvy of Perun and Veles.",
+  "version": 1,
+  "loot": [
+    {
+      "id": "leshy-bark",
+      "culture": "slavic",
+      "name": "strip of leshy bark",
+      "plural": "strips of leshy bark",
+      "value": 30,
+      "good": "reagents",
+      "units": 2.5
+    },
+    {
+      "id": "rusalka-pearl",
+      "culture": "slavic",
+      "name": "river pearl",
+      "plural": "river pearls",
+      "value": 40
+    },
+    {
+      "id": "upyr-fang",
+      "culture": "slavic",
+      "name": "upyr fang",
+      "plural": "upyr fangs",
+      "value": 25,
+      "good": "reagents",
+      "units": 2
+    }
+  ],
+  "creatures": [
+    {
+      "id": "leshy",
+      "culture": "slavic",
+      "name": "leshy",
+      "plural": "leshies",
+      "family": "beast",
+      "level": 4,
+      "hp": "4d8+4",
+      "attack": 4,
+      "damage": "1d10",
+      "defense": 13,
+      "agility": 1,
+      "fleeBelow": 0.2,
+      "group": [1, 1],
+      "gold": null,
+      "drops": [{ "loot": "leshy-bark", "chance": 0.6 }]
+    },
+    {
+      "id": "rusalka",
+      "culture": "slavic",
+      "name": "rusalka",
+      "plural": "rusalki",
+      "family": "undead",
+      "level": 3,
+      "hp": "2d8+2",
+      "attack": 3,
+      "damage": "1d6+1",
+      "defense": 14,
+      "agility": 2,
+      "fleeBelow": 0.3,
+      "group": [1, 2],
+      "gold": null,
+      "drops": [{ "loot": "rusalka-pearl", "chance": 0.3 }]
+    },
+    {
+      "id": "upyr",
+      "culture": "slavic",
+      "name": "upyr",
+      "plural": "upyri",
+      "family": "undead",
+      "level": 4,
+      "hp": "4d8+2",
+      "attack": 4,
+      "damage": "1d8+1",
+      "defense": 13,
+      "agility": 1,
+      "fleeBelow": 0,
+      "group": [1, 2],
+      "gold": { "dice": "2d6", "chance": 0.4 },
+      "drops": [{ "loot": "upyr-fang", "chance": 0.5 }]
+    }
+  ],
+  "weapons": [
+    {
+      "id": "sabre",
+      "slot": "weapon",
+      "culture": "slavic",
+      "name": "sabre",
+      "skill": "blades",
+      "damage": "1d8",
+      "accuracy": 1,
+      "value": 35,
+      "weight": 2
+    },
+    {
+      "id": "flail",
+      "slot": "weapon",
+      "culture": "slavic",
+      "name": "flail",
+      "skill": "blunt",
+      "damage": "1d8+1",
+      "accuracy": -1,
+      "value": 25,
+      "weight": 2
+    }
+  ],
+  "armor": [
+    {
+      "id": "kolchuga",
+      "slot": "armor",
+      "culture": "slavic",
+      "name": "kolchuga",
+      "defense": 5,
+      "metal": true,
+      "value": 75,
+      "weight": 1
+    }
+  ],
+  "spells": [
+    {
+      "id": "perun-spark",
+      "culture": "slavic",
+      "name": "Perun's Spark",
+      "effect": { "kind": "damage", "dice": "2d6+1" },
+      "difficulty": 12,
+      "costs": { "stamina": 3, "dizzy": 10 },
+      "arcana": 20
+    },
+    {
+      "id": "hearth-charm",
+      "culture": "slavic",
+      "name": "Hearth Charm",
+      "effect": { "kind": "ward", "dice": "2d6+2" },
+      "difficulty": 12,
+      "costs": { "stamina": 5 },
+      "arcana": 40
+    }
+  ],
+  "dungeons": {
+    "leshy-wood": {
+      "id": "leshy-wood",
+      "article": true,
+      "names": {
+        "first": ["Whispering", "Crooked", "Black", "Lost", "Old"],
+        "second": ["Thicket", "Grove", "Wildwood"],
+        "join": " "
+      },
+      "rooms": { "fight": 5, "treasure": 1, "trap": 2, "quiet": 2 },
+      "inhabitants": [
+        { "creature": "wolf", "max": 16, "regrowthPerDay": 0.7 },
+        { "creature": "dire-boar", "max": 8, "regrowthPerDay": 0.3 },
+        { "creature": "leshy", "max": 3, "regrowthPerDay": 0.04 }
+      ],
+      "treasureGold": "1d6",
+      "masters": []
+    },
+    "upyr-crypt": {
+      "id": "upyr-crypt",
+      "article": true,
+      "names": {
+        "first": ["Boyar's", "Drowned", "Sunken", "Nameless"],
+        "second": ["Crypt", "Kurgan", "Vault"],
+        "join": " "
+      },
+      "rooms": { "fight": 4, "treasure": 2, "trap": 2, "quiet": 3 },
+      "inhabitants": [
+        { "creature": "skeleton", "max": 24, "regrowthPerDay": 1.2 },
+        { "creature": "zombie", "max": 12, "regrowthPerDay": 0.6 },
+        { "creature": "upyr", "max": 8, "regrowthPerDay": 0.2 }
+      ],
+      "treasureGold": "2d6",
+      "masters": ["lich", "revenant"]
+    }
+  },
+  "cultures": {
+    "slavic": {
+      "id": "slavic",
+      "name": "Slavic",
+      "givenNames": [
+        "Bogdan",
+        "Dobrava",
+        "Milan",
+        "Mira",
+        "Radomir",
+        "Ljuba",
+        "Vesna",
+        "Zoran",
+        "Jarom",
+        "Bozena",
+        "Stanislav",
+        "Zlata",
+        "Mstislav",
+        "Vlasta",
+        "Dragan",
+        "Snezana"
+      ],
+      "familyNamePrefixes": ["Novo", "Bel", "Dobro", "Gora", "Lesno", "Vol", "Kras", "Sokol"],
+      "familyNameSuffixes": ["vich", "ski", "v", "enko", "ar"],
+      "townPrefixes": ["Novo", "Bel", "Gor", "Vysh", "Zvezd", "Les", "Kras", "Sokol"],
+      "townSuffixes": ["grad", "gorod", "ovo", "itsa", "sk", "yar"],
+      "pack": {
+        "peoples": { "human": { "singular": "human", "plural": "humans" } },
+        "weapons": { "sabre": 3, "flail": 2, "axe": 2, "spear": 1 },
+        "armor": { "kolchuga": 1, "leather": 2, "padded": 1 },
+        "roles": { "fighter": "druzhinnik", "scout": "okhotnik", "mystic": "volkhv" },
+        "deities": [
+          { "name": "Perun", "domain": "thunder and war" },
+          { "name": "Veles", "domain": "herds and the underworld" },
+          { "name": "Mokosh", "domain": "the earth and weaving" },
+          { "name": "Dazhbog", "domain": "the sun" },
+          { "name": "Svarog", "domain": "fire and the forge" }
+        ],
+        "regionNames": {
+          "first": ["Birch", "Linden", "Amber", "Black", "Wolf", "Rye"],
+          "second": ["Marches", "Forest", "Lands", "Hills"],
+          "join": " "
+        },
+        "wildNames": {
+          "first": ["Rusal", "Mokra", "Chorna", "Bila", "Tikha"],
+          "second": [" Ford", " Weir", " Pool"],
+          "join": ""
+        },
+        "dungeons": { "leshy-wood": 3, "upyr-crypt": 2 },
+        "haunt": { "creature": "rusalka", "max": 5 },
+        "reach": 2
+      }
+    }
+  }
+}

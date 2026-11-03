@@ -3,11 +3,21 @@
  *
  *   npm run sim -- --seed 42 --days 7
  *   npm run sim -- --seed 42 --days 365 --quiet     (just the world report)
+ *   npm run sim -- --seed 42 --danger deadly --pack packs/slavic.json
  */
 import { randomInt } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { parseArgs } from 'node:util';
 
-import { creatureDef, type CreatureId, type TraitId } from '../src/content';
+import {
+  checkPack,
+  creatureDef,
+  PEOPLES,
+  type ContentPack,
+  type CreatureId,
+  type PeopleId,
+  type TraitId,
+} from '../src/content';
 import { roleOf } from '../src/sim/systems/progress';
 import {
   createSimulation,
@@ -23,6 +33,7 @@ import {
   type CharacterId,
   type SimEvent,
   type World,
+  type WorldSettings,
 } from '../src/sim';
 import {
   anItem,
@@ -51,8 +62,53 @@ Options:
   --characters <n>         Number of adventurers. Default: 20.
   --importance <level>     Lowest importance to print: trivial, normal, notable,
                            legendary. Default: trivial.
+  --size <size>            World size: small, medium or large. Default: to suit
+                           the adventurers.
+  --danger <level>         gentle, normal or deadly. Default: normal.
+  --magic <level>          rare, normal or common. Default: normal.
+  --peoples <list>         Peoples included, comma-separated (humans always are).
+  --cap <n>                Most people alive at once. Default: no limit.
+  --pack <file.json>       Add a content pack. Can be given more than once.
   --quiet                  Print only the summary, not the log.
   --help                   Show this message.`;
+
+/** World settings from the options, or what is wrong with them. */
+function settingsFrom(values: {
+  size?: string | undefined;
+  danger?: string | undefined;
+  magic?: string | undefined;
+  peoples?: string | undefined;
+  cap?: string | undefined;
+}): Partial<WorldSettings> | string {
+  const settings: { -readonly [K in keyof WorldSettings]?: WorldSettings[K] } = {};
+  const pick = <T extends string>(name: string, value: string | undefined, allowed: T[]) => {
+    if (value === undefined) return undefined;
+    if (!allowed.includes(value as T)) throw `--${name} must be one of ${allowed.join(', ')}`;
+    return value as T;
+  };
+  try {
+    const size = pick('size', values.size, ['small', 'medium', 'large']);
+    const danger = pick('danger', values.danger, ['gentle', 'normal', 'deadly']);
+    const magic = pick('magic', values.magic, ['rare', 'normal', 'common']);
+    if (size) settings.size = size;
+    if (danger) settings.danger = danger;
+    if (magic) settings.magic = magic;
+  } catch (message) {
+    return String(message);
+  }
+  if (values.peoples !== undefined) {
+    const listed = values.peoples.split(',').map((p) => p.trim());
+    const unknown = listed.filter((p) => !(PEOPLES as readonly string[]).includes(p));
+    if (unknown.length > 0) return `Unknown peoples: ${unknown.join(', ')}`;
+    settings.peoples = PEOPLES.filter((p: PeopleId) => p === 'human' || listed.includes(p));
+  }
+  if (values.cap !== undefined) {
+    const cap = Number(values.cap);
+    if (!Number.isSafeInteger(cap) || cap < 1) return '--cap must be a positive integer';
+    settings.populationCap = cap;
+  }
+  return settings;
+}
 
 function main(): number {
   let values;
@@ -63,6 +119,12 @@ function main(): number {
         days: { type: 'string', default: '3' },
         characters: { type: 'string', default: '20' },
         importance: { type: 'string', default: 'trivial' },
+        size: { type: 'string' },
+        danger: { type: 'string' },
+        magic: { type: 'string' },
+        peoples: { type: 'string' },
+        cap: { type: 'string' },
+        pack: { type: 'string', multiple: true },
         quiet: { type: 'boolean', default: false },
         help: { type: 'boolean', short: 'h' },
       },
@@ -86,6 +148,16 @@ function main(): number {
     return fail('--characters must be a positive integer');
   }
   if (floor === undefined) return fail(`Unknown importance "${values.importance}"`);
+  const settings = settingsFrom(values);
+  if (typeof settings === 'string') return fail(settings);
+  const packs: ContentPack[] = [];
+  for (const file of values.pack ?? []) {
+    try {
+      packs.push(checkPack(JSON.parse(readFileSync(file, 'utf8'))));
+    } catch (error) {
+      return fail(`${file}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
 
   const hash = new StreamHash();
   const counts = new Map<string, number>();
@@ -107,6 +179,8 @@ function main(): number {
   const sim = createSimulation({
     seed,
     characterCount,
+    settings,
+    packs,
     retention: 1,
     onEvent(event) {
       hash.update(JSON.stringify(event));
@@ -366,6 +440,21 @@ function worldRows(
     ...fortresses,
     row('The dread', `${world.tally.dreadSlain} destroyed`),
     ...dread,
+    row(
+      'Culture lands',
+      [...world.regions.values()]
+        .filter((r) => r.culture)
+        .map((r) => `${r.name} (${r.culture})`)
+        .join(', ') || 'none',
+    ),
+    row('Myths', `${world.myths.length} (${world.myths.filter((m) => m.endedAt).length} ended)`),
+    ...world.myths.slice(-5).map((m) => {
+      const place = world.locations.get(m.locationId)!;
+      const where = `${place.article ? 'the ' : ''}${place.name}`;
+      const what =
+        m.subject.kind === 'creature' ? `the ${m.subject.creature}` : name(m.subject.characterId);
+      return row(`  ${what} of ${where}`, `${m.deaths} lives, told by ${m.culture} folk`);
+    }),
   ];
 }
 

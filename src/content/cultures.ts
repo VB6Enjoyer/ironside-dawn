@@ -1,6 +1,15 @@
+import type { NameParts } from './biomes';
+import type { CreatureId } from './creatures';
+import type { DungeonTemplateId } from './dungeons';
+import type { ArmorId, WeaponId } from './items';
+import type { Role } from './skills';
+import type { PeopleId } from './species';
+
 /**
- * Cultures (WORLD.md §6). Each people has a generic culture of its own for
- * now; mythology-inspired culture packs arrive in Phase 10.
+ * Cultures (WORLD.md §6). Each people has a culture of its own; culture
+ * packs (Phase 10) are regional, drawn from real-world civilizations and
+ * their myths: the peoples who live in such a region are raised in its ways,
+ * with its names, arms, gods and stories.
  */
 
 export interface CultureDef {
@@ -13,6 +22,31 @@ export interface CultureDef {
   /** Town names, built the same way ("Concord" + "dale"). */
   readonly townPrefixes?: readonly string[];
   readonly townSuffixes?: readonly string[];
+  /** A regional culture pack, which the peoples living in its lands take up. */
+  readonly pack?: CulturePack;
+}
+
+/** What a regional culture brings to the lands it covers (WORLD.md §6). */
+export interface CulturePack {
+  /** The peoples raised in it, and what they are called there (Norse dvergar for dwarves). */
+  readonly peoples: Partial<
+    Record<PeopleId, { readonly singular: string; readonly plural: string }>
+  >;
+  /** Arms and armor favored by those raised in it. */
+  readonly weapons: Partial<Record<WeaponId, number>>;
+  readonly armor: Partial<Record<ArmorId, number>>;
+  /** What fighters, scouts and mystics are called there. */
+  readonly roles: Readonly<Record<Role, string>>;
+  /** Who is worshipped at its shrines: believed in, at least. */
+  readonly deities: readonly { readonly name: string; readonly domain: string }[];
+  readonly regionNames: NameParts;
+  readonly wildNames: NameParts;
+  /** The kinds of dungeon in its lands, by weight. */
+  readonly dungeons: Partial<Record<DungeonTemplateId, number>>;
+  /** A creature that haunts its wild places, regrowing there. */
+  readonly haunt: { readonly creature: CreatureId; readonly max: number } | null;
+  /** How many regions of a world it covers, at most. */
+  readonly reach: number;
 }
 
 export const CULTURES = {
@@ -124,6 +158,87 @@ export const CULTURES = {
     // prettier-ignore
     townSuffixes: ['moot', 'run', 'camp', 'meet', 'reach', 'ring', 'ford', 'stand'],
   },
+  japonic: {
+    id: 'japonic',
+    name: 'Japonic',
+    // prettier-ignore
+    givenNames: [
+      'Akira', 'Asuka', 'Daichi', 'Emi', 'Hana', 'Haruto', 'Hikari', 'Isamu', 'Jun', 'Kaede',
+      'Kazuki', 'Kenji', 'Kiyoshi', 'Masaru', 'Mei', 'Michi', 'Naoki', 'Nori', 'Ren', 'Rin',
+      'Sachiko', 'Shin', 'Sora', 'Takeshi', 'Taro', 'Tomoe', 'Yuki',
+    ],
+    // prettier-ignore
+    familyNamePrefixes: [
+      'Yama', 'Kawa', 'Mori', 'Ishi', 'Matsu', 'Taka', 'Naka', 'Kita', 'Fuji', 'Haya', 'Ono', 'Sugi',
+    ],
+    // prettier-ignore
+    familyNameSuffixes: ['moto', 'mura', 'da', 'kawa', 'shita', 'zaki', 'hara', 'oka', 'ta'],
+    // prettier-ignore
+    townPrefixes: ['Kawa', 'Yama', 'Mizu', 'Taka', 'Hana', 'Matsu', 'Shira', 'Aka', 'Kuro', 'Asa'],
+    // prettier-ignore
+    townSuffixes: ['mura', 'machi', 'zaki', 'hama', 'saka', 'gawa', 'dera', 'shima'],
+    pack: {
+      peoples: { human: { singular: 'human', plural: 'humans' } },
+      weapons: { katana: 4, naginata: 3, yumi: 2 },
+      armor: { 'do-maru': 2, padded: 1 },
+      roles: { fighter: 'ronin', scout: 'shinobi', mystic: 'onmyōji' },
+      deities: [
+        { name: 'Inari', domain: 'rice, foxes and fortune' },
+        { name: 'Hachiman', domain: 'archery and war' },
+        { name: 'Amaterasu', domain: 'the sun' },
+        { name: 'Susanoo', domain: 'storms and the sea' },
+        { name: 'Benzaiten', domain: 'water and music' },
+      ],
+      // prettier-ignore
+      regionNames: { first: ['Cedar', 'Crane', 'Plum', 'Moon', 'Pine', 'Heron', 'Misty'], second: ['Provinces', 'Valley', 'Highlands', 'Coast'], join: ' ' },
+      // prettier-ignore
+      wildNames: { first: ['Yanagi', 'Kiri', 'Sagi', 'Tsuki', 'Hotaru', 'Kawazu'], second: [' Ford', ' Crossing', ' Bridge'], join: '' },
+      dungeons: { shrine: 3, 'oni-hold': 2, cave: 1 },
+      haunt: { creature: 'kappa', max: 6 },
+      reach: 2,
+    },
+  },
+  norse: {
+    id: 'norse',
+    name: 'Norse',
+    // prettier-ignore
+    givenNames: [
+      'Astrid', 'Bjorn', 'Eirik', 'Freydis', 'Gudrun', 'Gunnar', 'Hakon', 'Halla', 'Hild', 'Ketil',
+      'Leif', 'Orm', 'Ragnar', 'Runa', 'Sigrid', 'Solveig', 'Sten', 'Thyra', 'Ulf', 'Brokk', 'Eitri',
+    ],
+    // prettier-ignore
+    familyNamePrefixes: ['Raven', 'Wolf', 'Frost', 'Storm', 'Sea', 'Elk', 'Bear', 'Ash', 'Iron', 'Fjall'],
+    // prettier-ignore
+    familyNameSuffixes: ['vik', 'dal', 'heim', 'fell', 'holm', 'strand', 'berg'],
+    // prettier-ignore
+    townPrefixes: ['Kaup', 'Hafn', 'Skog', 'Fjord', 'Sval', 'Ulf', 'Hrafn', 'Grim', 'Vind', 'Is'],
+    // prettier-ignore
+    townSuffixes: ['vik', 'stad', 'heim', 'by', 'fjord', 'holt', 'nes'],
+    pack: {
+      peoples: {
+        human: { singular: 'human', plural: 'humans' },
+        dwarf: { singular: 'dvergr', plural: 'dvergar' },
+        elf: { singular: 'álfr', plural: 'álfar' },
+      },
+      weapons: { 'bearded-axe': 3, seax: 2, spear: 3, longsword: 1 },
+      armor: { leather: 2, byrnie: 1, padded: 1 },
+      roles: { fighter: 'huscarl', scout: 'tracker', mystic: 'rune-carver' },
+      deities: [
+        { name: 'Odin', domain: 'wisdom, war and the dead' },
+        { name: 'Thor', domain: 'thunder' },
+        { name: 'Freyja', domain: 'love and seiðr' },
+        { name: 'Tyr', domain: 'law and oaths' },
+        { name: 'Njord', domain: 'the sea' },
+      ],
+      // prettier-ignore
+      regionNames: { first: ['Frost', 'Raven', 'Wolf', 'Grey', 'Iron', 'Wind'], second: ['Fjords', 'Holds', 'Marches', 'Fells'], join: ' ' },
+      // prettier-ignore
+      wildNames: { first: ['Grim', 'Hrafn', 'Ulf', 'Draug', 'Ice', 'Mist'], second: ['howe', 'fell', 'skerry', 'moor'], join: '' },
+      dungeons: { barrow: 3, 'jotun-hall': 1, troll: 1 },
+      haunt: null,
+      reach: 3,
+    },
+  },
   // The dread: a name, and an epithet in place of a family name ("Morvath the Pale").
   grave: {
     id: 'grave',
@@ -155,6 +270,17 @@ export const CULTURES = {
       'Breaker', 'Chain-bearer',
     ],
   },
-} as const satisfies Record<string, CultureDef>;
+} as const satisfies Record<CultureId, CultureDef>;
 
-export type CultureId = keyof typeof CULTURES;
+/** Every culture, named here rather than derived, since the content tables refer to each other. */
+export type CultureId =
+  'generic' | 'sylvan' | 'deephold' | 'steppe' | 'japonic' | 'norse' | 'grave' | 'infernal';
+
+/** The regional culture packs, in the order worlds place them (content packs' last). */
+export function packCultures(): CultureId[] {
+  return (Object.keys(CULTURES) as CultureId[]).filter((id) => (CULTURES[id] as CultureDef).pack);
+}
+
+export function packOf(culture: CultureId): CulturePack | null {
+  return (CULTURES[culture] as CultureDef).pack ?? null;
+}

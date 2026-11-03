@@ -109,6 +109,59 @@ export const DUNGEON_TEMPLATES = {
     treasureGold: '2d6',
     masters: [],
   },
+  // Japonic
+  shrine: {
+    id: 'shrine', article: true,
+    names: { first: ['Forsaken', 'Broken', 'Fox', 'Moonlit', 'Silent', 'Weeping'], second: ['Shrine', 'Temple', 'Pagoda'], join: ' ' },
+    rooms: { fight: 4, treasure: 2, trap: 2, quiet: 3 },
+    inhabitants: [
+      { creature: 'yurei', max: 18, regrowthPerDay: 0.6 },
+      { creature: 'kitsune', max: 10, regrowthPerDay: 0.4 },
+      { creature: 'zombie', max: 14, regrowthPerDay: 0.8 },
+      { creature: 'wraith', max: 2, regrowthPerDay: 0.03 },
+    ],
+    treasureGold: '2d6',
+    masters: ['lich'],
+  },
+  'oni-hold': {
+    id: 'oni-hold', article: true,
+    names: { first: ['Red Oni', 'Blue Oni', 'Iron Fang', 'Thunder', 'Ogre'], second: ['Hold', 'Gate', 'Caves', 'Fastness'], join: ' ' },
+    rooms: { fight: 5, treasure: 2, trap: 1, quiet: 2 },
+    inhabitants: [
+      { creature: 'giant-rat', max: 20, regrowthPerDay: 1.5 },
+      { creature: 'tengu', max: 8, regrowthPerDay: 0.2 },
+      { creature: 'kitsune', max: 6, regrowthPerDay: 0.2 },
+      { creature: 'oni', max: 4, regrowthPerDay: 0.04 },
+    ],
+    treasureGold: '3d6',
+    masters: ['demon'],
+  },
+  // Norse
+  barrow: {
+    id: 'barrow', article: true,
+    names: { first: ['Grim', 'Raven', 'Kings\u2019', 'Frost', 'Sunken', 'Ash'], second: ['Barrow', 'Howe', 'Mound', 'Cairn'], join: ' ' },
+    rooms: { fight: 4, treasure: 2, trap: 2, quiet: 3 },
+    inhabitants: [
+      { creature: 'skeleton', max: 30, regrowthPerDay: 1.5 },
+      { creature: 'draugr', max: 12, regrowthPerDay: 0.3 },
+      { creature: 'wraith', max: 3, regrowthPerDay: 0.05 },
+    ],
+    treasureGold: '2d6',
+    masters: ['revenant', 'lich'],
+  },
+  'jotun-hall': {
+    id: 'jotun-hall', article: false,
+    names: { first: ['Jötun', 'Frost', 'Giant', 'Ymir', 'Rime'], second: ['hall', 'heim', 'gard'], join: '' },
+    rooms: { fight: 5, treasure: 2, trap: 1, quiet: 2 },
+    inhabitants: [
+      { creature: 'wolf', max: 16, regrowthPerDay: 0.7 },
+      { creature: 'warg', max: 10, regrowthPerDay: 0.3 },
+      { creature: 'troll', max: 2, regrowthPerDay: 0.02 },
+      { creature: 'jotunn', max: 3, regrowthPerDay: 0.03 },
+    ],
+    treasureGold: '3d6',
+    masters: [],
+  },
 } as const satisfies Record<string, DungeonTemplate>;
 
 export type DungeonTemplateId = keyof typeof DUNGEON_TEMPLATES;

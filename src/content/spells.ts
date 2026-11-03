@@ -42,6 +42,12 @@ export const SPELLS = [
   { id: 'mend-flesh', culture: 'generic', name: 'Mend Flesh', effect: { kind: 'heal', dice: '2d6+3' }, difficulty: 11, costs: { health: 4 }, arcana: 25 },
   { id: 'quickening', culture: 'generic', name: 'Quickening', effect: { kind: 'quicken', attack: 2, defense: 2 }, difficulty: 13, costs: { stamina: 1, drain: { stat: 'agility', amount: 3, hours: 3 } }, arcana: 35 },
   { id: 'ward-of-ash', culture: 'generic', name: 'Ward of Ash', effect: { kind: 'ward', dice: '2d6+2' }, difficulty: 12, costs: { stamina: 6 }, arcana: 45 },
+  // Japonic: talismans and spirit-fire
+  { id: 'foxfire', culture: 'japonic', name: 'Foxfire', effect: { kind: 'damage', dice: '2d6+1' }, difficulty: 12, costs: { stamina: 3, dizzy: 10 }, arcana: 20 },
+  { id: 'ofuda-ward', culture: 'japonic', name: 'Ofuda Ward', effect: { kind: 'ward', dice: '2d6+3' }, difficulty: 12, costs: { stamina: 5 }, arcana: 40 },
+  // Norse: runes
+  { id: 'thunder-rune', culture: 'norse', name: 'Thunder Rune', effect: { kind: 'damage', dice: '2d8' }, difficulty: 13, costs: { stamina: 4, dizzy: 10 }, arcana: 30 },
+  { id: 'rune-of-warding', culture: 'norse', name: 'Rune of Warding', effect: { kind: 'ward', dice: '2d6+3' }, difficulty: 12, costs: { stamina: 5 }, arcana: 40 },
 ] as const satisfies readonly SpellDef[];
 
 export type SpellId = (typeof SPELLS)[number]['id'];

@@ -1,7 +1,8 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 
 import { createWorkerHost, type InitOptions, type SavedGame, type SimHost } from '../host';
-import type { CharacterId, LocationId } from '../sim';
+import { installPack, type ContentPack } from '../content';
+import { defaultSettings, type CharacterId, type LocationId, type WorldSettings } from '../sim';
 import { CharacterCard } from './components/CharacterCard';
 import { Controls } from './components/Controls';
 import { DigestPanel } from './components/DigestPanel';
@@ -13,6 +14,7 @@ import { HallsPage } from './pages/HallsPage';
 import { LogPage } from './pages/LogPage';
 import { PlacePage, PlacesPage } from './pages/PlacesPage';
 import { ProfilePage } from './pages/ProfilePage';
+import { RegionPage } from './pages/RegionPage';
 import { StatsPage } from './pages/StatsPage';
 import { TradePage } from './pages/TradePage';
 
@@ -26,7 +28,8 @@ import {
   writeSpecToUrl,
   type WorldSpec,
 } from './seed';
-import { autosaveId, readSave, writeSave } from './storage';
+import { packsByIds } from './packs';
+import { autosaveId, listSaves, readSave, writeSave } from './storage';
 import { useHostSnapshot } from './useHost';
 
 /** Real time between autosaves while the world runs. */
@@ -76,22 +79,66 @@ function useWorldHost(session: Session): SimHost {
   return entry.host;
 }
 
+/**
+ * The world's content packs go into this page's tables as well as the
+ * worker's, so its creatures, arms and spells can be named here. A pack can
+ * go in only once per page; one changed since needs a reload.
+ */
+function installHere(packs: readonly ContentPack[]): string | null {
+  for (const pack of packs) {
+    try {
+      installPack(pack);
+    } catch (e) {
+      return `${e instanceof Error ? e.message : String(e)} Reload the page to use it.`;
+    }
+  }
+  return null;
+}
+
 function freshSession(spec: WorldSpec): Session {
+  const packs = packsByIds(spec.packs);
+  const missing = spec.packs.filter((id) => !packs.some((p) => p.id === id));
+  const trouble = installHere(packs);
   return {
     key: nextSessionKey++,
-    spec,
-    init: { seed: spec.seed, characterCount: spec.characterCount },
-    note: null,
+    spec: { ...spec, packs: packs.map((p) => p.id) },
+    init: {
+      seed: spec.seed,
+      characterCount: spec.characterCount,
+      settings: spec.settings,
+      ...(packs.length > 0 ? { packs } : {}),
+    },
+    note:
+      trouble ??
+      (missing.length > 0
+        ? `This world was made with content packs you haven't added here (${missing.join(', ')}), so it has turned out differently.`
+        : null),
   };
 }
 
 function savedSession(game: SavedGame, note: string): Session {
+  const packs = game.world.packs;
   return {
     key: nextSessionKey++,
-    spec: { seed: game.seed, characterCount: game.world.characterCount },
+    spec: {
+      seed: game.seed,
+      characterCount: game.world.characterCount,
+      settings: game.world.settings,
+      packs: packs.map((p) => p.id),
+    },
     init: { seed: game.seed, restore: game },
-    note,
+    note: installHere(packs) ?? note,
   };
+}
+
+/** Whether a saved world was made with the settings and packs a link asks for. */
+function sameSettings(saved: SavedGame['world'], spec: WorldSpec): boolean {
+  const wanted: WorldSettings = { ...defaultSettings(spec.characterCount), ...spec.settings };
+  const packs = saved.packs.map((p) => p.id);
+  return (
+    JSON.stringify(saved.settings) === JSON.stringify(wanted) &&
+    packs.join(',') === spec.packs.join(',')
+  );
 }
 
 export function App() {
@@ -99,21 +146,35 @@ export function App() {
   const [dialogOpen, setDialogOpen] = useState(false);
 
   // On arrival: the world named in the link, carried on from its autosave if
-  // you've watched it here before; otherwise a new world.
+  // you've watched it here before. With no world named (a bare address, or
+  // opening the desktop app), the world last watched here; else a new one.
   useEffect(() => {
-    const spec = specFromUrl() ?? { seed: randomSeed(), characterCount: DEFAULT_CHARACTER_COUNT };
     let current = true;
-    readSave(autosaveId(spec.seed))
-      .catch(() => null)
-      .then((game) => {
-        if (!current) return;
-        const fits = game && game.world.characterCount === spec.characterCount;
-        setSession(
-          fits
-            ? savedSession(game, 'Carried on from where you left this world.')
-            : freshSession(spec),
-        );
-      });
+    const linked = specFromUrl();
+    const arrive = async (): Promise<Session> => {
+      if (!linked) {
+        const last = (await listSaves().catch(() => [])).find((s) => s.auto);
+        const game = last ? await readSave(last.id).catch(() => null) : null;
+        if (game) return savedSession(game, 'Carried on with the world you last watched.');
+        return freshSession({
+          seed: randomSeed(),
+          characterCount: DEFAULT_CHARACTER_COUNT,
+          settings: {},
+          packs: [],
+        });
+      }
+      const game = await readSave(autosaveId(linked.seed)).catch(() => null);
+      const fits =
+        game &&
+        game.world.characterCount === linked.characterCount &&
+        sameSettings(game.world, linked);
+      return fits
+        ? savedSession(game, 'Carried on from where you left this world.')
+        : freshSession(linked);
+    };
+    void arrive().then((session) => {
+      if (current) setSession(session);
+    });
     return () => {
       current = false;
     };
@@ -240,6 +301,7 @@ function Observatory({
     onCharacter: setSelected,
     onLocation: (id: LocationId) => go({ page: 'place', id }),
   };
+  const toRegion = (id: string) => go({ page: 'region', id });
   const cardId = selected ?? (route.page === 'profile' ? route.id : null);
 
   return (
@@ -288,17 +350,38 @@ function Observatory({
             <ChroniclePage host={host} names={names} time={snapshot.time} {...links} />
           )}
           {route.page === 'places' && (
-            <PlacesPage host={host} time={snapshot.time} onLocation={links.onLocation} />
+            <PlacesPage
+              host={host}
+              time={snapshot.time}
+              onLocation={links.onLocation}
+              onRegion={toRegion}
+            />
           )}
           {route.page === 'place' && (
-            <PlacePage host={host} id={route.id} names={names} time={snapshot.time} {...links} />
+            <PlacePage
+              host={host}
+              id={route.id}
+              names={names}
+              time={snapshot.time}
+              onRegion={toRegion}
+              {...links}
+            />
+          )}
+          {route.page === 'region' && (
+            <RegionPage host={host} id={route.id} names={names} time={snapshot.time} {...links} />
           )}
           {route.page === 'trade' && (
             <TradePage host={host} names={names} time={snapshot.time} {...links} />
           )}
           {route.page === 'map' && (
             <Suspense fallback={<p className="muted page-loading">Unrolling the map…</p>}>
-              <MapPage host={host} time={snapshot.time} following={snapshot.following} {...links} />
+              <MapPage
+                host={host}
+                time={snapshot.time}
+                following={snapshot.following}
+                onRegion={toRegion}
+                {...links}
+              />
             </Suspense>
           )}
           {route.page === 'stats' && <StatsPage host={host} time={snapshot.time} />}
@@ -362,7 +445,7 @@ const TABS = [
 ] as const;
 
 function tabOf(route: Route): Route['page'] | null {
-  if (route.page === 'place') return 'places';
+  if (route.page === 'place' || route.page === 'region') return 'places';
   if (route.page === 'profile') return null;
   return route.page;
 }

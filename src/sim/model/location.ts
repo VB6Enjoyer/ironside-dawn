@@ -31,6 +31,8 @@ export interface Location {
   readonly economy: EconomyDef | null;
   /** Creatures out of their dungeons and loose here, a danger on the roads. */
   readonly roaming: Partial<Record<CreatureId, number>>;
+  /** A creature native to the place, that keeps coming back (a kappa at a ford). */
+  readonly haunt: { readonly creature: CreatureId; readonly max: number } | null;
   /** Fortresses: who holds it, the lands it guards, and its garrison. */
   readonly fortress: Fortress | null;
 }
@@ -52,6 +54,8 @@ export interface Region {
   readonly id: RegionId;
   readonly name: string;
   readonly biome: BiomeId;
+  /** A regional culture, if its lands have one. */
+  readonly culture: CultureId | null;
   readonly x: number;
   readonly y: number;
   weather: WeatherId;

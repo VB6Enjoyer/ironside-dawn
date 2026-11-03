@@ -74,11 +74,15 @@ const CONSTANT_PATTERN = /^[+-]?\d+$/;
 
 class SeededRng implements Rng {
   readonly #key: string;
-  readonly #s: [number, number, number, number];
+  // The state as four plain fields: draws are the hottest code in the simulation.
+  #a: number;
+  #b: number;
+  #c: number;
+  #d: number;
 
   constructor(key: string, s: [number, number, number, number]) {
     this.#key = key;
-    this.#s = s;
+    [this.#a, this.#b, this.#c, this.#d] = s;
   }
 
   static fromKey(key: string): SeededRng {
@@ -155,26 +159,7 @@ class SeededRng implements Rng {
   }
 
   roll(dice: string): number {
-    const notation = dice.replace(/\s+/g, '').toLowerCase();
-
-    if (CONSTANT_PATTERN.test(notation)) {
-      return Number(notation);
-    }
-
-    const match = DICE_PATTERN.exec(notation);
-    if (!match) {
-      throw new SyntaxError(`Invalid dice notation: "${dice}"`);
-    }
-    const count = match[1] === '' ? 1 : Number(match[1]);
-    const sides = Number(match[2]);
-    const modifier = match[3] === undefined ? 0 : Number(match[3]);
-    if (count < 1 || count > MAX_DICE) {
-      throw new RangeError(`Dice count must be between 1 and ${MAX_DICE}: "${dice}"`);
-    }
-    if (sides < 1) {
-      throw new RangeError(`Dice must have at least one side: "${dice}"`);
-    }
-
+    const { count, sides, modifier } = parseDice(dice);
     let total = modifier;
     for (let i = 0; i < count; i++) total += this.int(1, sides);
     return total;
@@ -188,25 +173,58 @@ class SeededRng implements Rng {
   }
 
   getState(): RngState {
-    return { key: this.#key, s: [...this.#s] };
+    return { key: this.#key, s: [this.#a, this.#b, this.#c, this.#d] };
   }
 
   /** sfc32 step. Keeps state as unsigned 32-bit integers so snapshots are stable. */
   #nextUint32(): number {
-    const s = this.#s;
-    let [a, b, c, d] = s;
+    const a = this.#a;
+    const b = this.#b;
+    const c = this.#c;
+    const d = this.#d;
     const t = (((a + b) | 0) + d) | 0;
-    d = (d + 1) | 0;
-    a = b ^ (b >>> 9);
-    b = (c + (c << 3)) | 0;
-    c = (c << 21) | (c >>> 11);
-    c = (c + t) | 0;
-    s[0] = a >>> 0;
-    s[1] = b >>> 0;
-    s[2] = c >>> 0;
-    s[3] = d >>> 0;
+    this.#d = ((d + 1) | 0) >>> 0;
+    this.#a = (b ^ (b >>> 9)) >>> 0;
+    this.#b = ((c + (c << 3)) | 0) >>> 0;
+    this.#c = ((((c << 21) | (c >>> 11)) + t) | 0) >>> 0;
     return t >>> 0;
   }
+}
+
+interface Dice {
+  readonly count: number;
+  readonly sides: number;
+  readonly modifier: number;
+}
+
+/** Dice notations seen so far: the same few are rolled millions of times. */
+const parsedDice = new Map<string, Dice>();
+
+function parseDice(dice: string): Dice {
+  const known = parsedDice.get(dice);
+  if (known) return known;
+  const notation = dice.replace(/\s+/g, '').toLowerCase();
+  let parsed: Dice;
+  if (CONSTANT_PATTERN.test(notation)) {
+    parsed = { count: 0, sides: 1, modifier: Number(notation) };
+  } else {
+    const match = DICE_PATTERN.exec(notation);
+    if (!match) {
+      throw new SyntaxError(`Invalid dice notation: "${dice}"`);
+    }
+    const count = match[1] === '' ? 1 : Number(match[1]);
+    const sides = Number(match[2]);
+    const modifier = match[3] === undefined ? 0 : Number(match[3]);
+    if (count < 1 || count > MAX_DICE) {
+      throw new RangeError(`Dice count must be between 1 and ${MAX_DICE}: "${dice}"`);
+    }
+    if (sides < 1) {
+      throw new RangeError(`Dice must have at least one side: "${dice}"`);
+    }
+    parsed = { count, sides, modifier };
+  }
+  parsedDice.set(dice, parsed);
+  return parsed;
 }
 
 /** cyrb128 string hash: turns a seed key into 128 bits of sfc32 state. */

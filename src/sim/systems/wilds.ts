@@ -29,6 +29,8 @@ const WAYLAY_CHANCE = 0.06;
 const RAID_BAND = 6;
 /** Daily chance of a raid, for a band of RAID_BAND, on each town a road away. */
 const RAID_CHANCE = 0.012;
+/** Creatures a day that come back to the place they haunt. */
+const HAUNT_RETURN = 0.15;
 /** The most creatures a waylaying or a raid brings. */
 const MAX_RAIDERS = 12;
 
@@ -51,6 +53,15 @@ export function wildsDay(ctx: SimContext): void {
           max,
           count + stochasticRound(rng.next(), regrowthPerDay * breeders * season),
         );
+      }
+    }
+    const haunt = location.haunt;
+    if (haunt) {
+      // Whatever haunts a place keeps coming back to it.
+      const count = location.roaming[haunt.creature] ?? 0;
+      if (count < haunt.max) {
+        location.roaming[haunt.creature] =
+          count + stochasticRound(rng.next(), HAUNT_RETURN * season);
       }
     }
     roam(ctx, location);

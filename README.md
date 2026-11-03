@@ -28,6 +28,21 @@ town's market, or watch a dungeon's population change over time.
 
 ## Status
 
+Phase 11 (Scale & Ship), the last of the plan, is built; the final name is
+still to be chosen. A new world can be made small, medium or large, gentle or
+deadly, with magic rare or common, with only some peoples, and with a cap on
+how many may live at once. Content
+packs, JSON files of creatures, arms, spells, dungeons and whole cultures, can
+be added from a file (`packs/slavic.json` brings Slavic lands, with leshies,
+rusalki and the volkhvy of Perun). A thousand people run smoothly in the
+browser, and the same build is a desktop app for Windows, macOS and Linux.
+
+Phase 10 (Cultures & Myths) is done. Regions can belong to a culture drawn
+from real-world mythology, so far Japonic and Norse: ronin with naginata
+fight kappa at the river crossings, dvergr huscarls face draugar in the
+barrows, folk pray to Inari or Thor, and anything that keeps killing at a
+place becomes a legend the locals tell and fear. Each region has its own page.
+
 Phase 9 (A Living World) is done. Every seed makes its own world: regions
 of forest, mountain, steppe and waste, each people's towns in its homeland,
 dungeons, fortresses and the roads between them, drawn on a map you can pan
@@ -41,8 +56,7 @@ marriages, children, heirs and legends; Phase 7 (Markets) gave each town a
 daily market where nobody sets the prices, and merchants to haul goods
 between them; and Phase 6 made it an observatory: follow anyone, read life
 stories, browse the chronicle, statistics and halls, skip years at a time,
-and save, load and share worlds. Phase 10 (Cultures & Myths) is next. The
-plan is in:
+and save, load and share worlds. The plan is in:
 
 - [`docs/ROADMAP.md`](docs/ROADMAP.md): the phased development plan, with exit
   criteria for each milestone.
@@ -71,6 +85,27 @@ npm run dev
 | `npm run check`                     | Typecheck, lint, format check and tests, as CI does           |
 | `npm run build`                     | Production build into `dist/`                                 |
 | `npm run format`                    | Format everything with Prettier                               |
+| `npm run tauri dev`                 | Run the desktop app (needs Rust; see below)                   |
+| `npm run tauri build`               | Build desktop installers into `src-tauri/target/release/`     |
+
+### The desktop app
+
+The desktop app is a [Tauri](https://tauri.app) window around the same web
+build, so it behaves as the browser does, saves included. Building it needs
+[Rust](https://rustup.rs) and, on Linux, the WebKitGTK libraries (on Debian or
+Ubuntu: `libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf`).
+The **Desktop** workflow in GitHub Actions builds installers for all three
+systems: run it by hand from the Actions tab, or push a tag like `v0.1.0` to
+attach them to a draft release. Set the repository variable `SHARE_URL` to the
+hosted site's address so the app's links to a world point there.
+
+### Content packs
+
+A content pack is a JSON file that adds creatures, loot, arms, spells, dungeon
+kinds and cultures; see `packs/slavic.json` and `ARCHITECTURE.md` §4.13. Add
+one under **Worlds… → Settings → Content packs**, or headless with
+`npm run sim -- --pack packs/slavic.json`. A pack is checked whole before
+anything goes in, and refused with the reason if anything in it is wrong.
 
 ## Project layout
 
@@ -80,6 +115,8 @@ src/content/  Data tables: species, creatures, items, names…
 src/text/     Turns events into prose. No DOM; shared by the UI and the CLI.
 src/host/     Runs the simulation in a Web Worker for the UI: speeds, skips, queries.
 src/ui/       React app.
+src-tauri/    The desktop app (Tauri).
+packs/        Example content packs.
 tools/        Headless tools, such as the sim CLI.
 docs/         Roadmap, world design and architecture.
 ```

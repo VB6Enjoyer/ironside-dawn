@@ -5,6 +5,7 @@ import {
   itemBase,
   MATERIALS,
   materialDef,
+  packOf,
   RARITIES,
   TRINKETS,
   UNIQUE_NAME_ENDINGS,
@@ -197,7 +198,17 @@ export function carriedGear(character: Character): Item[] {
 function pickBase(rng: Rng, slot: Slot, culture: CultureId): ItemBase {
   const bases: readonly ItemBase[] =
     slot === 'weapon' ? WEAPONS : slot === 'armor' ? ARMORS : TRINKETS;
-  return rng.weighted(bases.map((b) => [b, b.weight * (b.culture === culture ? 2 : 1)] as const));
+  return rng.weighted(bases.map((b) => [b, b.weight * cultureWeight(b.culture, culture)] as const));
+}
+
+/**
+ * How likely a thing of one culture turns up where another holds sway: twice
+ * as likely at home; a regional culture's things (a katana, a seax) rarely
+ * far from their lands.
+ */
+function cultureWeight(of: CultureId, where: CultureId): number {
+  if (of === where) return packOf(of) ? 4 : 2;
+  return packOf(of) ? 0.03 : 1;
 }
 
 /**
@@ -229,7 +240,7 @@ function pickMaterial(
   return rng.weighted(
     options.map((m) => {
       const weight = Math.max(0.05, m.weight * (1 + m.depthBias * depth));
-      return [m.id, weight * (m.culture === culture ? 2 : 1)] as const;
+      return [m.id, weight * cultureWeight(m.culture, culture)] as const;
     }),
   );
 }

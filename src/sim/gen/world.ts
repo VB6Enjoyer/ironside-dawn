@@ -1,8 +1,18 @@
-import type { CreatureId, MapDef } from '../../content';
+import { PEOPLES, type CreatureId, type MapDef } from '../../content';
 import { createScheduler } from '../core/scheduler';
 import { HOUR } from '../core/time';
 import type { SimContext } from '../context';
-import type { Location, LocationId, Region, RegionId, Route, RouteId, World } from '../model';
+import type {
+  Location,
+  LocationId,
+  Region,
+  RegionId,
+  Route,
+  RouteId,
+  World,
+  WorldSettings,
+} from '../model';
+import { sizeFor } from './geography';
 import { createMarket } from '../systems/market';
 import { createCharacter, townPopulation, towns } from './people';
 
@@ -14,7 +24,22 @@ export const WORLD_START = 6 * HOUR;
 /** Characters' first actions are spread over the first hours, not all at once. */
 const FIRST_WAKE_SPREAD = 3 * HOUR;
 
-export function createWorldState(seed: string, map: MapDef): World {
+/** Settings for a world of this many adventurers, where none were chosen. */
+export function defaultSettings(adventurers = 20): WorldSettings {
+  return {
+    size: sizeFor(adventurers),
+    danger: 'normal',
+    magic: 'normal',
+    peoples: PEOPLES,
+    populationCap: null,
+  };
+}
+
+export function createWorldState(
+  seed: string,
+  map: MapDef,
+  settings: WorldSettings = defaultSettings(),
+): World {
   const ids = new Set<string>();
   for (const def of map.locations) {
     if (ids.has(def.id)) throw new Error(`Duplicate location ID: ${def.id}`);
@@ -56,7 +81,8 @@ export function createWorldState(seed: string, map: MapDef): World {
       academy: def.academy ?? false,
       dungeon: def.dungeon ? { def: def.dungeon, population, lostItems: [], masterId: null } : null,
       economy: def.economy ?? null,
-      roaming: {},
+      roaming: def.haunt ? { [def.haunt.creature]: Math.ceil(def.haunt.max / 2) } : {},
+      haunt: def.haunt ?? null,
       fortress:
         def.kind === 'fortress'
           ? {
@@ -73,11 +99,18 @@ export function createWorldState(seed: string, map: MapDef): World {
   const regions = new Map<RegionId, Region>();
   for (const def of map.regions ?? []) {
     const id = def.id as RegionId;
-    regions.set(id, { ...def, id, weather: 'fair', weatherSince: WORLD_START });
+    regions.set(id, {
+      ...def,
+      id,
+      culture: def.culture ?? null,
+      weather: 'fair',
+      weatherSince: WORLD_START,
+    });
   }
 
   const world: World = {
     seed,
+    settings,
     time: WORLD_START,
     characters: new Map(),
     locations,
@@ -109,6 +142,8 @@ export function createWorldState(seed: string, map: MapDef): World {
     shocks: [],
     ledger: { minted: {}, burned: {} },
     heroes: [],
+    myths: [],
+    omens: {},
   };
   for (const location of locations.values()) {
     const market = createMarket(world, location);

@@ -91,6 +91,9 @@ function initialBeliefs(): Partial<Record<GoodId, Belief>> {
 }
 
 /** A town's market, its trades staffed from its commoners. */
+/** What each townsperson uses up in a day, as a list: the market runs every day in every town. */
+const NEEDS = Object.entries(NEEDS_PER_HEAD) as [GoodId, number][];
+
 export function createMarket(world: World, town: Location): Market | null {
   const economy = town.economy;
   if (!economy) return null;
@@ -311,7 +314,7 @@ function payOut(market: Market, population: number): void {
 function dailyNeeds(agent: TownAgent): Goods {
   const needs: Goods = {};
   const prosperity = Math.min(3, Math.max(0.5, agent.gold / Math.max(1, agent.workers) / 10));
-  for (const [good, perHead] of Object.entries(NEEDS_PER_HEAD) as [GoodId, number][]) {
+  for (const [good, perHead] of NEEDS) {
     needs[good] = perHead * agent.workers * (good === 'food' ? 1 : prosperity);
   }
   return needs;

@@ -21,6 +21,7 @@ import { isAlive, isFitToDelve, needsRecovery } from './condition';
 import { remember, satisfy } from './mind';
 import { cancelWake, wakeAt } from './wake';
 import { sharePrices } from './merchants';
+import { taleToTell } from './myths';
 import { charactersAt, idsAt, moveTo } from './whereabouts';
 
 /**
@@ -50,6 +51,8 @@ const PROPOSAL = 0.006;
 const MIXED_MARRIAGE = 0.1;
 /** Chance per meeting of a tale about a dead hero. */
 const TALE = 0.05;
+/** Chance, when two talk, that a local legend is told. */
+const MYTH_TALE = 0.03;
 /** Below this, a member stops following their leader. */
 const LOYALTY_FLOOR = 0.1;
 /** Languages understood at least this well allow real conversation. */
@@ -231,6 +234,9 @@ function meet(ctx: SimContext, a: Character, b: Character, location: Location): 
     sharePrices(a, b);
   }
   if (comm >= UNDERSTOOD && rng.chance(TALE)) tellTale(ctx, a, b, location);
+  if (comm >= UNDERSTOOD && ctx.world.myths.length > 0 && rng.chance(MYTH_TALE)) {
+    tellMyth(ctx, a, b, location);
+  }
 
   for (const [self, other] of [
     [a, b],
@@ -440,6 +446,31 @@ function tellTale(ctx: SimContext, teller: Character, listener: Character, locat
         otherId: listener.id,
         heroId: hero.id,
         locationId: location.id,
+      },
+    },
+    [teller.id, listener.id],
+    location.id,
+  );
+}
+
+/**
+ * A local legend told over a drink (Phase 10): one of the teller's own
+ * culture. A listener raised on the same tales takes it to heart.
+ */
+function tellMyth(ctx: SimContext, teller: Character, listener: Character, location: Location) {
+  const myth = taleToTell(ctx.world, teller, ctx.rng.social.next());
+  if (!myth) return;
+  ctx.emit(
+    {
+      type: 'social.myth',
+      data: {
+        characterId: teller.id,
+        otherId: listener.id,
+        locationId: location.id,
+        mythId: myth.id,
+        placeId: myth.locationId,
+        creature: myth.subject.kind === 'creature' ? myth.subject.creature : null,
+        subjectId: myth.subject.kind === 'dread' ? myth.subject.characterId : null,
       },
     },
     [teller.id, listener.id],

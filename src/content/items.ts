@@ -56,6 +56,13 @@ export const WEAPONS = [
   { id: 'leafblade', slot: 'weapon', culture: 'sylvan', name: 'leaf-bladed sword', skill: 'blades', damage: '1d6', accuracy: 2, value: 35, weight: 1 },
   { id: 'greatsword', slot: 'weapon', culture: 'generic', name: 'greatsword', skill: 'blades', damage: '2d6', accuracy: -1, value: 60, weight: 1 },
   { id: 'battleaxe', slot: 'weapon', culture: 'deephold', name: 'battleaxe', skill: 'axes', damage: '1d12', accuracy: -1, value: 50, weight: 1 },
+  // Japonic
+  { id: 'katana', slot: 'weapon', culture: 'japonic', name: 'katana', skill: 'blades', damage: '1d8+1', accuracy: 1, value: 60, weight: 2 },
+  { id: 'naginata', slot: 'weapon', culture: 'japonic', name: 'naginata', skill: 'polearms', damage: '1d10', accuracy: 0, value: 40, weight: 2 },
+  { id: 'yumi', slot: 'weapon', culture: 'japonic', name: 'yumi', skill: 'bows', damage: '1d8', accuracy: 2, value: 35, weight: 2 },
+  // Norse
+  { id: 'bearded-axe', slot: 'weapon', culture: 'norse', name: 'bearded axe', skill: 'axes', damage: '1d8+1', accuracy: 0, value: 30, weight: 2 },
+  { id: 'seax', slot: 'weapon', culture: 'norse', name: 'seax', skill: 'blades', damage: '1d6+1', accuracy: 1, value: 20, weight: 2 },
 ] as const satisfies readonly WeaponBase[];
 
 // prettier-ignore
@@ -65,6 +72,8 @@ export const ARMORS = [
   { id: 'scale', slot: 'armor', culture: 'generic', name: 'scale coat', defense: 4, metal: true, value: 45, weight: 2 },
   { id: 'chain', slot: 'armor', culture: 'generic', name: 'chain shirt', defense: 5, metal: true, value: 80, weight: 1 },
   { id: 'plate', slot: 'armor', culture: 'deephold', name: 'plate harness', defense: 6, metal: true, value: 150, weight: 0.3 },
+  { id: 'do-maru', slot: 'armor', culture: 'japonic', name: 'do-maru', defense: 4, metal: true, value: 55, weight: 2 },
+  { id: 'byrnie', slot: 'armor', culture: 'norse', name: 'mail byrnie', defense: 5, metal: true, value: 75, weight: 1 },
 ] as const satisfies readonly ArmorBase[];
 
 // prettier-ignore
@@ -80,10 +89,11 @@ export type TrinketId = (typeof TRINKETS)[number]['id'];
 export type ItemBaseId = WeaponId | ArmorId | TrinketId;
 export type ItemBase = WeaponBase | ArmorBase | TrinketBase;
 
-const BASES: readonly ItemBase[] = [...WEAPONS, ...ARMORS, ...TRINKETS];
-
 export function itemBase(id: ItemBaseId): ItemBase {
-  return BASES.find((b) => b.id === id)!;
+  // Looked up afresh each time: content packs may have added to the tables.
+  return (WEAPONS.find((b) => b.id === id) ??
+    ARMORS.find((b) => b.id === id) ??
+    TRINKETS.find((b) => b.id === id))!;
 }
 
 export function weaponBase(id: WeaponId): WeaponBase {
@@ -112,6 +122,7 @@ export const MATERIALS = [
   { id: 'steel', culture: 'generic', name: 'steel', slots: ['weapon', 'armor'], attack: 1, damage: 0, defense: 1, valueMultiplier: 2, weight: 3, depthBias: 0.2 },
   { id: 'dwarven-steel', culture: 'deephold', name: 'dwarven-steel', slots: ['weapon', 'armor'], attack: 1, damage: 1, defense: 1, valueMultiplier: 4, weight: 1, depthBias: 0.4 },
   { id: 'elven-silver', culture: 'sylvan', name: 'elven-silver', slots: ['weapon', 'armor', 'trinket'], attack: 2, damage: 0, defense: 1, valueMultiplier: 5, weight: 0.6, depthBias: 0.5 },
+  { id: 'tamahagane', culture: 'japonic', name: 'tamahagane', slots: ['weapon'], attack: 1, damage: 1, defense: 0, valueMultiplier: 3, weight: 1, depthBias: 0.3 },
   { id: 'brass', culture: 'generic', name: 'brass', slots: ['trinket'], attack: 0, damage: 0, defense: 0, valueMultiplier: 1, weight: 5, depthBias: 0 },
   { id: 'silver', culture: 'generic', name: 'silver', slots: ['trinket'], attack: 0, damage: 0, defense: 0, valueMultiplier: 2.5, weight: 3, depthBias: 0.2 },
   { id: 'gold', culture: 'generic', name: 'gold', slots: ['trinket'], attack: 0, damage: 0, defense: 0, valueMultiplier: 5, weight: 1, depthBias: 0.4 },
@@ -208,6 +219,7 @@ export const UNIQUE_NAME_ENDINGS: Record<WeaponSkill | 'armor' | 'trinket', read
   axes: ['cleaver', 'bite', 'splitter', 'reaver'],
   blunt: ['maul', 'breaker', 'fall', 'crusher'],
   polearms: ['spire', 'thorn', 'reach', 'lance'],
+  bows: ['string', 'flight', 'song', 'reach'],
   armor: ['ward', 'mantle', 'aegis', 'shroud', 'hide'],
   trinket: ['eye', 'heart', 'star', 'tear', 'whisper'],
 };

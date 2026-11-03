@@ -2,6 +2,8 @@ import {
   creatureDef,
   itemBase,
   LANGUAGES,
+  packOf,
+  spellDef,
   type CreatureId,
   type ItemBaseId,
   type LocationKind,
@@ -21,7 +23,7 @@ import { describeDuration, seasonName } from './calendar';
 import { anItem, itemName, legendTitle, SKILL_PHRASES, spellName } from './items';
 import { goodsList } from './goods';
 import { describeWhy } from './mind';
-import { SPECIES_NAMES, type NameResolver } from './names';
+import { peopleName, roleTitle, type NameResolver } from './names';
 import {
   aCreature,
   article,
@@ -73,8 +75,14 @@ interface Helpers {
   /** A town's name, for bounty notices. */
   place(id: LocationId): Segment;
   kindOf(id: LocationId): LocationKind | undefined;
-  /** "a human", "an elf". */
+  /** "a human", "an elf", "a dvergr". */
   aSpecies(id: CharacterId): string;
+  /** A name with what their culture calls them: "Kenji Yamamoto, a ronin with a katana,". */
+  introduce(id: CharacterId): Part[];
+  /** One of the gods worshipped where a place's culture holds sway, if it has its own. */
+  deityOf(id: LocationId): string | null;
+  /** A local legend's name: "the kappa of the Yanagi Ford". */
+  myth(place: LocationId, creature: CreatureId | null, subject: CharacterId | null): Part[];
   weaponOf(id: CharacterId): ItemBaseId | undefined;
   /** Picks a variant by event ID. */
   pick<T>(options: readonly T[]): T;
@@ -129,6 +137,11 @@ const WEAPON_VERBS: Record<WeaponId, readonly string[]> = {
   leafblade: ['slices', 'carves into'],
   greatsword: ['cleaves', 'hews'],
   battleaxe: ['hacks into', 'splits'],
+  katana: ['cuts', 'slashes'],
+  naginata: ['sweeps at', 'cleaves'],
+  yumi: ['looses an arrow at', 'shoots'],
+  'bearded-axe': ['hooks and hacks', 'cleaves'],
+  seax: ['stabs', 'slashes'],
 };
 
 const CREATURE_VERBS: Record<CreatureId, readonly string[]> = {
@@ -146,6 +159,13 @@ const CREATURE_VERBS: Record<CreatureId, readonly string[]> = {
   ghoul: ['claws at', 'bites'],
   wraith: ['chills', 'drains'],
   soldier: ['cuts', 'thrusts at'],
+  kappa: ['grapples', 'claws at'],
+  kitsune: ['bites', 'sears with foxfire'],
+  tengu: ['strikes', 'buffets'],
+  yurei: ['chills', 'wails at'],
+  oni: ['clubs', 'batters'],
+  draugr: ['batters', 'claws at'],
+  jotunn: ['smashes', 'tramples'],
 };
 
 /** "a troll", "six wolves". */
@@ -155,7 +175,10 @@ function herd(creature: CreatureId, count: number): string {
 }
 
 function attackVerb(h: Helpers, attacker: Combatant): string {
-  if (attacker.kind === 'creature') return h.pick(CREATURE_VERBS[attacker.ref.species]);
+  if (attacker.kind === 'creature') {
+    // Creatures from content packs have no verbs of their own.
+    return h.pick(CREATURE_VERBS[attacker.ref.species] ?? ['strikes', 'attacks']);
+  }
   const weapon = h.weaponOf(attacker.id);
   const verbs = weapon ? WEAPON_VERBS[weapon as WeaponId] : undefined;
   return verbs ? h.pick(verbs) : 'strikes';
@@ -207,8 +230,21 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
     },
   ],
   'character.pastime': [
-    (e, h) =>
-      h.pick(PASTIME_PHRASES[e.data.pastime])(h.c(e.data.characterId), h.l(e.data.locationId)),
+    (e, h) => {
+      // At a shrine in a culture's lands, prayers go to its gods.
+      const god = e.data.pastime === 'shrine' ? h.deityOf(e.data.locationId) : null;
+      if (god)
+        return [
+          h.c(e.data.characterId),
+          ` prays to ${god} at the shrine in `,
+          h.l(e.data.locationId),
+          '.',
+        ];
+      return h.pick(PASTIME_PHRASES[e.data.pastime])(
+        h.c(e.data.characterId),
+        h.l(e.data.locationId),
+      );
+    },
   ],
   'character.rest': [
     (e, h) => {
@@ -473,7 +509,7 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
   'combat.start': [
     (e, h) => {
       const party = e.data.characterIds;
-      const us = h.group(party);
+      const us = party.length === 1 ? h.introduce(party[0]!) : h.group(party);
       const them = h.foes(e.data.foes);
       const many = party.length > 1;
       switch (e.data.kind) {
@@ -674,6 +710,37 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
             : [c, ' casts Quickening and moves like the wind.'];
         case 'ward-of-ash':
           return [c, ` raises a Ward of Ash${weak ? ', thin and flickering' : ''} (${amount}).`];
+        case 'foxfire':
+          return weak
+            ? [c, ' calls up a few wisps of Foxfire against ', target, ` for ${amount} damage.`]
+            : [c, ' sends Foxfire streaming at ', target, ` for ${amount} damage.`];
+        case 'thunder-rune':
+          return weak
+            ? [c, ' carves a Thunder Rune that only rumbles, jolting ', target, ` for ${amount}.`]
+            : [
+                c,
+                ' carves a Thunder Rune, and lightning strikes ',
+                target,
+                ` for ${amount} damage.`,
+              ];
+        case 'ofuda-ward':
+          return [
+            c,
+            ` presses an Ofuda Ward to their armor${weak ? ', its ink smudged' : ''} (${amount}).`,
+          ];
+        case 'rune-of-warding':
+          return [c, ` carves a Rune of Warding${weak ? ', crooked and faint' : ''} (${amount}).`];
+      }
+      // Spells from content packs, by what they do.
+      switch (spellDef(e.data.spell).effect.kind) {
+        case 'damage':
+          return [c, ` casts ${spell} at `, target, ` for ${amount} damage.`];
+        case 'heal':
+          return [c, ` casts ${spell} and heals ${amount}.`];
+        case 'ward':
+          return [c, ` casts ${spell}${weak ? ', weakly' : ''} (${amount}).`];
+        default:
+          return [c, ` casts ${spell}.`];
       }
     },
   ],
@@ -1159,6 +1226,43 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
       e.data.slain > 0 ? `, ending a terror that claimed ${countWord(e.data.slain)} lives.` : '.',
     ],
   ],
+  'myth.born': [
+    (e, h) => {
+      const deaths = countWord(e.data.deaths);
+      if (e.data.characterId) {
+        return [
+          h.c(e.data.characterId),
+          ` has claimed ${deaths} lives; around `,
+          h.l(e.data.locationId),
+          ', folk now tell of it in hushed voices.',
+        ];
+      }
+      return [
+        'Folk begin to tell of ',
+        ...h.myth(e.data.locationId, e.data.creature, null),
+        `, which has taken ${deaths} lives.`,
+      ];
+    },
+  ],
+  'myth.end': [
+    (e, h) => [
+      'With ',
+      h.c(e.data.characterId),
+      ' destroyed, the tales told of ',
+      h.l(e.data.locationId),
+      ' have their ending.',
+    ],
+  ],
+  'social.myth': [
+    (e, h) => [
+      h.c(e.data.characterId),
+      ' tells ',
+      h.c(e.data.otherId),
+      ' the tale of ',
+      ...h.myth(e.data.placeId, e.data.creature, e.data.subjectId),
+      '.',
+    ],
+  ],
   'market.shock': [
     (e, h) => {
       const town = h.l(e.data.locationId);
@@ -1239,9 +1343,28 @@ export function describeEvent(event: SimEvent, names: NameResolver): Segment[] {
       return names.location(id)?.kind;
     },
     aSpecies(id) {
-      const species = names.character(id)?.species;
-      const name = species ? SPECIES_NAMES[species].singular : 'traveler';
+      const who = names.character(id);
+      const name = who ? peopleName(who.species, who.culture).singular : 'traveler';
       return `${article(name)} ${name}`;
+    },
+    introduce(id) {
+      const who = names.character(id);
+      const title = roleTitle(who?.culture, who?.role);
+      if (!who || !title) return [helpers.c(id)];
+      const weapon = itemBase(who.weapon).name;
+      const people = peopleName(who.species, who.culture).singular;
+      // Humans go without saying in their own lands; other peoples don't.
+      const kind = who.species === 'human' ? title : `${people} ${title}`;
+      return [helpers.c(id), `, ${article(kind)} ${kind} with ${article(weapon)} ${weapon},`];
+    },
+    deityOf(id) {
+      const culture = names.location(id)?.culture;
+      const gods = culture ? packOf(culture)?.deities : undefined;
+      return gods && gods.length > 0 ? helpers.pick(gods).name : null;
+    },
+    myth(place, creature, subject) {
+      if (subject) return [helpers.c(subject), ' of ', helpers.l(place)];
+      return [`the ${creature ? creatureDef(creature).name : 'terror'} of `, helpers.l(place)];
     },
     weaponOf(id) {
       return names.character(id)?.weapon;

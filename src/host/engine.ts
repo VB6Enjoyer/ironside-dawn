@@ -2,6 +2,7 @@ import {
   createSimulation,
   DAY,
   Importance,
+  roleOf,
   worldSample,
   type CharacterId,
   type EventType,
@@ -39,6 +40,7 @@ import {
   statsView,
   tradeView,
   mapView,
+  regionView,
 } from './views';
 
 /**
@@ -196,6 +198,8 @@ export function createEngine(options: EngineOptions): Engine {
       : createSimulation({
           seed: init.seed,
           characterCount: init.characterCount,
+          ...(init.settings ? { settings: init.settings } : {}),
+          ...(init.packs ? { packs: init.packs } : {}),
           watch: currentWatch(),
           onEvent: intake,
         });
@@ -332,7 +336,8 @@ export function createEngine(options: EngineOptions): Engine {
     function changedNames(): NameEntry[] {
       const changed: NameEntry[] = [];
       for (const c of sim.world.characters.values()) {
-        const key = `${c.equipment.weapon.base}|${c.death ? 1 : 0}`;
+        const role = roleOf(c);
+        const key = `${c.equipment.weapon.base}|${c.death ? 1 : 0}|${role}`;
         if (sentNames.get(c.id) === key) continue;
         sentNames.set(c.id, key);
         changed.push({
@@ -341,6 +346,8 @@ export function createEngine(options: EngineOptions): Engine {
           species: c.species,
           weapon: c.equipment.weapon.base,
           dead: c.death !== null,
+          culture: c.culture,
+          role,
         });
       }
       return changed;
@@ -435,6 +442,8 @@ export function createEngine(options: EngineOptions): Engine {
           return savedGame(sim);
         case 'map':
           return mapView(sim);
+        case 'region':
+          return regionView(sim, request.id);
       }
     }
 
