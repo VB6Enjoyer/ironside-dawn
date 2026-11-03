@@ -1,4 +1,5 @@
 import type { SavedGame } from '../host';
+import { checkSave } from '../sim';
 
 /**
  * Saved worlds in the browser's IndexedDB (ARCHITECTURE.md §6). The list of
@@ -92,12 +93,18 @@ export async function writeSave(
   return info;
 }
 
+/**
+ * A save, or null if there is none by that id. Throws, saying why, if it was
+ * made by a version of the app that this one can't load.
+ */
 export async function readSave(id: string): Promise<SavedGame | null> {
   const db = await open();
   const game = await result(
     db.transaction(DATA).objectStore(DATA).get(id) as IDBRequest<SavedGame | undefined>,
   );
-  return game ?? null;
+  if (!game) return null;
+  checkSave(game.world);
+  return game;
 }
 
 export async function deleteSave(id: string): Promise<void> {
