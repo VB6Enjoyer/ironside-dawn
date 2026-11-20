@@ -107,6 +107,24 @@ one under **Worlds… → Settings → Content packs**, or headless with
 `npm run sim -- --pack packs/slavic.json`. A pack is checked whole before
 anything goes in, and refused with the reason if anything in it is wrong.
 
+## Releases
+
+Versions follow [Semantic Versioning](https://semver.org); the current one is
+shown at the top of the app. To cut a release:
+
+1. Bump `version` in `package.json` (`npm version x.y.z --no-git-tag-version`);
+   the desktop app reads it from there. Update `src-tauri/Cargo.toml` to match.
+2. Add the public notes players see under "What's new" to the top of
+   `src/ui/releases.ts` (a test fails until the newest notes match the version).
+3. In `CHANGELOG.md`, move the `[Unreleased]` entries under a new
+   `## [x.y.z] - YYYY-MM-DD` heading and update the links at the bottom.
+4. If the shape of saves changed, bump `SAVE_VERSION`, add the migration step in
+   `src/sim/save.ts`, and add a save file exported by the new version to
+   `src/sim/fixtures/`. If how worlds play out from a seed changed, move
+   `SAME_HISTORY_SINCE` in `src/host/version.ts` (a test fails until you do).
+5. Once merged, tag the release on `main` (`vx.y.z`); the Desktop workflow
+   builds its installers into a draft GitHub release.
+
 ## Project layout
 
 ```
