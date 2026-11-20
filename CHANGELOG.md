@@ -16,6 +16,8 @@ Changes before this file was started are described phase by phase in `docs/ROADM
 
 - Saves and exported save files from 0.1.0 onward keep loading in newer versions, brought up to date as they open (`src/sim/save.ts`, `src/host/saved-game.ts`). Saves now record which version wrote them and which version began their world.
 
+- Links to a world carry the version it was begun in (`v=` in the address, `src/ui/seed.ts`), and opening one from a version whose worlds play out differently says so. Each saved world under **Worlds…** has a **Copy link** button for its stamped link, and shows the version it was begun in.
+
 ### Changed
 
 - The PR title check (`.github/workflows/pr-title.yml`) lists the allowed types, requires a lowercase subject without a trailing period, and re-runs when a PR is reopened.

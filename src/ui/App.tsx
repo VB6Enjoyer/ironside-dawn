@@ -1,6 +1,16 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 
-import { createWorkerHost, type InitOptions, type SavedGame, type SimHost } from '../host';
+import {
+  APP_VERSION,
+  compareVersions,
+  createWorkerHost,
+  FIRST_RELEASE,
+  replaysHere,
+  SAME_HISTORY_SINCE,
+  type InitOptions,
+  type SavedGame,
+  type SimHost,
+} from '../host';
 import { installPack, type ContentPack } from '../content';
 import { defaultSettings, type CharacterId, type LocationId, type WorldSettings } from '../sim';
 import { CharacterCard } from './components/CharacterCard';
@@ -25,6 +35,7 @@ import {
   DEFAULT_CHARACTER_COUNT,
   randomSeed,
   specFromUrl,
+  specOfSave,
   writeSpecToUrl,
   type WorldSpec,
 } from './seed';
@@ -95,13 +106,26 @@ function installHere(packs: readonly ContentPack[]): string | null {
   return null;
 }
 
-function freshSession(spec: WorldSpec): Session {
+/**
+ * Why a link's world won't follow the history it had where the link was made,
+ * or null if it will: a seed plays out the same only in versions that play
+ * worlds out the same way.
+ */
+function otherHistory(madeWith: string = FIRST_RELEASE): string | null {
+  if (replaysHere(madeWith)) return null;
+  return compareVersions(madeWith, APP_VERSION) > 0
+    ? `This link comes from a newer version (${madeWith}) than this one (${APP_VERSION}), so its world turns out differently here.`
+    : `This link was made with version ${madeWith}. Worlds have played out differently since ${SAME_HISTORY_SINCE}, so its world turns out differently here.`;
+}
+
+/** A world begun now, in this version. */
+function freshSession(spec: WorldSpec, from?: WorldSpec): Session {
   const packs = packsByIds(spec.packs);
   const missing = spec.packs.filter((id) => !packs.some((p) => p.id === id));
   const trouble = installHere(packs);
   return {
     key: nextSessionKey++,
-    spec: { ...spec, packs: packs.map((p) => p.id) },
+    spec: { ...spec, packs: packs.map((p) => p.id), madeWith: APP_VERSION },
     init: {
       seed: spec.seed,
       characterCount: spec.characterCount,
@@ -112,7 +136,8 @@ function freshSession(spec: WorldSpec): Session {
       trouble ??
       (missing.length > 0
         ? `This world was made with content packs you haven't added here (${missing.join(', ')}), so it has turned out differently.`
-        : null),
+        : null) ??
+      (from ? otherHistory(from.madeWith) : null),
   };
 }
 
@@ -120,12 +145,7 @@ function savedSession(game: SavedGame, note: string): Session {
   const packs = game.world.packs;
   return {
     key: nextSessionKey++,
-    spec: {
-      seed: game.seed,
-      characterCount: game.world.characterCount,
-      settings: game.world.settings,
-      packs: packs.map((p) => p.id),
-    },
+    spec: specOfSave(game),
     init: { seed: game.seed, restore: game },
     note: installHere(packs) ?? note,
   };
@@ -172,7 +192,7 @@ export function App() {
         sameSettings(game.world, linked);
       return fits
         ? savedSession(game, 'Carried on from where you left this world.')
-        : freshSession(linked);
+        : freshSession(linked, linked);
     };
     // Whatever goes wrong carrying on, a new world beats a page stuck opening.
     void arrive()

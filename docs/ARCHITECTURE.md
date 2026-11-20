@@ -673,7 +673,15 @@ A loaded world keeps all it has, and carries on under the new version's rules.
 Saves from test versions before 0.1.0, and from versions newer than the one
 running, are refused with the reason. A saved game also records the version
 that wrote it and the version its world was begun in, kept as it is carried
-on, since a link replays a world's history only in that version. Save files
+on, since a link replays a world's history only in that version.
+
+Links carry that version (`v=0.1.2`). `SAME_HISTORY_SINCE` (`src/host/version.ts`)
+names the last release that changed how a world turns out from its seed; a link
+from it or any later version up to the one running replays the same world, and
+one from elsewhere is opened with a note that it turns out differently. A test
+(`src/sim/history.test.ts`) holds a month of one seed's history by hash, with
+the release it has held since, and fails if history changes without that
+marker being moved. Save files
 exported by each release that changed the shape of saves are kept in
 `src/sim/fixtures/`, and every one is loaded, run on and saved again in the
 tests. Files are gzipped JSON

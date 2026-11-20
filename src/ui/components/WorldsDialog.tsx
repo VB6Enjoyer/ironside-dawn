@@ -1,10 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 
-import type { SavedGame } from '../../host';
+import { FIRST_RELEASE, type SavedGame } from '../../host';
 import { formatDate, SPECIES_NAMES } from '../../text';
 import { exportSave, importSave } from '../files';
 import { addPack, availablePacks, BUNDLED_PACKS, removePack } from '../packs';
-import { CHARACTER_COUNTS, randomSeed, shareLink, withHumans, type WorldSpec } from '../seed';
+import {
+  CHARACTER_COUNTS,
+  randomSeed,
+  shareLink,
+  specOfSave,
+  withHumans,
+  type WorldSpec,
+} from '../seed';
 import { PEOPLES, type PeopleId } from '../../content';
 import type { WorldSettings } from '../../sim';
 import { deleteSave, listSaves, readSave, type SaveInfo } from '../storage';
@@ -86,7 +93,8 @@ export function WorldsDialog({
       <section>
         <h3>This world</h3>
         <p className="muted">
-          Seed <code>{current.seed}</code>, {current.characterCount} adventurers.{' '}
+          Seed <code>{current.seed}</code>, {current.characterCount} adventurers, begun in version{' '}
+          {current.madeWith ?? FIRST_RELEASE}.{' '}
           {link
             ? 'Anyone opening this link gets the same world from its beginning:'
             : 'A world begun with the same seed and settings is the same world.'}
@@ -298,7 +306,8 @@ export function WorldsDialog({
                   {s.auto && <span className="chip">autosave</span>}
                   <div className="muted">
                     {formatDate(s.time).split(' · ').slice(0, 2).join(' · ')} · {s.living} alive ·
-                    saved {new Date(s.savedAt).toLocaleString()}
+                    saved {new Date(s.savedAt).toLocaleString()} · begun in version{' '}
+                    {s.madeWith ?? FIRST_RELEASE}
                   </div>
                 </div>
                 <div className="row">
@@ -315,6 +324,25 @@ export function WorldsDialog({
                   >
                     Load
                   </button>
+                  {link && (
+                    <button
+                      type="button"
+                      disabled={busy}
+                      title="Copy a link that begins this world again, stamped with the version it was begun in"
+                      onClick={() =>
+                        run(async () => {
+                          const game = await readSave(s.id);
+                          if (!game) throw new Error('That save has gone missing.');
+                          await navigator.clipboard.writeText(shareLink(specOfSave(game))!);
+                          setMessage(
+                            `Link to ${s.name} copied, for version ${game.madeWith ?? FIRST_RELEASE}.`,
+                          );
+                        })
+                      }
+                    >
+                      Copy link
+                    </button>
+                  )}
                   <button
                     type="button"
                     disabled={busy}

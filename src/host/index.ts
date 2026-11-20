@@ -6,4 +6,11 @@ export type * from './protocol';
 export { SPEED_TIERS, speedTier } from './speed';
 export type { SpeedId, SpeedTier } from './speed';
 export { readSaveFile, SAVE_FILE_FORMAT, upgradeSavedGame } from './saved-game';
-export { APP_VERSION, FIRST_RELEASE } from './version';
+export {
+  APP_VERSION,
+  compareVersions,
+  FIRST_RELEASE,
+  isVersion,
+  replaysHere,
+  SAME_HISTORY_SINCE,
+} from './version';
