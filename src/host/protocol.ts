@@ -332,6 +332,14 @@ export interface SavedGame {
   readonly seed: string;
   readonly time: number;
   readonly living: number;
+  /** The version that wrote this save (missing from those of 0.1.0). */
+  readonly appVersion?: string;
+  /**
+   * The version the world was begun in, kept as it is carried on in later
+   * ones: a link to the world replays its history only in that version.
+   * Missing from 0.1.0's saves, whose worlds were all begun in 0.1.0.
+   */
+  readonly madeWith?: string;
 }
 
 /** What happened while skipping ahead. */

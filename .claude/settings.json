@@ -3,5 +3,17 @@
     "commit": "",
     "pr": "",
     "sessionUrl": false
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ \"$CLAUDE_CODE_REMOTE\" = \"true\" ] && npm install --no-audit --no-fund --silent || true"
+          }
+        ]
+      }
+    ]
   }
 }

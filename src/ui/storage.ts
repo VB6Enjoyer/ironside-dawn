@@ -1,5 +1,4 @@
-import type { SavedGame } from '../host';
-import { checkSave } from '../sim';
+import { upgradeSavedGame, type SavedGame } from '../host';
 
 /**
  * Saved worlds in the browser's IndexedDB (ARCHITECTURE.md §6). The list of
@@ -18,6 +17,8 @@ export interface SaveInfo {
   /** World time when saved. */
   readonly time: number;
   readonly living: number;
+  /** The version the world was begun in (missing from saves made by 0.1.0). */
+  readonly madeWith?: string;
 }
 
 const DB_NAME = 'ironside-dawn';
@@ -83,6 +84,7 @@ export async function writeSave(
     seed: game.seed,
     time: game.time,
     living: game.living,
+    ...(game.madeWith ? { madeWith: game.madeWith } : {}),
   };
   const db = await open();
   const tx = db.transaction([INFO, DATA], 'readwrite');
@@ -94,17 +96,15 @@ export async function writeSave(
 }
 
 /**
- * A save, or null if there is none by that id. Throws, saying why, if it was
- * made by a version of the app that this one can't load.
+ * A save, or null if there is none by that id, brought up to this version if
+ * an earlier one made it. Throws, saying why, if it can't be loaded.
  */
 export async function readSave(id: string): Promise<SavedGame | null> {
   const db = await open();
   const game = await result(
     db.transaction(DATA).objectStore(DATA).get(id) as IDBRequest<SavedGame | undefined>,
   );
-  if (!game) return null;
-  checkSave(game.world);
-  return game;
+  return game ? upgradeSavedGame(game) : null;
 }
 
 export async function deleteSave(id: string): Promise<void> {

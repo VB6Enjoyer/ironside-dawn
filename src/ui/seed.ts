@@ -1,10 +1,12 @@
 import { PEOPLES, type PeopleId } from '../content';
+import { APP_VERSION, isVersion, type SavedGame } from '../host';
 import type { WorldSettings } from '../sim';
 
 /**
  * The world seed, size, settings and content packs live in the URL
- * (`?seed=42&n=100&danger=deadly&packs=slavic`) so a world can be shared or
- * reloaded.
+ * (`?seed=42&n=100&danger=deadly&packs=slavic&v=0.1.2`) so a world can be
+ * shared or reloaded. `v` is the version the world was begun in: a seed gives
+ * the same history only in versions that play worlds out the same way.
  */
 
 export interface WorldSpec {
@@ -14,6 +16,11 @@ export interface WorldSpec {
   readonly settings: Partial<WorldSettings>;
   /** Ids of the content packs the world is made with. */
   readonly packs: readonly string[];
+  /**
+   * The version the world was begun in. Missing from links made before
+   * versions were stamped on them, which all came from 0.1.0.
+   */
+  readonly madeWith?: string;
 }
 
 export const DEFAULT_CHARACTER_COUNT = 20;
@@ -74,16 +81,33 @@ function writePacks(params: URLSearchParams, packs: readonly string[]): void {
   else params.delete('packs');
 }
 
+function writeVersion(params: URLSearchParams, spec: WorldSpec): void {
+  params.set('v', spec.madeWith ?? APP_VERSION);
+}
+
+/** What a saved game's link would say: its world as it was begun. */
+export function specOfSave(game: SavedGame): WorldSpec {
+  return {
+    seed: game.seed,
+    characterCount: game.world.characterCount,
+    settings: game.world.settings,
+    packs: game.world.packs.map((p) => p.id),
+    ...(game.madeWith ? { madeWith: game.madeWith } : {}),
+  };
+}
+
 export function specFromUrl(): WorldSpec | null {
   const params = new URLSearchParams(window.location.search);
   const seed = params.get('seed')?.trim();
   if (!seed) return null;
   const n = Number(params.get('n'));
+  const version = params.get('v');
   return {
     seed,
     characterCount: Number.isSafeInteger(n) && n > 0 && n <= 2_000 ? n : DEFAULT_CHARACTER_COUNT,
     settings: settingsFrom(params),
     packs: packsFrom(params),
+    ...(version && isVersion(version) ? { madeWith: version } : {}),
   };
 }
 
@@ -92,13 +116,15 @@ export function randomSeed(): string {
   return String((n! % 999_999) + 1);
 }
 
-export function writeSpecToUrl({ seed, characterCount, settings, packs }: WorldSpec): void {
+export function writeSpecToUrl(spec: WorldSpec): void {
+  const { seed, characterCount, settings, packs } = spec;
   const url = new URL(window.location.href);
   url.searchParams.set('seed', seed);
   if (characterCount === DEFAULT_CHARACTER_COUNT) url.searchParams.delete('n');
   else url.searchParams.set('n', String(characterCount));
   writeSettings(url.searchParams, settings);
   writePacks(url.searchParams, packs);
+  writeVersion(url.searchParams, spec);
   window.history.replaceState(null, '', url);
 }
 
@@ -125,5 +151,6 @@ export function shareLink(spec: WorldSpec): string | null {
   }
   writeSettings(url.searchParams, spec.settings);
   writePacks(url.searchParams, spec.packs);
+  writeVersion(url.searchParams, spec);
   return url.toString();
 }

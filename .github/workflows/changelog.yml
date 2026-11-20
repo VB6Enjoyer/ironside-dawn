@@ -1,0 +1,31 @@
+name: Changelog
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+permissions:
+  contents: read
+concurrency:
+  group: changelog-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  changelog:
+    if: ${{ !contains(github.event.pull_request.labels.*.name, 'skip-changelog') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Require a CHANGELOG.md entry under [Unreleased]
+        run: |
+          set -euo pipefail
+          base="${{ github.event.pull_request.base.sha }}"
+          head="${{ github.event.pull_request.head.sha }}"
+          if ! git diff --name-only "$base...$head" | grep -qx 'CHANGELOG.md'; then
+            echo "::error file=CHANGELOG.md::Update CHANGELOG.md under '## [Unreleased]', or add the 'skip-changelog' label."
+            exit 1
+          fi
+          added=$(git diff -U0 "$base...$head" -- CHANGELOG.md | grep -E '^\+- ' || true)
+          if [ -z "$added" ]; then
+            echo "::error file=CHANGELOG.md::CHANGELOG.md changed but no new '- ' entry was added."
+            exit 1
+          fi

@@ -17,6 +17,7 @@ import {
   type PartyId,
   type Simulation,
 } from '../sim';
+import { APP_VERSION } from './version';
 import type {
   CaravanEntry,
   CharacterSummary,
@@ -464,7 +465,8 @@ export function eventsView(sim: Simulation, query: EventQuery) {
   return sim.events.query({ ...query, limit: Math.min(query.limit ?? EVENTS_LIMIT, EVENTS_LIMIT) });
 }
 
-export function savedGame(sim: Simulation): SavedGame {
+/** `madeWith`: the version the world was begun in (see `SavedGame`). */
+export function savedGame(sim: Simulation, madeWith: string): SavedGame {
   const chronicle = sim.events.query({ minImportance: Importance.Notable });
   const recent = sim.events.query({
     minImportance: Importance.Normal,
@@ -476,7 +478,15 @@ export function savedGame(sim: Simulation): SavedGame {
   );
   let living = 0;
   for (const c of sim.world.characters.values()) if (!c.death) living++;
-  return { world: sim.save(), events, seed: sim.world.seed, time: sim.world.time, living };
+  return {
+    world: sim.save(),
+    events,
+    seed: sim.world.seed,
+    time: sim.world.time,
+    living,
+    appVersion: APP_VERSION,
+    madeWith,
+  };
 }
 
 export function mapView(sim: Simulation): MapView {

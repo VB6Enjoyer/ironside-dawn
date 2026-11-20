@@ -22,7 +22,7 @@ export type {
   SimulationOptions,
   Watch,
 } from './simulation';
-export { checkSave, SAVE_FORMAT, SAVE_VERSION } from './save';
+export { OLDEST_SAVE_VERSION, SAVE_FORMAT, SAVE_VERSION, upgradeSave } from './save';
 export type { WorldSave } from './save';
 export { worldSample } from './systems/history';
 export { moneyBooked, moneyHeld } from './systems/ledger';

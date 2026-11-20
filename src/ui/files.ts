@@ -1,12 +1,9 @@
-import { checkSave } from '../sim';
-import type { SavedGame } from '../host';
+import { readSaveFile, SAVE_FILE_FORMAT, type SavedGame } from '../host';
 
 /** Save files: a world as JSON, gzipped where the browser can. */
 
-const FILE_FORMAT = 'ironside-dawn/save-file';
-
 export async function exportSave(game: SavedGame, fileName: string): Promise<void> {
-  const json = JSON.stringify({ format: FILE_FORMAT, game });
+  const json = JSON.stringify({ format: SAVE_FILE_FORMAT, game });
   let blob = new Blob([json], { type: 'application/json' });
   let name = `${fileName}.json`;
   if (typeof CompressionStream !== 'undefined') {
@@ -34,16 +31,5 @@ export async function importSave(file: File): Promise<SavedGame> {
   } else {
     text = await file.text();
   }
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(text);
-  } catch {
-    throw new Error('That file is not a save file');
-  }
-  const wrapper = parsed as { format?: string; game?: SavedGame } | null;
-  if (!wrapper || wrapper.format !== FILE_FORMAT || !wrapper.game) {
-    throw new Error('That file is not an Ironside Dawn save');
-  }
-  checkSave(wrapper.game.world);
-  return wrapper.game;
+  return readSaveFile(text);
 }
