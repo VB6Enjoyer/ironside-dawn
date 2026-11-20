@@ -47,6 +47,17 @@ describe('save files from earlier releases', () => {
     expect(open('save-0.1.0.json.gz').madeWith).toBe('0.1.0');
   });
 
+  it('read the version once called 0.1.2 as 0.1.1, as it was renumbered', () => {
+    const game = open('save-0.1.0.json.gz');
+    const file = JSON.stringify({
+      format: 'ironside-dawn/save-file',
+      game: { ...game, madeWith: '0.1.2', appVersion: '0.1.2' },
+    });
+    const read = readSaveFile(file);
+    expect(read.madeWith).toBe('0.1.1');
+    expect(read.appVersion).toBe('0.1.1');
+  });
+
   it('refuse, saying why, what this version cannot load', () => {
     const game = open('save-0.1.0.json.gz');
     const file = (world: object) =>

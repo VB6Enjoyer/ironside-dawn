@@ -34,7 +34,7 @@ export const RELEASES: readonly Release[] = [
     ],
   },
   {
-    version: '0.1.2',
+    version: '0.1.1',
     date: '2026-11-20',
     title: 'Worlds that keep',
     intro:

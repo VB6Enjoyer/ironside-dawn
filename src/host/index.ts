@@ -9,6 +9,7 @@ export { readSaveFile, SAVE_FILE_FORMAT, upgradeSavedGame } from './saved-game';
 export {
   APP_VERSION,
   compareVersions,
+  currentName,
   FIRST_RELEASE,
   isVersion,
   replaysHere,
