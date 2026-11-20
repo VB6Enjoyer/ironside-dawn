@@ -8,6 +8,8 @@ The public notes players see under "What's new" are kept in `src/ui/releases.ts`
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-20
+
 ### Added
 
 - **Skip ahead** offers 50 and 100 years (`src/ui/components/Controls.tsx`). Like any skip, it can be stopped partway.
@@ -62,7 +64,8 @@ The public notes players see under "What's new" are kept in `src/ui/releases.ts`
 
 - The first release: procedural worlds with their people, markets, generations, cultures and myths; the observatory to watch them; world settings, content packs, saves and links; and the desktop app. How it was built is told phase by phase in `docs/ROADMAP.md`.
 
-[Unreleased]: https://github.com/VB6Enjoyer/ironside-dawn/compare/v0.1.2...HEAD
+[Unreleased]: https://github.com/VB6Enjoyer/ironside-dawn/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/VB6Enjoyer/ironside-dawn/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/VB6Enjoyer/ironside-dawn/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/VB6Enjoyer/ironside-dawn/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/VB6Enjoyer/ironside-dawn/releases/tag/v0.1.0
