@@ -36,7 +36,7 @@ export function HallsPage({
         type="button"
         className="ref ref-location"
         data-location={id}
-        onClick={() => links.onLocation!(id)}
+        onClick={(e) => links.onLocation!(id, e)}
       >
         {text}
       </button>

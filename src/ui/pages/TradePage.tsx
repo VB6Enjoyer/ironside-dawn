@@ -138,7 +138,7 @@ function Place({
       type="button"
       className="ref ref-location"
       data-location={id}
-      onClick={() => onLocation(id)}
+      onClick={(e) => onLocation(id, e)}
     >
       {name}
     </button>

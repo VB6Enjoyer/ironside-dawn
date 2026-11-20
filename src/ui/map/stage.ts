@@ -1,19 +1,12 @@
 // Pixi without eval, so the map runs under a strict content security policy
 // (the desktop build has one).
 import 'pixi.js/unsafe-eval';
-import {
-  Application,
-  Container,
-  Graphics,
-  Sprite,
-  Text,
-  Texture,
-  type FederatedPointerEvent,
-} from 'pixi.js';
+import { Application, Container, Graphics, Text, type FederatedPointerEvent } from 'pixi.js';
 
 import type { BiomeId } from '../../content';
 import type { MapPlace, MapTraveler, MapView } from '../../host';
 import type { CharacterId, LocationId } from '../../sim';
+import { voronoiCell, type Point } from './voronoi';
 
 /**
  * The world map (ROADMAP.md Phase 9), drawn with PixiJS on one canvas:
@@ -48,9 +41,6 @@ const TRAVELER: Record<'adventurer' | 'merchant' | 'outlaw' | 'other', number> =
   other: 0xbfbfbf,
 };
 const FOLLOWED = 0xffffff;
-
-/** Pixels per league in the land texture. */
-const TEXEL = 4;
 
 /** What the map is asked to show: a traveler's dot, or a place. */
 export type StageFocus =
@@ -136,8 +126,13 @@ export class MapStage {
     if (!this.ready) return;
     const key = `${view.width}x${view.height}:${view.regions.map((r) => r.id).join()}`;
     if (key !== this.landKey) {
-      this.landKey = key;
-      this.drawLand(view);
+      // Marked drawn only once it is: if drawing fails, the next update tries again.
+      try {
+        this.drawLand(view);
+        this.landKey = key;
+      } catch (error) {
+        console.error('Could not draw the land', error);
+      }
       this.fitted = false;
     }
     this.drawRoads(view);
@@ -232,40 +227,31 @@ export class MapStage {
     this.fitted = true;
   }
 
-  /** Each league goes to the region whose heart is nearest: a coarse Voronoi map. */
+  /**
+   * Each point of the map belongs to the region whose heart is nearest: a
+   * Voronoi map, drawn as one polygon per region. (Shapes rather than a
+   * painted image: nothing to upload to the graphics card, crisp at any zoom.)
+   */
   private drawLand(view: MapView): void {
-    this.land.removeChildren().forEach((c) => c.destroy({ texture: true }));
-    const w = Math.max(1, Math.round(view.width * TEXEL));
-    const h = Math.max(1, Math.round(view.height * TEXEL));
-    const canvas = document.createElement('canvas');
-    canvas.width = w;
-    canvas.height = h;
-    const g = canvas.getContext('2d')!;
-    const image = g.createImageData(w, h);
-    for (let py = 0; py < h; py++) {
-      for (let px = 0; px < w; px++) {
-        const x = px / TEXEL;
-        const y = py / TEXEL;
-        let color = PLAIN_LAND;
-        let best = Infinity;
-        for (const r of view.regions) {
-          const d = (r.x - x) ** 2 + (r.y - y) ** 2;
-          if (d < best) {
-            best = d;
-            color = BIOME_COLORS[r.biome];
-          }
-        }
-        const i = (py * w + px) * 4;
-        image.data[i] = (color >> 16) & 0xff;
-        image.data[i + 1] = (color >> 8) & 0xff;
-        image.data[i + 2] = color & 0xff;
-        image.data[i + 3] = 255;
-      }
+    this.land.removeChildren().forEach((c) => c.destroy());
+    const land = new Graphics();
+    const frame: Point[] = [
+      [0, 0],
+      [view.width, 0],
+      [view.width, view.height],
+      [0, view.height],
+    ];
+    if (view.regions.length === 0) {
+      land.poly(frame.flat()).fill(PLAIN_LAND);
     }
-    g.putImageData(image, 0, 0);
-    const sprite = new Sprite(Texture.from(canvas));
-    sprite.scale.set(1 / TEXEL);
-    this.land.addChild(sprite);
+    for (const r of view.regions) {
+      const cell = voronoiCell(r, view.regions, frame);
+      if (cell.length < 3) continue;
+      const color = BIOME_COLORS[r.biome];
+      // The stroke, in the land's own colour, covers the hairline seams between cells.
+      land.poly(cell.flat()).fill(color).stroke({ width: 0.15, color });
+    }
+    this.land.addChild(land);
     for (const r of view.regions) {
       const label = new Text({
         text: r.name,

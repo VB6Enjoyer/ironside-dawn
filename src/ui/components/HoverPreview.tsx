@@ -156,6 +156,7 @@ function CharacterGlance({
 }
 
 function PlaceGlance({ host, id, at }: { host: SimHost; id: LocationId; at: number }) {
+  const { characterClick } = useDisplay();
   const place = host.places.get(id);
   const summaries = useQuery(host, { kind: 'places' }, at);
   const summary = summaries?.find((s) => s.id === id);
@@ -175,7 +176,10 @@ function PlaceGlance({ host, id, at }: { host: SimHost; id: LocationId; at: numb
         {summary?.region && ` in ${summary.region.name}, ${summary.region.biome}`}
       </p>
       {facts.length > 0 && <p className="glance-line">{facts.join(' · ')}</p>}
-      <p className="glance-hint">Click for its page</p>
+      <p className="glance-hint">
+        Click for {characterClick === 'page' ? 'its page' : 'its card'} · {MODIFIER}+click for{' '}
+        {characterClick === 'page' ? 'its card' : 'its page'}
+      </p>
     </>
   );
 }

@@ -16,13 +16,13 @@ import { formatCount } from '../format';
 import { Prose, type LinkClick, type ProseLinks } from '../components/Prose';
 import { useQuery } from '../useHost';
 
-const KIND_NAMES = {
+export const KIND_NAMES = {
   town: 'Town',
   dungeon: 'Dungeon',
   wilderness: 'Wilderness',
   fortress: 'Fortress',
 } as const;
-const DANGER = ['', 'tame', 'uneasy', 'dangerous', 'deadly', 'murderous'];
+export const DANGER = ['', 'tame', 'uneasy', 'dangerous', 'deadly', 'murderous'];
 
 export const placeName = (p: PlaceEntry | undefined) =>
   p
@@ -32,7 +32,7 @@ export const placeName = (p: PlaceEntry | undefined) =>
 /** Kinds of place in the order they are listed. */
 const KIND_ORDER = ['town', 'fortress', 'dungeon', 'wilderness'] as const;
 
-const WEATHER_NAMES = {
+export const WEATHER_NAMES = {
   fair: 'fair skies',
   rain: 'rain',
   storm: 'storms',
@@ -89,7 +89,7 @@ export function PlacesPage({
                       type="button"
                       className="place-card"
                       data-location={p.id}
-                      onClick={() => onLocation(p.id)}
+                      onClick={(e) => onLocation(p.id, e)}
                     >
                       <span className="place-kind">{entry ? KIND_NAMES[entry.kind] : ''}</span>
                       <span className="place-name">{placeName(entry)}</span>
@@ -179,7 +179,7 @@ export function PlacePage({
                 type="button"
                 className="ref ref-location"
                 data-location={view.heldBy!.id}
-                onClick={() => links.onLocation?.(view.heldBy!.id)}
+                onClick={(e) => links.onLocation?.(view.heldBy!.id, e)}
               >
                 {placeName(view.heldBy)}
               </button>
@@ -220,7 +220,7 @@ export function PlacePage({
                     type="button"
                     className="ref ref-location"
                     data-location={t.id}
-                    onClick={() => links.onLocation?.(t.id)}
+                    onClick={(e) => links.onLocation?.(t.id, e)}
                   >
                     {placeName(t)}
                   </button>
@@ -352,7 +352,7 @@ export function PlacePage({
   );
 }
 
-function People({
+export function People({
   people,
   onCharacter,
 }: {

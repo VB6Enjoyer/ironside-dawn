@@ -42,7 +42,7 @@ Every technical decision below follows from these five pillars.
 | Tests           | **Vitest**                                       | Same config as Vite. Also used for determinism and statistical tests.                                                                |
 | Headless runner | **tsx** (Node)                                   | Runs `npm run sim -- --seed 42 --years 50` for balancing and debugging.                                                              |
 | Persistence     | **IndexedDB** (via `idb`)                        | Saves are larger than `localStorage` allows.                                                                                         |
-| Desktop         | **Tauri**                                        | Wraps the same web build as a native app for Windows, macOS, and Linux (`src-tauri/`).                                               |
+| Desktop         | **Tauri**                                        | Wraps the same web build as a native app for Windows and Linux (`src-tauri/`); no macOS build, as unsigned apps won't open there.    |
 
 ### Why HTML/React rather than a non-HTML GUI?
 
@@ -666,7 +666,7 @@ a world you've watched carries on from its autosave. Opening the app with no
 world named shows the main menu (0.2.0): a new world, the saved ones, and
 Continue for the one last saved.
 
-_Across versions (0.1.2):_ every save since 0.1.0, the first release, keeps
+_Across versions (0.1.1):_ every save since 0.1.0, the first release, keeps
 loading. `SAVE_VERSION` is bumped only when the shape of saves changes, and
 each bump adds a step to `MIGRATIONS` (`src/sim/save.ts`) that brings a save of
 the version before up to the new one, filling in anything new with a default.
@@ -676,7 +676,7 @@ running, are refused with the reason. A saved game also records the version
 that wrote it and the version its world was begun in, kept as it is carried
 on, since a link replays a world's history only in that version.
 
-Links carry that version (`v=0.1.2`). `SAME_HISTORY_SINCE` (`src/host/version.ts`)
+Links carry that version (`v=0.2.0`). `SAME_HISTORY_SINCE` (`src/host/version.ts`)
 names the last release that changed how a world turns out from its seed; a link
 from it or any later version up to the one running replays the same world, and
 one from elsewhere is opened with a note that it turns out differently. A test

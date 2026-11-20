@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import { FIRST_RELEASE, type SavedGame } from '../../host';
+import { currentName, FIRST_RELEASE, type SavedGame } from '../../host';
 import { PEOPLES, type PeopleId } from '../../content';
 import type { WorldSettings } from '../../sim';
 import { formatDate, SPECIES_NAMES } from '../../text';
@@ -279,7 +279,7 @@ export function SavedWorlds({
                 <div className="muted">
                   {formatDate(s.time).split(' · ').slice(0, 2).join(' · ')} · {s.living} alive ·
                   saved {new Date(s.savedAt).toLocaleString()} · begun in version{' '}
-                  {s.madeWith ?? FIRST_RELEASE}
+                  {currentName(s.madeWith ?? FIRST_RELEASE)}
                 </div>
               </div>
               <div className="row">

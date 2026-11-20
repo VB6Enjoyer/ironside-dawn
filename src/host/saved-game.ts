@@ -1,6 +1,6 @@
 import { upgradeSave } from '../sim';
 import type { SavedGame } from './protocol';
-import { FIRST_RELEASE } from './version';
+import { currentName, FIRST_RELEASE } from './version';
 
 /**
  * Checks a saved game read from the browser's storage or a file, and brings
@@ -21,7 +21,8 @@ export function upgradeSavedGame(data: unknown): SavedGame {
   return {
     ...(game as SavedGame),
     world: upgradeSave(game.world),
-    madeWith: game.madeWith ?? FIRST_RELEASE,
+    madeWith: currentName(game.madeWith ?? FIRST_RELEASE),
+    ...(game.appVersion ? { appVersion: currentName(game.appVersion) } : {}),
   };
 }
 

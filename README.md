@@ -40,7 +40,7 @@ how many may live at once. Content
 packs, JSON files of creatures, arms, spells, dungeons and whole cultures, can
 be added from a file (`packs/slavic.json` brings Slavic lands, with leshies,
 rusalki and the volkhvy of Perun). A thousand people run smoothly in the
-browser, and the same build is a desktop app for Windows, macOS and Linux.
+browser, and the same build is a desktop app for Windows and Linux.
 
 Phase 10 (Cultures & Myths) is done. Regions can belong to a culture drawn
 from real-world mythology, so far Japonic and Norse: ronin with naginata
@@ -99,9 +99,10 @@ The desktop app is a [Tauri](https://tauri.app) window around the same web
 build, so it behaves as the browser does, saves included. Building it needs
 [Rust](https://rustup.rs) and, on Linux, the WebKitGTK libraries (on Debian or
 Ubuntu: `libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf`).
-The **Desktop** workflow in GitHub Actions builds installers for all three
-systems: run it by hand from the Actions tab, or push a tag like `v0.1.0` to
-attach them to a draft release. Set the repository variable `SHARE_URL` to the
+The **Desktop** workflow in GitHub Actions builds installers for Windows and
+Linux: run it by hand from the Actions tab, or push a tag like `v0.2.0` to
+attach them to a draft release. There is no macOS build, since macOS won't open
+an app that isn't signed with a paid Apple developer certificate. Set the repository variable `SHARE_URL` to the
 hosted site's address so the app's links to a world point there.
 
 ### Content packs

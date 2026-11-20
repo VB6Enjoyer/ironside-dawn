@@ -27,14 +27,15 @@ export const RELEASES: readonly Release[] = [
       'Display settings also offer a light mode, three text sizes, and switches for everything below.',
       'Colour where it means something: deaths and kills in red, gold in gold, dungeons in purple, love in pink, crime in orange, magic in blue, in life stories, the Halls and the live log.',
       'The live log marks deaths, marriages and births, crime, legendary finds and more with a colour and a symbol, and the chips above it show only one kind at a time.',
-      'Rest the pointer on a name for a quick look at who or where it is. Ctrl+click (Cmd+click on a Mac) opens a life story straight away.',
+      'Places open in a card beside the page, as characters do: click a place in the log or on the map to see who is there and what happened lately.',
+      'Rest the pointer on a name for a quick look at who or where it is. Ctrl+click (Cmd+click on a Mac) skips the card and opens the page straight away.',
       'Show on map, on characters and places, zooms the map to them and follows travelers along the road.',
       'Skip ahead 50 or 100 years at a time, and see the living in green and the gone in red below the log.',
       'Fixed: the card beside a life story now closes, and the Trade page’s town names are links.',
     ],
   },
   {
-    version: '0.1.2',
+    version: '0.1.1',
     date: '2026-11-20',
     title: 'Worlds that keep',
     intro:

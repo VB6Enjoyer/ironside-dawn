@@ -1,10 +1,10 @@
 import { PEOPLES, type PeopleId } from '../content';
-import { APP_VERSION, isVersion, type SavedGame } from '../host';
+import { APP_VERSION, currentName, isVersion, type SavedGame } from '../host';
 import type { WorldSettings } from '../sim';
 
 /**
  * The world seed, size, settings and content packs live in the URL
- * (`?seed=42&n=100&danger=deadly&packs=slavic&v=0.1.2`) so a world can be
+ * (`?seed=42&n=100&danger=deadly&packs=slavic&v=0.2.0`) so a world can be
  * shared or reloaded. `v` is the version the world was begun in: a seed gives
  * the same history only in versions that play worlds out the same way.
  */
@@ -107,7 +107,7 @@ export function specFromUrl(): WorldSpec | null {
     characterCount: Number.isSafeInteger(n) && n > 0 && n <= 2_000 ? n : DEFAULT_CHARACTER_COUNT,
     settings: settingsFrom(params),
     packs: packsFrom(params),
-    ...(version && isVersion(version) ? { madeWith: version } : {}),
+    ...(version && isVersion(version) ? { madeWith: currentName(version) } : {}),
   };
 }
 

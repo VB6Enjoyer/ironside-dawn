@@ -18,6 +18,7 @@ import { Controls } from './components/Controls';
 import { DigestPanel } from './components/DigestPanel';
 import { DisplaySettings } from './components/DisplaySettings';
 import { HoverPreviews } from './components/HoverPreview';
+import { PlaceCard } from './components/PlaceCard';
 import type { LinkClick } from './components/Prose';
 import { SearchBox } from './components/SearchBox';
 import { StatusBar } from './components/StatusBar';
@@ -337,6 +338,8 @@ function Observatory({
   const snapshot = useHostSnapshot(host);
   const [route, go] = useRoute();
   const [selected, setSelected] = useState<CharacterId | null>(null);
+  // A place's card takes the side column instead of a character's while open.
+  const [placeCard, setPlaceCard] = useState<LocationId | null>(null);
   const [note, setNote] = useState(session.note);
   // On a life story the card shows that character until closed: closing it
   // there has to be remembered, or the page would bring it straight back.
@@ -373,13 +376,15 @@ function Observatory({
     };
   }, [host, save]);
 
+  // A click on a name opens its card or its page, as chosen under Display
+  // settings; with Ctrl (or Cmd) held, the other.
+  const toPage = (click?: LinkClick) =>
+    (currentDisplay().characterClick === 'page') !==
+    Boolean(click && (click.ctrlKey || click.metaKey));
   const links = {
-    // A click opens the card or the life story, as chosen under Display
-    // settings; with Ctrl (or Cmd) held, the other.
     onCharacter: (id: CharacterId, click?: LinkClick) => {
-      const swapped = Boolean(click && (click.ctrlKey || click.metaKey));
-      const toPage = (currentDisplay().characterClick === 'page') !== swapped;
-      if (toPage) {
+      setPlaceCard(null);
+      if (toPage(click)) {
         // Straight to the page, without the card beside it.
         setSelected(null);
         setDismissed(id);
@@ -388,10 +393,22 @@ function Observatory({
         setSelected(id);
       }
     },
-    onLocation: (id: LocationId) => go({ page: 'place', id }),
+    onLocation: (id: LocationId, click?: LinkClick) => {
+      if (toPage(click)) {
+        // Straight to the page, without a card beside it.
+        setPlaceCard(null);
+        setSelected(null);
+        go({ page: 'place', id });
+      } else {
+        setSelected(null);
+        setPlaceCard(id);
+      }
+    },
   };
   const toRegion = (id: string) => go({ page: 'region', id });
-  const cardId = selected ?? (route.page === 'profile' && route.id !== dismissed ? route.id : null);
+  const cardId = placeCard
+    ? null
+    : (selected ?? (route.page === 'profile' && route.id !== dismissed ? route.id : null));
 
   return (
     <>
@@ -430,7 +447,7 @@ function Observatory({
         ))}
         <SearchBox host={host} onCharacter={links.onCharacter} onLocation={links.onLocation} />
       </nav>
-      <div className={`world-area${cardId ? ' with-card' : ''}`}>
+      <div className={`world-area${cardId || placeCard ? ' with-card' : ''}`}>
         <main className="page-area">
           {route.page === 'log' && (
             <LogPage host={host} snapshot={snapshot} names={names} selected={cardId} {...links} />
@@ -503,6 +520,23 @@ function Observatory({
             onProfile={() => go({ page: 'profile', id: cardId })}
             onMap={() => go({ page: 'map', focus: { kind: 'character', id: cardId } })}
             onClose={closeCard}
+            {...links}
+          />
+        )}
+        {placeCard && (
+          <PlaceCard
+            key={placeCard}
+            host={host}
+            placeId={placeCard}
+            names={names}
+            refresh={snapshot.time}
+            onPage={() => {
+              setPlaceCard(null);
+              go({ page: 'place', id: placeCard });
+            }}
+            onMap={() => go({ page: 'map', focus: { kind: 'place', id: placeCard } })}
+            onRegion={toRegion}
+            onClose={() => setPlaceCard(null)}
             {...links}
           />
         )}

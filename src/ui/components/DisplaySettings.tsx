@@ -91,10 +91,10 @@ export function DisplaySettings({ onClose }: { onClose(): void }) {
         name="Clicking a name"
         setting="characterClick"
         options={[
-          { value: 'card', label: 'Opens their card' },
-          { value: 'page', label: 'Opens their life story' },
+          { value: 'card', label: 'Opens its card' },
+          { value: 'page', label: 'Opens its page' },
         ]}
-        hint={`${MODIFIER}+click opens the other.`}
+        hint={`For characters and places. ${MODIFIER}+click opens the other.`}
       />
       <Choice
         name="Previews on hover"
