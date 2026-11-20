@@ -662,8 +662,9 @@ stopping; a test compares the two. A 500-adventurer world a year in is about
 3.5 MB of JSON, 0.7 MB gzipped. Saves live in two IndexedDB stores (a list and
 the data), so listing them is cheap. While a world runs it is autosaved once a
 minute and whenever the tab is hidden, one autosave per seed; opening a link to
-a world you've watched carries on from its autosave, and opening the app with
-no world named (Phase 11) carries on the last one watched.
+a world you've watched carries on from its autosave. Opening the app with no
+world named shows the main menu (0.2.0): a new world, the saved ones, and
+Continue for the one last saved.
 
 _Across versions (0.1.2):_ every save since 0.1.0, the first release, keeps
 loading. `SAVE_VERSION` is bumped only when the shape of saves changes, and

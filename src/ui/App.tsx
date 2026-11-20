@@ -28,6 +28,7 @@ import { HallsPage } from './pages/HallsPage';
 import { LogPage } from './pages/LogPage';
 import { PlacePage, PlacesPage } from './pages/PlacesPage';
 import { ProfilePage } from './pages/ProfilePage';
+import { MainMenu } from './pages/MainMenu';
 import { RegionPage } from './pages/RegionPage';
 import { StatsPage } from './pages/StatsPage';
 import { TradePage } from './pages/TradePage';
@@ -35,18 +36,11 @@ import { TradePage } from './pages/TradePage';
 // The map brings in PixiJS, so it loads only when first opened.
 const MapPage = lazy(() => import('./pages/MapPage'));
 import { useRoute, type Route } from './route';
-import {
-  DEFAULT_CHARACTER_COUNT,
-  randomSeed,
-  specFromUrl,
-  specOfSave,
-  writeSpecToUrl,
-  type WorldSpec,
-} from './seed';
+import { specFromUrl, specOfSave, writeSpecToUrl, type WorldSpec } from './seed';
 import { currentDisplay } from './display';
 import { packsByIds } from './packs';
 import { markNotesSeen, notesUnseen } from './releases';
-import { autosaveId, listSaves, readSave, writeSave } from './storage';
+import { autosaveId, readSave, writeSave } from './storage';
 import { useHostSnapshot } from './useHost';
 
 /** Real time between autosaves while the world runs. */
@@ -174,26 +168,14 @@ export function App() {
   const [notesOpen, setNotesOpen] = useState(() => notesUnseen(APP_VERSION));
   const [displayOpen, setDisplayOpen] = useState(false);
 
-  // On arrival: the world named in the link, carried on from its autosave if
-  // you've watched it here before. With no world named (a bare address, or
-  // opening the desktop app), the world last watched here; else a new one.
+  // The bare address opens the main menu; a link to a world opens that world,
+  // carried on from its autosave if it has been watched here before.
+  const [menu, setMenu] = useState(() => specFromUrl() === null);
   useEffect(() => {
     let current = true;
     const linked = specFromUrl();
+    if (!linked) return;
     const arrive = async (): Promise<Session> => {
-      if (!linked) {
-        // The latest autosave that this version can load; older ones are passed over.
-        for (const save of (await listSaves().catch(() => [])).filter((s) => s.auto)) {
-          const game = await readSave(save.id).catch(() => null);
-          if (game) return savedSession(game, 'Carried on with the world you last watched.');
-        }
-        return freshSession({
-          seed: randomSeed(),
-          characterCount: DEFAULT_CHARACTER_COUNT,
-          settings: {},
-          packs: [],
-        });
-      }
       const game = await readSave(autosaveId(linked.seed)).catch(() => null);
       const fits =
         game &&
@@ -203,16 +185,11 @@ export function App() {
         ? savedSession(game, 'Carried on from where you left this world.')
         : freshSession(linked, linked);
     };
-    // Whatever goes wrong carrying on, a new world beats a page stuck opening.
+    // Whatever goes wrong carrying on, the world begun afresh beats a page stuck opening.
     void arrive()
       .catch((e: unknown) => {
         console.error('Could not carry on a saved world', e);
-        return freshSession({
-          seed: randomSeed(),
-          characterCount: DEFAULT_CHARACTER_COUNT,
-          settings: {},
-          packs: [],
-        });
+        return freshSession(linked, linked);
       })
       .then((session) => {
         if (current) setSession(session);
@@ -221,6 +198,18 @@ export function App() {
       current = false;
     };
   }, []);
+
+  const enter = (next: Session) => {
+    setMenu(false);
+    setSession(next);
+  };
+  const toMenu = () => {
+    setDialogOpen(false);
+    setSession(null);
+    setMenu(true);
+    // The bare address is the menu's.
+    window.history.replaceState(null, '', window.location.pathname);
+  };
 
   useEffect(() => {
     if (session) writeSpecToUrl(session.spec);
@@ -275,6 +264,7 @@ export function App() {
 
       {session ? (
         <WorldView
+          onMenu={toMenu}
           key={session.key}
           session={session}
           dialogOpen={dialogOpen}
@@ -285,6 +275,11 @@ export function App() {
             setSession(next);
           }}
           onStartOver={() => setSession(freshSession(session.spec))}
+        />
+      ) : menu ? (
+        <MainMenu
+          onNew={(spec) => enter(freshSession(spec))}
+          onLoad={(game) => enter(savedSession(game, `Loaded world ${game.seed}.`))}
         />
       ) : (
         <p className="muted page-loading">Opening the world…</p>
@@ -299,12 +294,14 @@ function WorldView({
   onCloseDialog,
   onSession,
   onStartOver,
+  onMenu,
 }: {
   session: Session;
   dialogOpen: boolean;
   onCloseDialog(): void;
   onSession(session: Session): void;
   onStartOver(): void;
+  onMenu(): void;
 }) {
   const host = useWorldHost(session);
   return (
@@ -315,6 +312,7 @@ function WorldView({
       onCloseDialog={onCloseDialog}
       onSession={onSession}
       onStartOver={onStartOver}
+      onMenu={onMenu}
     />
   );
 }
@@ -326,6 +324,7 @@ function Observatory({
   onCloseDialog,
   onSession,
   onStartOver,
+  onMenu,
 }: {
   host: SimHost;
   session: Session;
@@ -333,6 +332,7 @@ function Observatory({
   onCloseDialog(): void;
   onSession(session: Session): void;
   onStartOver(): void;
+  onMenu(): void;
 }) {
   const snapshot = useHostSnapshot(host);
   const [route, go] = useRoute();
@@ -528,6 +528,12 @@ function Observatory({
           onNew={(spec) => onSession(freshSession(spec))}
           onLoad={(game) => onSession(savedSession(game, `Loaded world ${game.seed}.`))}
           onSave={() => save(false)}
+          onMenu={() => {
+            // Kept as it is now, so Continue on the menu carries on from here.
+            void save(true)
+              .catch(() => undefined)
+              .then(onMenu);
+          }}
           onClose={onCloseDialog}
         />
       )}

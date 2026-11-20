@@ -1477,19 +1477,22 @@ button.kin-legend .kin-name {
   align-items: center;
 }
 
-.worlds-dialog .row {
+.worlds-dialog .row,
+.main-menu .row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 6px 8px;
 }
 
-.worlds-dialog .row input[readonly] {
+.worlds-dialog .row input[readonly],
+.main-menu .row input[readonly] {
   flex: 1;
   min-width: 200px;
 }
 
-.worlds-dialog label {
+.worlds-dialog label,
+.main-menu label {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -2140,4 +2143,53 @@ button.link-button {
 /* The map's white town mark needs an edge to show on a light page. */
 :root[data-theme='light'] .symbol-town {
   box-shadow: 0 0 0 1px var(--muted);
+}
+
+/* The main menu, at the bare address. */
+.main-menu {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.menu-intro {
+  max-width: 68ch;
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.menu-continue {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+}
+
+.menu-continue button {
+  font-size: 1rem;
+  padding: 8px 18px;
+}
+
+.menu-panels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+  align-items: start;
+  gap: 16px;
+}
+
+.menu-panel {
+  padding: 14px 18px 18px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.menu-panel h2 {
+  margin: 0 0 12px;
+  font-weight: normal;
+  font-size: 1.3rem;
+  color: var(--accent);
 }
