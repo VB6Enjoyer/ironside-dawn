@@ -1,8 +1,11 @@
 import type { CharacterId, LocationId } from '../../sim';
 import type { Segment } from '../../text';
 
+/** Which keys were held on a click: Ctrl or Cmd swaps what a character's link opens. */
+export type LinkClick = Pick<MouseEvent, 'ctrlKey' | 'metaKey'>;
+
 export interface ProseLinks {
-  onCharacter?: (id: CharacterId) => void;
+  onCharacter?: (id: CharacterId, click?: LinkClick) => void;
   onLocation?: (id: LocationId) => void;
 }
 
@@ -35,7 +38,7 @@ export function Prose({
           key={i}
           type="button"
           className="ref ref-character"
-          onClick={() => onCharacter(ref.id)}
+          onClick={(e) => onCharacter(ref.id, e)}
         >
           {segment.text}
         </button>

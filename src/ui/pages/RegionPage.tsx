@@ -39,7 +39,11 @@ export function RegionPage({
     </button>
   );
   const who = (cid: Parameters<NonNullable<ProseLinks['onCharacter']>>[0], name: string) => (
-    <button type="button" className="ref ref-character" onClick={() => links.onCharacter?.(cid)}>
+    <button
+      type="button"
+      className="ref ref-character"
+      onClick={(e) => links.onCharacter?.(cid, e)}
+    >
       {name}
     </button>
   );

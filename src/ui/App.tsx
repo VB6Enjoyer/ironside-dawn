@@ -17,6 +17,7 @@ import { CharacterCard } from './components/CharacterCard';
 import { Controls } from './components/Controls';
 import { DigestPanel } from './components/DigestPanel';
 import { DisplaySettings } from './components/DisplaySettings';
+import type { LinkClick } from './components/Prose';
 import { SearchBox } from './components/SearchBox';
 import { StatusBar } from './components/StatusBar';
 import { WhatsNew } from './components/WhatsNew';
@@ -41,6 +42,7 @@ import {
   writeSpecToUrl,
   type WorldSpec,
 } from './seed';
+import { currentDisplay } from './display';
 import { packsByIds } from './packs';
 import { markNotesSeen, notesUnseen } from './releases';
 import { autosaveId, listSaves, readSave, writeSave } from './storage';
@@ -371,7 +373,20 @@ function Observatory({
   }, [host, save]);
 
   const links = {
-    onCharacter: setSelected,
+    // A click opens the card or the life story, as chosen under Display
+    // settings; with Ctrl (or Cmd) held, the other.
+    onCharacter: (id: CharacterId, click?: LinkClick) => {
+      const swapped = Boolean(click && (click.ctrlKey || click.metaKey));
+      const toPage = (currentDisplay().characterClick === 'page') !== swapped;
+      if (toPage) {
+        // Straight to the page, without the card beside it.
+        setSelected(null);
+        setDismissed(id);
+        go({ page: 'profile', id });
+      } else {
+        setSelected(id);
+      }
+    },
     onLocation: (id: LocationId) => go({ page: 'place', id }),
   };
   const toRegion = (id: string) => go({ page: 'region', id });
@@ -412,7 +427,7 @@ function Observatory({
             {tab.label}
           </a>
         ))}
-        <SearchBox host={host} onCharacter={setSelected} onLocation={links.onLocation} />
+        <SearchBox host={host} onCharacter={links.onCharacter} onLocation={links.onLocation} />
       </nav>
       <div className={`world-area${cardId ? ' with-card' : ''}`}>
         <main className="page-area">

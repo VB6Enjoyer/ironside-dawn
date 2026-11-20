@@ -47,7 +47,7 @@ import {
 } from '../../text';
 import { callingTitle, formatCount } from '../format';
 import { useQuery } from '../useHost';
-import { Prose, type ProseLinks } from './Prose';
+import { Prose, type LinkClick, type ProseLinks } from './Prose';
 
 const STAT_LABELS: Record<StatId, string> = {
   might: 'Might',
@@ -67,7 +67,7 @@ interface Props extends ProseLinks {
   refresh: unknown;
   names: NameResolver;
   following: boolean;
-  onCharacter(id: CharacterId): void;
+  onCharacter(id: CharacterId, click?: LinkClick): void;
   onFollow(follow: boolean): void;
   onProfile(): void;
   onClose(): void;
@@ -360,7 +360,7 @@ function Bonds({
 }: {
   character: Character;
   world: WorldSlice;
-  onSelect(id: CharacterId): void;
+  onSelect(id: CharacterId, click?: LinkClick): void;
 }) {
   const link = (id: CharacterId) => {
     const other = world.characters.get(id);
@@ -369,7 +369,7 @@ function Bonds({
       <button
         type="button"
         className={`ref ref-character${other.dead ? ' ref-dead' : ''}`}
-        onClick={() => onSelect(id)}
+        onClick={(e) => onSelect(id, e)}
       >
         {other.name}
       </button>

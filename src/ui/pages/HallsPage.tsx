@@ -17,7 +17,11 @@ export function HallsPage({
   if (!halls) return <p className="muted page-loading">Opening the halls…</p>;
   const who = (id: CharacterId, name: string) =>
     links.onCharacter ? (
-      <button type="button" className="ref ref-character" onClick={() => links.onCharacter!(id)}>
+      <button
+        type="button"
+        className="ref ref-character"
+        onClick={(e) => links.onCharacter!(id, e)}
+      >
         {name}
       </button>
     ) : (

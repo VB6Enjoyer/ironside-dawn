@@ -11,7 +11,7 @@ import {
 } from '../../text';
 import { LineChart } from '../components/charts';
 import { callingTitle, lifeYears } from '../format';
-import { Prose, type ProseLinks } from '../components/Prose';
+import { Prose, type LinkClick, type ProseLinks } from '../components/Prose';
 import { useQuery } from '../useHost';
 
 /** A character's full profile: their life story, how they grew, and a timeline. */
@@ -120,7 +120,7 @@ function FamilyTree({
   self: CharacterId;
   family: Family;
   world: WorldSlice;
-  onCharacter?: (id: CharacterId) => void;
+  onCharacter?: (id: CharacterId, click?: LinkClick) => void;
 }) {
   const rows: [string, readonly CharacterId[]][] = [
     ['Grandparents', family.grandparents],
@@ -149,7 +149,7 @@ function FamilyTree({
           type="button"
           className={className}
           disabled={id === self || !onCharacter}
-          onClick={() => onCharacter?.(id)}
+          onClick={(e) => onCharacter?.(id, e)}
           title={person.legend ? 'Remembered in song' : undefined}
         >
           <span className="kin-name">

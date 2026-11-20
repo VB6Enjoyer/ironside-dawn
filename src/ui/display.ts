@@ -11,14 +11,25 @@ export interface Display {
   readonly textSize: 'small' | 'normal' | 'large';
   /** Colour for what things are about: deaths, wealth, dungeons, love, crime, magic. */
   readonly colours: 'on' | 'off';
+  /**
+   * What a plain click on a character's name opens: their card, or their life
+   * story. Ctrl+click (Cmd+click on a Mac) opens the other.
+   */
+  readonly characterClick: 'card' | 'page';
 }
 
-export const DISPLAY_DEFAULTS: Display = { layout: 'wide', textSize: 'normal', colours: 'on' };
+export const DISPLAY_DEFAULTS: Display = {
+  layout: 'wide',
+  textSize: 'normal',
+  colours: 'on',
+  characterClick: 'card',
+};
 
 const CHOICES: { readonly [K in keyof Display]: readonly Display[K][] } = {
   layout: ['wide', 'compact'],
   textSize: ['small', 'normal', 'large'],
   colours: ['on', 'off'],
+  characterClick: ['card', 'page'],
 };
 
 const KEY = 'ironside-dawn/display';
@@ -62,6 +73,11 @@ export function setDisplay(change: Partial<Display>): void {
   }
   apply(current);
   for (const listener of listeners) listener();
+}
+
+/** The choices as they stand, for code outside React's rendering (event handlers). */
+export function currentDisplay(): Display {
+  return current;
 }
 
 export function useDisplay(): Display {

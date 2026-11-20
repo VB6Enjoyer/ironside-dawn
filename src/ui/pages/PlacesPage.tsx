@@ -13,7 +13,7 @@ import {
 } from '../../text';
 import { MarketPanel } from '../components/MarketPanel';
 import { formatCount } from '../format';
-import { Prose, type ProseLinks } from '../components/Prose';
+import { Prose, type LinkClick, type ProseLinks } from '../components/Prose';
 import { useQuery } from '../useHost';
 
 const KIND_NAMES = {
@@ -183,7 +183,7 @@ export function PlacePage({
                 <button
                   type="button"
                   className="ref ref-character"
-                  onClick={() => links.onCharacter?.(view.lord!.id)}
+                  onClick={(e) => links.onCharacter?.(view.lord!.id, e)}
                 >
                   {view.lord.name}
                 </button>
@@ -222,7 +222,7 @@ export function PlacePage({
             <button
               type="button"
               className="ref ref-character"
-              onClick={() => links.onCharacter?.(view.master!.id)}
+              onClick={(e) => links.onCharacter?.(view.master!.id, e)}
             >
               {view.master.name}
             </button>
@@ -338,7 +338,7 @@ function People({
   onCharacter,
 }: {
   people: readonly CharacterSummary[];
-  onCharacter?: (id: CharacterId) => void;
+  onCharacter?: (id: CharacterId, click?: LinkClick) => void;
 }) {
   return (
     <ul className="people">
@@ -349,7 +349,7 @@ function People({
             <button
               type="button"
               className={`ref ref-character${p.dead ? ' ref-dead' : ''}`}
-              onClick={() => onCharacter?.(p.id)}
+              onClick={(e) => onCharacter?.(p.id, e)}
             >
               {p.name}
             </button>{' '}

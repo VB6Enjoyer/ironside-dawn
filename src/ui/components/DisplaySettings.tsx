@@ -38,6 +38,9 @@ function Choice<K extends keyof Display>({
   );
 }
 
+/** The key that swaps what a click on a name opens: Cmd on a Mac, Ctrl elsewhere. */
+export const MODIFIER = /Mac|iPhone|iPad/.test(navigator.platform) ? 'Cmd' : 'Ctrl';
+
 /** How the app is shown, kept in this browser. Changes apply at once. */
 export function DisplaySettings({ onClose }: { onClose(): void }) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -75,6 +78,15 @@ export function DisplaySettings({ onClose }: { onClose(): void }) {
           { value: 'normal', label: 'Normal' },
           { value: 'large', label: 'Large' },
         ]}
+      />
+      <Choice
+        name="Clicking a name"
+        setting="characterClick"
+        options={[
+          { value: 'card', label: 'Opens their card' },
+          { value: 'page', label: 'Opens their life story' },
+        ]}
+        hint={`${MODIFIER}+click opens the other.`}
       />
       <Choice
         name="Colour cues"

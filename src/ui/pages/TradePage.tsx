@@ -144,7 +144,7 @@ function Place({
 
 function Who({ m, onCharacter }: { m: CaravanEntry } & ProseLinks) {
   return onCharacter ? (
-    <button type="button" className="ref ref-character" onClick={() => onCharacter(m.id)}>
+    <button type="button" className="ref ref-character" onClick={(e) => onCharacter(m.id, e)}>
       {m.name}
     </button>
   ) : (
