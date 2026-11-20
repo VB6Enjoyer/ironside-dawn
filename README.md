@@ -28,6 +28,11 @@ town's market, or watch a dungeon's population change over time.
 
 ## Status
 
+The current version is **0.2.0, the Interface Update**: a main menu, a full-width
+layout (or compact), a light mode, colour for what matters, hover previews and
+"Show on map". What changed in each version is in [`CHANGELOG.md`](CHANGELOG.md),
+and players see it under "What's new" in the app.
+
 Phase 11 (Scale & Ship), the last of the plan, is built; the final name is
 still to be chosen. A new world can be made small, medium or large, gentle or
 deadly, with magic rare or common, with only some peoples, and with a cap on

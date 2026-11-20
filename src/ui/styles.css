@@ -26,6 +26,7 @@
   --mark-love: #ef93c2;
   --mark-crime: #f09a52;
   --mark-magic: #82b4ec;
+  --mark-living: #86c27a;
 
   /* Chart series, in fixed order: the dark steps of the categorical palette,
      validated against --panel (worst adjacent CVD ΔE 8.4, all ≥ 3:1). */
@@ -35,6 +36,15 @@
   --series-4: #c98500;
   --grid: #2b2f35;
 
+  /* Text on the accent colour, and a few things with colours of their own. */
+  --on-accent: #1b1712;
+  --poster-bg: #241f18;
+  --poster-border: #4a3d29;
+  --dearer: #e0a080;
+  --cheaper: #8fc0a0;
+
+  color-scheme: dark;
+
   --serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
   --mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 
@@ -42,6 +52,51 @@
   line-height: 1.5;
   color: var(--text);
   background: var(--bg);
+}
+
+/* Light mode (Display settings): the same roles, in dark ink on parchment.
+   Every text colour is at least 4.2:1 against the panels; chart lines 3:1. */
+:root[data-theme='light'] {
+  --bg: #f3efe6;
+  --panel: #fbf9f4;
+  --panel-raised: #ebe5d9;
+  --border: #d6cfbf;
+  --text: #24211c;
+  --muted: #625c51;
+  --faint: #7d776b;
+  --accent: #7e5a17;
+  --character: #76490c;
+  --location: #22626b;
+  --focus: #9a6f16;
+  --hp: #a83c35;
+  --stamina: #3c7037;
+  --dead: #8a4646;
+  --xp: #5f50a0;
+  --fine: #3a7529;
+  --rare: #2a62a8;
+  --legendary: #9a5a0a;
+
+  --mark-death: #b03c2a;
+  --mark-wealth: #856200;
+  --mark-delve: #6646bd;
+  --mark-love: #a83d76;
+  --mark-crime: #a85410;
+  --mark-magic: #2a66ad;
+  --mark-living: #3a7529;
+
+  --series-1: #2f6fc4;
+  --series-2: #c4501f;
+  --series-3: #138a62;
+  --series-4: #a86d00;
+  --grid: #e2dccf;
+
+  --on-accent: #fffaf0;
+  --poster-bg: #f6eedc;
+  --poster-border: #d9c7a0;
+  --dearer: #a6512a;
+  --cheaper: #2f7550;
+
+  color-scheme: light;
 }
 
 /* Display settings: text size scales everything sized in rem. */
@@ -312,7 +367,7 @@ button.ref {
   font-size: inherit;
   color: var(--character);
   cursor: pointer;
-  text-decoration: underline dotted rgba(227, 197, 143, 0.35);
+  text-decoration: underline dotted color-mix(in srgb, currentColor 40%, transparent);
   text-underline-offset: 3px;
 }
 
@@ -322,7 +377,7 @@ button.ref:hover {
 
 button.ref-location {
   color: var(--location);
-  text-decoration-color: rgba(156, 196, 201, 0.35);
+  text-decoration-color: color-mix(in srgb, currentColor 40%, transparent);
 }
 
 button.ref-location:hover {
@@ -331,7 +386,7 @@ button.ref-location:hover {
 
 button.ref-dead {
   color: var(--dead);
-  text-decoration-color: rgba(154, 107, 107, 0.4);
+  text-decoration-color: color-mix(in srgb, currentColor 40%, transparent);
 }
 
 .outlaw {
@@ -712,7 +767,7 @@ button.ref-dead {
 button.primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #1b1712;
+  color: var(--on-accent);
 }
 
 input[type='search'],
@@ -1180,8 +1235,8 @@ dialog input:not([type='checkbox']):not([type='file']) {
 
 .wanted-poster {
   padding: 10px 12px;
-  background: #241f18;
-  border: 1px solid #4a3d29;
+  background: var(--poster-bg);
+  border: 1px solid var(--poster-border);
   border-radius: 4px;
   font-size: 0.9rem;
 }
@@ -1422,19 +1477,22 @@ button.kin-legend .kin-name {
   align-items: center;
 }
 
-.worlds-dialog .row {
+.worlds-dialog .row,
+.main-menu .row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 6px 8px;
 }
 
-.worlds-dialog .row input[readonly] {
+.worlds-dialog .row input[readonly],
+.main-menu .row input[readonly] {
   flex: 1;
   min-width: 200px;
 }
 
-.worlds-dialog label {
+.worlds-dialog label,
+.main-menu label {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -1517,11 +1575,11 @@ button.link-button {
 
 /* Changes are named in words too ("+12%"), never by color alone. */
 .dearer {
-  color: #e0a080;
+  color: var(--dearer);
 }
 
 .cheaper {
-  color: #8fc0a0;
+  color: var(--cheaper);
 }
 
 .troubles,
@@ -1774,7 +1832,7 @@ button.link-button {
 
 .segmented button.active {
   position: relative;
-  color: var(--bg);
+  color: var(--on-accent);
   background: var(--accent);
   border-color: var(--accent);
 }
@@ -1891,6 +1949,10 @@ button.link-button {
 
 .mark-magic {
   color: var(--mark-magic);
+}
+
+.mark-living {
+  color: var(--mark-living);
 }
 
 :root[data-colours='off'] .mark {
@@ -2076,4 +2138,58 @@ button.link-button {
 
 .page-action {
   font-size: 0.85rem;
+}
+
+/* The map's white town mark needs an edge to show on a light page. */
+:root[data-theme='light'] .symbol-town {
+  box-shadow: 0 0 0 1px var(--muted);
+}
+
+/* The main menu, at the bare address. */
+.main-menu {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.menu-intro {
+  max-width: 68ch;
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.menu-continue {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+}
+
+.menu-continue button {
+  font-size: 1rem;
+  padding: 8px 18px;
+}
+
+.menu-panels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+  align-items: start;
+  gap: 16px;
+}
+
+.menu-panel {
+  padding: 14px 18px 18px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.menu-panel h2 {
+  margin: 0 0 12px;
+  font-weight: normal;
+  font-size: 1.3rem;
+  color: var(--accent);
 }
