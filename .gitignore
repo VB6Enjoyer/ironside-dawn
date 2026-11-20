@@ -18,3 +18,9 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Secrets and local Claude settings
+.env
+.env.*
+!.env.example
+.claude/settings.local.json
