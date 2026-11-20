@@ -13,6 +13,11 @@ The public notes players see under "What's new" are kept in `src/ui/releases.ts`
 - A **Display settings** panel (⚙ in the header) with a choice of text size, kept in this browser (`src/ui/display.ts`, `src/ui/components/DisplaySettings.tsx`). The one animation in the app stops for those whose system asks for reduced motion.
 - A full-width layout, now the default: the app uses the whole window, and wide screens get side columns, with headlines beside the live log and a life story's timeline beside the story (`src/ui/styles.css`, `src/ui/pages/LogPage.tsx`, `src/ui/pages/ProfilePage.tsx`). The narrow single column stays as the **Compact** layout under Display settings.
 - Colour cues for what things are about, the same everywhere: red for deaths and kills, gold for wealth, purple for dungeons, pink for love, orange for crime, blue for magic. Life stories colour their figures (`src/text/biography.ts`), as do the character card and the Halls; **Colour cues** under Display settings turns them off.
+- The live log tints the events that stand out, each with its colour and a symbol: deaths (✝), marriages and births (♥), crime and bounties (⚖), legendary finds and inheritances (◆), the dread rising (▼) and spells learned (✶) (`src/text/categories.ts`, `src/ui/components/EventLog.tsx`). Chips above the log name them and show only one kind when pressed.
+
+### Changed
+
+- The log's timestamps take the same width whatever the day, so its text lines up.
 
 ### Fixed
 

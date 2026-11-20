@@ -6,7 +6,7 @@ export {
   seasonName,
 } from './calendar';
 export { describeEvent, toPlainText } from './describe';
-export type { Segment } from './describe';
+export type { Mark, Segment } from './describe';
 export { peopleName, roleTitle, SPECIES_NAMES, worldNames } from './names';
 export type { NameResolver } from './names';
 export {
@@ -33,6 +33,6 @@ export {
   traitWord,
 } from './mind';
 export { biography, causeOfDeath, deathLine, whenIn } from './biography';
-export { EVENT_CATEGORIES, eventCategory } from './categories';
+export { EVENT_CATEGORIES, EVENT_TONES, eventCategory, eventTone } from './categories';
 export type { EventCategory } from './categories';
 export { goodsAmount, goodsList, SHOCK_NAMES } from './goods';

@@ -1896,3 +1896,91 @@ button.link-button {
 :root[data-colours='off'] .mark {
   color: inherit;
 }
+
+/* Toned rows in the log: a faint wash, the edge and a symbol in the tone's
+   colour. The text goes back to its plain colour, so notable rows don't
+   carry two colours at once. */
+:root:not([data-colours='off']) .log-row.tone {
+  border-left-color: var(--tone);
+  background: var(--tone-wash);
+}
+
+:root:not([data-colours='off']) .log-row.tone .log-text {
+  color: var(--text);
+}
+
+.tone-symbol {
+  flex: none;
+  width: 1em;
+  margin-right: -6px;
+  text-align: center;
+  color: var(--tone);
+}
+
+.tone-death {
+  --tone: var(--mark-death);
+  --tone-wash: rgba(232, 128, 111, 0.1);
+}
+
+.tone-love {
+  --tone: var(--mark-love);
+  --tone-wash: rgba(239, 147, 194, 0.1);
+}
+
+.tone-crime {
+  --tone: var(--mark-crime);
+  --tone-wash: rgba(240, 154, 82, 0.1);
+}
+
+.tone-wealth {
+  --tone: var(--mark-wealth);
+  --tone-wash: rgba(240, 193, 75, 0.08);
+}
+
+.tone-delve {
+  --tone: var(--mark-delve);
+  --tone-wash: rgba(179, 154, 240, 0.1);
+}
+
+.tone-magic {
+  --tone: var(--mark-magic);
+  --tone-wash: rgba(130, 180, 236, 0.08);
+}
+
+:root[data-colours='off'] .tone-symbol {
+  color: var(--muted);
+}
+
+/* The tones as chips above the log: the legend, and a filter. */
+.tone-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+}
+
+.tone-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px;
+  font-size: 0.85rem;
+  border-radius: 999px;
+}
+
+.tone-chip .tone-symbol {
+  margin: 0;
+  width: auto;
+}
+
+.tone-chip[aria-pressed='true'] {
+  color: var(--text);
+  border-color: var(--tone, var(--muted));
+  background: var(--tone-wash, var(--panel-raised));
+}
+
+/* Timestamps take the same width whatever the day, so the log's text lines up. */
+@media (min-width: 641px) {
+  .log-time {
+    min-width: 23ch;
+  }
+}

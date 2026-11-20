@@ -1,4 +1,5 @@
-import type { EventType } from '../sim';
+import type { EventType, SimEvent } from '../sim';
+import type { Mark } from './describe';
 
 /** Broad kinds of event, for filtering the log. */
 export type EventCategory =
@@ -41,3 +42,53 @@ export function eventCategory(type: EventType): EventCategory {
       return 'world';
   }
 }
+
+/**
+ * The few kinds of event that stand out in the log, coloured as the same
+ * marks are everywhere else; most events have none. The log tints their
+ * rows, and filters by them.
+ */
+export function eventTone(event: SimEvent): Mark | null {
+  switch (event.type) {
+    case 'character.death':
+      // Leaving for distant lands is the end of a story here, not a death.
+      return event.data.cause.kind === 'departed' ? null : 'death';
+    case 'raid.sack':
+    case 'dread.fall':
+      return 'death';
+    case 'family.marry':
+    case 'family.birth':
+      return 'love';
+    case 'crime.robbery':
+    case 'outlaw.turn':
+    case 'outlaw.ambush':
+    case 'outlaw.reform':
+    case 'bounty.post':
+    case 'bounty.claim':
+      return 'crime';
+    case 'item.legend':
+    case 'family.inherit':
+    case 'legend.hero':
+      return 'wealth';
+    case 'dread.rise':
+      return 'delve';
+    case 'magic.learn':
+      return 'magic';
+    default:
+      return null;
+  }
+}
+
+/** The tones as the log offers them, each with the symbol its rows carry. */
+export const EVENT_TONES: readonly {
+  readonly id: Mark;
+  readonly label: string;
+  readonly symbol: string;
+}[] = [
+  { id: 'death', label: 'Deaths', symbol: '✝' },
+  { id: 'love', label: 'Love', symbol: '♥' },
+  { id: 'crime', label: 'Crime', symbol: '⚖' },
+  { id: 'wealth', label: 'Fortune', symbol: '◆' },
+  { id: 'delve', label: 'The deeps', symbol: '▼' },
+  { id: 'magic', label: 'Magic', symbol: '✶' },
+];
