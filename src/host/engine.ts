@@ -25,6 +25,7 @@ import type {
   Responses,
 } from './protocol';
 import { speedTier, type SpeedId } from './speed';
+import { APP_VERSION, FIRST_RELEASE } from './version';
 import {
   characterView,
   chronicleView,
@@ -188,6 +189,8 @@ export function createEngine(options: EngineOptions): Engine {
       };
     }
 
+    // The version the world was begun in, kept as it's carried on in later ones.
+    const madeWith = init.restore ? (init.restore.madeWith ?? FIRST_RELEASE) : APP_VERSION;
     const sim: Simulation = init.restore
       ? createSimulation({
           seed: init.seed,
@@ -439,7 +442,7 @@ export function createEngine(options: EngineOptions): Engine {
         case 'events':
           return eventsView(sim, request.query);
         case 'save':
-          return savedGame(sim);
+          return savedGame(sim, madeWith);
         case 'map':
           return mapView(sim);
         case 'region':

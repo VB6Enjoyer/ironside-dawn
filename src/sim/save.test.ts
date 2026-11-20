@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { StreamHash } from './core/hash';
 import { DAY } from './core/time';
 import { Importance, type CharacterId, type SimEvent } from './model';
-import { checkSave, decode, encode } from './save';
+import { upgradeSave, decode, encode } from './save';
 import { createSimulation, DETAIL_EVENTS, type Watch } from './simulation';
 
 const fingerprint = (events: readonly SimEvent[]) => {
@@ -47,8 +47,10 @@ describe('saves', () => {
   });
 
   it('refuses what is not a save', () => {
-    expect(() => checkSave({ hello: 1 })).toThrow(/Not an Ironside Dawn/);
-    expect(() => checkSave({ format: 'ironside-dawn/world', version: 99 })).toThrow(/version 99/);
+    expect(() => upgradeSave({ hello: 1 })).toThrow(/Not an Ironside Dawn/);
+    expect(() => upgradeSave({ format: 'ironside-dawn/world', version: 99 })).toThrow(
+      /newer version/,
+    );
   });
 });
 

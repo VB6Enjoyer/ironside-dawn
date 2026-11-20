@@ -24,7 +24,7 @@ import { runRound } from './systems/combat';
 import { daily, scheduleDaily } from './systems/ecology';
 import { sampleHistory } from './systems/history';
 import {
-  checkSave,
+  upgradeSave,
   decodeWorld,
   encodeWorld,
   SAVE_FORMAT,
@@ -138,7 +138,7 @@ const STREAMS = [
 ] as const satisfies readonly (keyof SimContext['rng'])[];
 
 export function createSimulation(options: SimulationOptions): Simulation {
-  const restore = options.restore ? checkSave(options.restore) : null;
+  const restore = options.restore ? upgradeSave(options.restore) : null;
   // Packs go in before anything is made or loaded: the world may name what they add.
   const packs = (restore?.packs ?? options.packs ?? []).map((p) => installPack(p));
   const settings: WorldSettings = {

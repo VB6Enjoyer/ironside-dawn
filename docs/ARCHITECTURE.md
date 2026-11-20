@@ -650,8 +650,9 @@ Built in Phase 11 (`src/sim/model/settings.ts`, `src/content/packs.ts`).
 - A save is `{ version, seed, config, world }`, serialized and stored in
   IndexedDB. It can also be exported or imported as a file (compressed JSON at
   first; switch to a binary format only if saves get large).
-- The save version is checked on load. Simple migrations are kept per version;
-  until 1.0, an incompatible save is refused with a clear message.
+- The save version is checked on load, and a save from an earlier version is
+  brought up to this one by a chain of migrations, one step per version (see
+  below).
 
 _As built (Phase 6):_ a save holds the world with its maps and sets encoded as
 tagged plain data, the state of every random stream, the population target,
@@ -662,7 +663,20 @@ stopping; a test compares the two. A 500-adventurer world a year in is about
 the data), so listing them is cheap. While a world runs it is autosaved once a
 minute and whenever the tab is hidden, one autosave per seed; opening a link to
 a world you've watched carries on from its autosave, and opening the app with
-no world named (Phase 11) carries on the last one watched. Files are gzipped JSON
+no world named (Phase 11) carries on the last one watched.
+
+_Across versions (0.1.2):_ every save since 0.1.0, the first release, keeps
+loading. `SAVE_VERSION` is bumped only when the shape of saves changes, and
+each bump adds a step to `MIGRATIONS` (`src/sim/save.ts`) that brings a save of
+the version before up to the new one, filling in anything new with a default.
+A loaded world keeps all it has, and carries on under the new version's rules.
+Saves from test versions before 0.1.0, and from versions newer than the one
+running, are refused with the reason. A saved game also records the version
+that wrote it and the version its world was begun in, kept as it is carried
+on, since a link replays a world's history only in that version. Save files
+exported by each release that changed the shape of saves are kept in
+`src/sim/fixtures/`, and every one is loaded, run on and saved again in the
+tests. Files are gzipped JSON
 where the browser can compress.
 
 ---

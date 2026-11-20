@@ -73,17 +73,50 @@ export function decodeWorld(data: unknown): World {
   return decode(data) as World;
 }
 
-/** Checks that something read from a file or the database is a save this version can load. */
-export function checkSave(data: unknown): WorldSave {
-  const save = data as Partial<WorldSave> | null;
-  if (!save || typeof save !== 'object' || save.format !== SAVE_FORMAT) {
+/** The oldest save version this one still loads: that of 0.1.0, the first release. */
+export const OLDEST_SAVE_VERSION = 6;
+
+type SaveData = Record<string, unknown> & { version: number };
+
+/**
+ * Steps that bring a save up one version, keyed by the version each starts
+ * from. A release that changes the shape of saves bumps `SAVE_VERSION` and adds
+ * the step from the version before, filling in anything new with a sensible
+ * default, so that every save since 0.1.0 keeps loading. A saved world carries
+ * on under the new version's rules from where it was. Saves kept from each
+ * release (`src/sim/fixtures`) test this.
+ */
+const MIGRATIONS: Readonly<Record<number, (save: SaveData) => Record<string, unknown>>> = {};
+
+/**
+ * Checks that something read from a file or the database is a world save, and
+ * brings one made by an earlier version up to this one. Throws, saying why, for
+ * anything it can't load.
+ */
+export function upgradeSave(data: unknown): WorldSave {
+  const read = data as SaveData | null;
+  if (!read || typeof read !== 'object' || read.format !== SAVE_FORMAT) {
     throw new Error('Not an Ironside Dawn world save');
   }
-  if (save.version !== SAVE_VERSION) {
-    throw new Error(`Saves of version ${save.version} can't be loaded (this is ${SAVE_VERSION})`);
+  let save: SaveData = read;
+  if (typeof save.version !== 'number' || save.version > SAVE_VERSION) {
+    throw new Error(
+      `This save was made by a newer version of Ironside Dawn (save version ${String(save.version)}); update to load it`,
+    );
+  }
+  if (save.version < OLDEST_SAVE_VERSION) {
+    throw new Error(
+      `This save is from a test version before 0.1.0 (save version ${save.version}) and can't be loaded`,
+    );
+  }
+  while (save.version < SAVE_VERSION) {
+    const step: ((save: SaveData) => Record<string, unknown>) | undefined =
+      MIGRATIONS[save.version];
+    if (!step) throw new Error(`No way to bring a save of version ${save.version} up to date`);
+    save = { ...step(save), version: save.version + 1 };
   }
   if (!save.world || !save.rng || typeof save.characterCount !== 'number') {
     throw new Error('The save is incomplete');
   }
-  return save as WorldSave;
+  return save as unknown as WorldSave;
 }
