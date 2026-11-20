@@ -122,6 +122,7 @@ export function PlacePage({
   names,
   time,
   onRegion,
+  onMap,
   ...links
 }: {
   host: SimHost;
@@ -129,6 +130,8 @@ export function PlacePage({
   names: NameResolver;
   time: number;
   onRegion?: (id: string) => void;
+  /** Shows the place on the world map. */
+  onMap?: () => void;
 } & ProseLinks) {
   // Watching a place reports its fights blow by blow.
   useEffect(() => {
@@ -145,7 +148,14 @@ export function PlacePage({
   return (
     <div className="page place-page">
       <p className="place-kind">{KIND_NAMES[location.kind]}</p>
-      <h2>{placeName(host.places.get(id))}</h2>
+      <div className="page-title">
+        <h2>{placeName(host.places.get(id))}</h2>
+        {onMap && (
+          <button type="button" className="page-action" onClick={onMap}>
+            Show on map
+          </button>
+        )}
+      </div>
       {view.region && (
         <p className="muted">
           In{' '}

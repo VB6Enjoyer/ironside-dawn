@@ -70,6 +70,8 @@ interface Props extends ProseLinks {
   onCharacter(id: CharacterId, click?: LinkClick): void;
   onFollow(follow: boolean): void;
   onProfile(): void;
+  /** Shows them on the world map. */
+  onMap?: () => void;
   onClose(): void;
 }
 
@@ -83,6 +85,7 @@ export function CharacterCard({
   onLocation,
   onFollow,
   onProfile,
+  onMap,
   onClose,
 }: Props) {
   useEffect(() => {
@@ -130,6 +133,11 @@ export function CharacterCard({
         <button type="button" onClick={onProfile}>
           Life story
         </button>
+        {onMap && (
+          <button type="button" onClick={onMap} title="Where they are on the world map">
+            Show on map
+          </button>
+        )}
         {!dead && (
           <button
             type="button"

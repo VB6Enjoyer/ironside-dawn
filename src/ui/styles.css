@@ -2041,3 +2041,39 @@ button.link-button {
   font-size: 0.75rem;
   color: var(--faint);
 }
+
+/* The map, asked to show someone or somewhere. */
+.map-focus {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 12px;
+  margin: 0 0 8px;
+  padding: 6px 12px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--mark-wealth);
+  border-radius: 6px;
+}
+
+/* A page's title with an action beside it ("Show on map"). */
+.page-title,
+.profile-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 14px;
+}
+
+.page-title h2 {
+  margin-right: auto;
+}
+
+.profile-header .card-subtitle {
+  flex-basis: 100%;
+}
+
+.page-action {
+  font-size: 0.85rem;
+}

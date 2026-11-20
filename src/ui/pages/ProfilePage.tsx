@@ -20,8 +20,16 @@ export function ProfilePage({
   id,
   names,
   time,
+  onMap,
   ...links
-}: { host: SimHost; id: CharacterId; names: NameResolver; time: number } & ProseLinks) {
+}: {
+  host: SimHost;
+  id: CharacterId;
+  names: NameResolver;
+  time: number;
+  /** Shows them on the world map. */
+  onMap?: () => void;
+} & ProseLinks) {
   const view = useQuery(host, { kind: 'character', id }, Math.floor(time / (DAY / 24)));
   if (view === undefined) return <p className="muted page-loading">Reading their story…</p>;
   if (view === null) return <p className="muted page-loading">Nobody by that name.</p>;
@@ -46,6 +54,11 @@ export function ProfilePage({
         <h2>
           {c.givenName} {c.familyName}
         </h2>
+        {onMap && (
+          <button type="button" className="page-action" onClick={onMap}>
+            Show on map
+          </button>
+        )}
         <p className="card-subtitle">
           {callingTitle(c)} · {peopleName(c.species, c.culture).singular} of{' '}
           {home?.name ?? 'nowhere'}

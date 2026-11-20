@@ -16,6 +16,7 @@ The public notes players see under "What's new" are kept in `src/ui/releases.ts`
 - The live log tints the events that stand out, each with its colour and a symbol: deaths (✝), marriages and births (♥), crime and bounties (⚖), legendary finds and inheritances (◆), the dread rising (▼) and spells learned (✶) (`src/text/categories.ts`, `src/ui/components/EventLog.tsx`). Chips above the log name them and show only one kind when pressed.
 - Ctrl+click (Cmd+click on a Mac) on a character's name opens their life story straight away, without the card. **Clicking a name** under Display settings swaps it, so a plain click opens the life story and Ctrl/Cmd+click the card (`src/ui/App.tsx`, `src/ui/display.ts`).
 - Resting the pointer on a character's or place's name (or tabbing to it) shows a glance: who they are, what they're doing and their health, or what a place is and who is there (`src/ui/components/HoverPreview.tsx`). **Previews on hover** under Display settings turns them off.
+- **Show on map** on a character's card and life story, and on a place's page: the map zooms to them and rings them, keeping a traveler in view as they go, and says where they are (`src/ui/map/stage.ts`, `src/ui/pages/MapPage.tsx`). Someone in a party is shown with their leader, the dead where they fell. The map has its own address for it (`#/map/character/…`, `#/map/place/…`), so Back works and it can be linked.
 
 ### Changed
 

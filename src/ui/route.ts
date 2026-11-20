@@ -1,44 +1,9 @@
 import { useEffect, useState } from 'react';
 
-import type { CharacterId, LocationId } from '../sim';
+import { parseRoute, routeHash, type Route } from './route-path';
 
-/** Which page is showing, kept in the URL's hash so Back works and pages can be linked. */
-export type Route =
-  | { readonly page: 'log' }
-  | { readonly page: 'chronicle' }
-  | { readonly page: 'places' }
-  | { readonly page: 'trade' }
-  | { readonly page: 'stats' }
-  | { readonly page: 'halls' }
-  | { readonly page: 'map' }
-  | { readonly page: 'profile'; readonly id: CharacterId }
-  | { readonly page: 'place'; readonly id: LocationId }
-  | { readonly page: 'region'; readonly id: string };
-
-export function parseRoute(hash: string): Route {
-  const [page, id] = hash.replace(/^#\/?/, '').split('/');
-  switch (page) {
-    case 'chronicle':
-    case 'places':
-    case 'trade':
-    case 'stats':
-    case 'halls':
-    case 'map':
-      return { page };
-    case 'profile':
-      return id ? { page, id: decodeURIComponent(id) as CharacterId } : { page: 'log' };
-    case 'place':
-      return id ? { page, id: decodeURIComponent(id) as LocationId } : { page: 'places' };
-    case 'region':
-      return id ? { page, id: decodeURIComponent(id) } : { page: 'places' };
-    default:
-      return { page: 'log' };
-  }
-}
-
-export function routeHash(route: Route): string {
-  return 'id' in route ? `#/${route.page}/${encodeURIComponent(route.id)}` : `#/${route.page}`;
-}
+export { parseRoute, routeHash } from './route-path';
+export type { MapFocus, Route } from './route-path';
 
 export function useRoute(): [Route, (route: Route) => void] {
   const [route, setRoute] = useState(() => parseRoute(window.location.hash));

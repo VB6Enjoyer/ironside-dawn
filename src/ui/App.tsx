@@ -453,6 +453,7 @@ function Observatory({
               names={names}
               time={snapshot.time}
               onRegion={toRegion}
+              onMap={() => go({ page: 'map', focus: { kind: 'place', id: route.id } })}
               {...links}
             />
           )}
@@ -468,6 +469,8 @@ function Observatory({
                 host={host}
                 time={snapshot.time}
                 following={snapshot.following}
+                focus={route.focus}
+                onClearFocus={() => go({ page: 'map' })}
                 onRegion={toRegion}
                 {...links}
               />
@@ -478,7 +481,14 @@ function Observatory({
             <HallsPage host={host} names={names} time={snapshot.time} {...links} />
           )}
           {route.page === 'profile' && (
-            <ProfilePage host={host} id={route.id} names={names} time={snapshot.time} {...links} />
+            <ProfilePage
+              host={host}
+              id={route.id}
+              names={names}
+              time={snapshot.time}
+              onMap={() => go({ page: 'map', focus: { kind: 'character', id: route.id } })}
+              {...links}
+            />
           )}
         </main>
         {cardId && (
@@ -491,6 +501,7 @@ function Observatory({
             following={snapshot.following.includes(cardId)}
             onFollow={(follow) => host.follow(follow ? [cardId] : [])}
             onProfile={() => go({ page: 'profile', id: cardId })}
+            onMap={() => go({ page: 'map', focus: { kind: 'character', id: cardId } })}
             onClose={closeCard}
             {...links}
           />
