@@ -19,6 +19,8 @@ const SKIPS: { label: string; seconds: number }[] = [
   { label: '5 years', seconds: 5 * YEAR },
   { label: '10 years', seconds: 10 * YEAR },
   { label: '25 years', seconds: 25 * YEAR },
+  { label: '50 years', seconds: 50 * YEAR },
+  { label: '100 years', seconds: 100 * YEAR },
 ];
 
 export function Controls({ host, snapshot }: { host: SimHost; snapshot: HostSnapshot }) {
