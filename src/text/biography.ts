@@ -139,10 +139,10 @@ export function biography(
           runs > 0
             ? `, ${runs} ${runs === 1 ? 'load' : 'loads'} that the chronicle still recalls,`
             : ''
-        } and cleared ${c.goldEarned.toLocaleString('en-US')} gold in profit. They ${
-          alive ? 'haggle' : 'haggled'
-        } in ${listOf(tongues)}.`,
+        } and cleared `,
       },
+      { text: `${c.goldEarned.toLocaleString('en-US')} gold`, mark: 'wealth' },
+      { text: ` in profit. They ${alive ? 'haggle' : 'haggled'} in ${listOf(tongues)}.` },
     ]);
   }
 
@@ -151,35 +151,58 @@ export function biography(
   const totalKills = kills.reduce((n, [, k]) => n + k, 0);
   const favorite = kills.sort((a, b) => b[1] - a[1])[0];
   const delves = Object.values(c.expectations).reduce((n, e) => n + (e?.trips ?? 0), 0);
-  const career: string[] = [];
+  const career: Segment[][] = [];
   // The living have done these things so far; the dead did them.
   const [reached, went, slew, earned] = alive
     ? ['They have reached', 'been into the dungeons', 'slain', 'earned']
     : ['They reached', 'went into the dungeons', 'slew', 'earned'];
-  career.push(`${reached} level ${c.level}`);
+  career.push([{ text: `${reached} level ${c.level}` }]);
   if (delves > 0) {
-    career.push(`${went} ${delves === 1 ? 'once' : `${delves.toLocaleString('en-US')} times`}`);
+    career.push([
+      { text: `${went} ` },
+      {
+        text: delves === 1 ? 'once' : `${delves.toLocaleString('en-US')} times`,
+        mark: 'delve',
+      },
+    ]);
   }
   if (totalKills > 0 && favorite) {
     const def = creatureDef(favorite[0]);
-    career.push(
-      `${slew} ${totalKills.toLocaleString('en-US')} ${totalKills === 1 ? 'foe' : 'foes'}${
-        totalKills > 1 ? `, most of them ${def.plural}` : ''
-      }`,
-    );
+    career.push([
+      { text: `${slew} ` },
+      {
+        text: `${totalKills.toLocaleString('en-US')} ${totalKills === 1 ? 'foe' : 'foes'}`,
+        mark: 'death',
+      },
+      ...(totalKills > 1 ? [{ text: `, most of them ${def.plural}` }] : []),
+    ]);
   }
-  if (c.goldEarned > 0) career.push(`${earned} ${c.goldEarned.toLocaleString('en-US')} gold`);
+  if (c.goldEarned > 0) {
+    career.push([
+      { text: `${earned} ` },
+      { text: `${c.goldEarned.toLocaleString('en-US')} gold`, mark: 'wealth' },
+    ]);
+  }
   const legends = c.deeds.filter((d) => d.kind === 'legend').map((d) => d.name);
-  let sentence = `${joinClauses(career)}.`;
+  const sentence: Segment[] = [...joinClauses(career), { text: '.' }];
   if (legends.length > 0) {
     const shown = legends.slice(0, 3);
     const more = legends.length - shown.length;
-    sentence += ` They found ${listOf(more > 0 ? [...shown, `${countWord(more)} more legendary pieces`] : shown)}.`;
+    sentence.push({
+      text: ` They found ${listOf(more > 0 ? [...shown, `${countWord(more)} more legendary pieces`] : shown)}.`,
+    });
   }
   if (c.spells.length > 0) {
-    sentence += ` They learned to cast ${listOf(c.spells.map(spellName))}.`;
+    sentence.push({ text: ' They learned to cast ' });
+    c.spells.forEach((spell, i) => {
+      sentence.push(
+        { text: spellName(spell), mark: 'magic' },
+        { text: listGlue(i, c.spells.length) },
+      );
+    });
+    sentence.push({ text: '.' });
   }
-  if (c.calling !== 'merchant') paragraphs.push([{ text: sentence }]);
+  if (c.calling !== 'merchant') paragraphs.push(sentence);
 
   // Bonds.
   const opinions = Object.entries(c.opinions) as [
@@ -227,7 +250,11 @@ export function biography(
               ? `, ${countWord(murders)} of them ${murders === 1 ? 'a murder' : 'murders'},`
               : ''
           } followed.`;
-    justice.push({ text: `In ${whenIn(since)} they turned outlaw. ${record} ` });
+    justice.push(
+      { text: `In ${whenIn(since)} they ` },
+      { text: 'turned outlaw', mark: 'crime' },
+      { text: `. ${record} ` },
+    );
   }
   const claims = events.filter((e) => e.type === 'bounty.claim' && e.data.characterId === c.id);
   if (claims.length > 0) {
@@ -246,7 +273,15 @@ export function biography(
 
   // Family, and settling down.
   const family: Segment[] = [];
-  if (c.spouseId) family.push({ text: 'They married ' }, person(c.spouseId, names), { text: '. ' });
+  if (c.spouseId) {
+    family.push(
+      { text: 'They ' },
+      { text: 'married', mark: 'love' },
+      { text: ' ' },
+      person(c.spouseId, names),
+      { text: '. ' },
+    );
+  }
   if (c.children.length > 0) {
     family.push(
       {
@@ -272,7 +307,9 @@ export function biography(
     ]);
   } else if (c.death) {
     paragraphs.push([
-      { text: `${c.givenName} died in ${whenIn(c.death.at)}, ` },
+      { text: `${c.givenName} ` },
+      { text: 'died', mark: 'death' },
+      { text: ` in ${whenIn(c.death.at)}, ` },
       ...causeOfDeath(c.death.cause, names),
       { text: ' in ' },
       place(c.death.locationId, names),
@@ -288,10 +325,22 @@ function trimEnd(paragraph: Segment[]): Segment[] {
   return [...paragraph.slice(0, -1), { ...last, text: last.text.trimEnd() }];
 }
 
-/** "They reached level 9, went into the dungeons 40 times and slew 120 foes". */
-function joinClauses(clauses: readonly string[]): string {
-  if (clauses.length <= 1) return clauses[0] ?? '';
-  const [first, ...rest] = clauses;
-  const last = rest.pop()!;
-  return [first, ...rest].join(', ') + `${rest.length > 0 ? ',' : ''} and ${last}`;
+/** "They reached level 9, went into the dungeons 40 times, and slew 120 foes". */
+function joinClauses(clauses: readonly (readonly Segment[])[]): Segment[] {
+  return clauses.flatMap((clause, i) => [
+    ...clause,
+    ...(i < clauses.length - 1 ? [{ text: clauseGlue(i, clauses.length) }] : []),
+  ]);
+}
+
+/** What follows clause `i` of `n`: ", " between, then ", and " (" and " for two) before the last. */
+function clauseGlue(i: number, n: number): string {
+  if (i === n - 2) return n > 2 ? ', and ' : ' and ';
+  return ', ';
+}
+
+/** What follows item `i` of a list of `n` ("a, b and c"): nothing after the last. */
+function listGlue(i: number, n: number): string {
+  if (i === n - 1) return '';
+  return i === n - 2 ? ' and ' : ', ';
 }

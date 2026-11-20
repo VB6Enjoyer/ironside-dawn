@@ -18,6 +18,15 @@
   --rare: #7aa7d9;
   --legendary: #e0a14a;
 
+  /* What things are about, coloured the same way everywhere (feed, life
+     stories, filters): each at least 6:1 against the panels. */
+  --mark-death: #e8806f;
+  --mark-wealth: #f0c14b;
+  --mark-delve: #b39af0;
+  --mark-love: #ef93c2;
+  --mark-crime: #f09a52;
+  --mark-magic: #82b4ec;
+
   /* Chart series, in fixed order: the dark steps of the categorical palette,
      validated against --panel (worst adjacent CVD ΔE 8.4, all ≥ 3:1). */
   --series-1: #3987e5;
@@ -1857,4 +1866,214 @@ button.link-button {
   :root[data-layout='wide'] .profile-columns .timeline > h2:first-child {
     margin-top: 0;
   }
+}
+
+/* Marked figures and phrases in prose ("120 foes", "4,200 gold"). */
+.mark-death {
+  color: var(--mark-death);
+}
+
+.mark-wealth {
+  color: var(--mark-wealth);
+}
+
+.mark-delve {
+  color: var(--mark-delve);
+}
+
+.mark-love {
+  color: var(--mark-love);
+}
+
+.mark-crime {
+  color: var(--mark-crime);
+}
+
+.mark-magic {
+  color: var(--mark-magic);
+}
+
+:root[data-colours='off'] .mark {
+  color: inherit;
+}
+
+/* Toned rows in the log: a faint wash, the edge and a symbol in the tone's
+   colour. The text goes back to its plain colour, so notable rows don't
+   carry two colours at once. */
+:root:not([data-colours='off']) .log-row.tone {
+  border-left-color: var(--tone);
+  background: var(--tone-wash);
+}
+
+:root:not([data-colours='off']) .log-row.tone .log-text {
+  color: var(--text);
+}
+
+.tone-symbol {
+  flex: none;
+  width: 1em;
+  margin-right: -6px;
+  text-align: center;
+  color: var(--tone);
+}
+
+.tone-death {
+  --tone: var(--mark-death);
+  --tone-wash: rgba(232, 128, 111, 0.1);
+}
+
+.tone-love {
+  --tone: var(--mark-love);
+  --tone-wash: rgba(239, 147, 194, 0.1);
+}
+
+.tone-crime {
+  --tone: var(--mark-crime);
+  --tone-wash: rgba(240, 154, 82, 0.1);
+}
+
+.tone-wealth {
+  --tone: var(--mark-wealth);
+  --tone-wash: rgba(240, 193, 75, 0.08);
+}
+
+.tone-delve {
+  --tone: var(--mark-delve);
+  --tone-wash: rgba(179, 154, 240, 0.1);
+}
+
+.tone-magic {
+  --tone: var(--mark-magic);
+  --tone-wash: rgba(130, 180, 236, 0.08);
+}
+
+:root[data-colours='off'] .tone-symbol {
+  color: var(--muted);
+}
+
+/* The tones as chips above the log: the legend, and a filter. */
+.tone-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+}
+
+.tone-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px;
+  font-size: 0.85rem;
+  border-radius: 999px;
+}
+
+.tone-chip .tone-symbol {
+  margin: 0;
+  width: auto;
+}
+
+.tone-chip[aria-pressed='true'] {
+  color: var(--text);
+  border-color: var(--tone, var(--muted));
+  background: var(--tone-wash, var(--panel-raised));
+}
+
+/* Timestamps take the same width whatever the day, so the log's text lines up. */
+@media (min-width: 641px) {
+  .log-time {
+    min-width: 23ch;
+  }
+}
+
+/* Hover previews: a glance at a character or a place. */
+.hover-preview {
+  position: fixed;
+  z-index: 50;
+  padding: 10px 12px;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  color: var(--text);
+  background: var(--panel-raised);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+}
+
+.hover-preview p {
+  margin: 0;
+}
+
+.glance-name {
+  font-size: 1.05rem;
+  color: var(--character);
+}
+
+.glance-name.glance-place {
+  color: var(--location);
+}
+
+.glance-sub {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.glance-line {
+  margin-top: 6px !important;
+}
+
+.glance-bar {
+  height: 4px;
+  margin-top: 8px;
+  background: var(--grid);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.glance-bar span {
+  display: block;
+  height: 100%;
+  background: var(--hp);
+}
+
+.glance-hint {
+  margin-top: 8px !important;
+  font-size: 0.75rem;
+  color: var(--faint);
+}
+
+/* The map, asked to show someone or somewhere. */
+.map-focus {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 12px;
+  margin: 0 0 8px;
+  padding: 6px 12px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--mark-wealth);
+  border-radius: 6px;
+}
+
+/* A page's title with an action beside it ("Show on map"). */
+.page-title,
+.profile-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 14px;
+}
+
+.page-title h2 {
+  margin-right: auto;
+}
+
+.profile-header .card-subtitle {
+  flex-basis: 100%;
+}
+
+.page-action {
+  font-size: 0.85rem;
 }

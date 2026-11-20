@@ -46,10 +46,19 @@ import {
  * names of characters and places into links.
  */
 
+/**
+ * What a marked figure or phrase is about, so the interface can colour it
+ * the same way everywhere: deaths and kills, wealth, dungeons, love, crime,
+ * magic.
+ */
+export type Mark = 'death' | 'wealth' | 'delve' | 'love' | 'crime' | 'magic';
+
 export type Segment =
   | { readonly text: string }
   /** An aside, such as the reasons behind a decision, shown quieter. */
   | { readonly text: string; readonly aside: true }
+  /** A figure or phrase worth catching the eye: "120 foes", "4,200 gold". */
+  | { readonly text: string; readonly mark: Mark }
   | {
       readonly text: string;
       readonly ref: { readonly kind: 'character'; readonly id: CharacterId };

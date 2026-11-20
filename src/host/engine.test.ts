@@ -276,6 +276,11 @@ describe('engine', () => {
     expect(hero?.events.length).toBeGreaterThan(0);
     expect(await host.request({ kind: 'character', id: 'nobody' as CharacterId })).toBeNull();
 
+    // A glance on hover: just the character.
+    const peek = await host.request({ kind: 'peek', id: 'c1' as CharacterId });
+    expect(peek?.givenName).toBe(hero?.character.givenName);
+    expect(await host.request({ kind: 'peek', id: 'nobody' as CharacterId })).toBeNull();
+
     const town = await host.request({ kind: 'location', id: hero!.character.homeId });
     expect(town?.location.kind).toBe('town');
     expect(town?.events.length).toBeGreaterThan(0);

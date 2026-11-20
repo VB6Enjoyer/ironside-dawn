@@ -361,6 +361,8 @@ export interface FastForwardDigest {
 
 export type Request =
   | { readonly kind: 'character'; readonly id: CharacterId }
+  /** Just the character, for a glance on hover: no story or family. */
+  | { readonly kind: 'peek'; readonly id: CharacterId }
   | { readonly kind: 'location'; readonly id: LocationId }
   | { readonly kind: 'places' }
   | { readonly kind: 'market'; readonly id: LocationId }
@@ -376,6 +378,7 @@ export type Request =
 
 export interface Responses {
   character: CharacterView | null;
+  peek: Character | null;
   location: LocationView | null;
   places: readonly PlaceSummary[];
   market: MarketView | null;

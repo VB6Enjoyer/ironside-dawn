@@ -13,7 +13,7 @@ import {
 } from '../../text';
 import { MarketPanel } from '../components/MarketPanel';
 import { formatCount } from '../format';
-import { Prose, type ProseLinks } from '../components/Prose';
+import { Prose, type LinkClick, type ProseLinks } from '../components/Prose';
 import { useQuery } from '../useHost';
 
 const KIND_NAMES = {
@@ -85,7 +85,12 @@ export function PlacesPage({
                 const entry = host.places.get(p.id);
                 return (
                   <li key={p.id}>
-                    <button type="button" className="place-card" onClick={() => onLocation(p.id)}>
+                    <button
+                      type="button"
+                      className="place-card"
+                      data-location={p.id}
+                      onClick={() => onLocation(p.id)}
+                    >
                       <span className="place-kind">{entry ? KIND_NAMES[entry.kind] : ''}</span>
                       <span className="place-name">{placeName(entry)}</span>
                       <span className="muted">
@@ -117,6 +122,7 @@ export function PlacePage({
   names,
   time,
   onRegion,
+  onMap,
   ...links
 }: {
   host: SimHost;
@@ -124,6 +130,8 @@ export function PlacePage({
   names: NameResolver;
   time: number;
   onRegion?: (id: string) => void;
+  /** Shows the place on the world map. */
+  onMap?: () => void;
 } & ProseLinks) {
   // Watching a place reports its fights blow by blow.
   useEffect(() => {
@@ -140,7 +148,14 @@ export function PlacePage({
   return (
     <div className="page place-page">
       <p className="place-kind">{KIND_NAMES[location.kind]}</p>
-      <h2>{placeName(host.places.get(id))}</h2>
+      <div className="page-title">
+        <h2>{placeName(host.places.get(id))}</h2>
+        {onMap && (
+          <button type="button" className="page-action" onClick={onMap}>
+            Show on map
+          </button>
+        )}
+      </div>
       {view.region && (
         <p className="muted">
           In{' '}
@@ -163,6 +178,7 @@ export function PlacePage({
               <button
                 type="button"
                 className="ref ref-location"
+                data-location={view.heldBy!.id}
                 onClick={() => links.onLocation?.(view.heldBy!.id)}
               >
                 {placeName(view.heldBy)}
@@ -183,7 +199,8 @@ export function PlacePage({
                 <button
                   type="button"
                   className="ref ref-character"
-                  onClick={() => links.onCharacter?.(view.lord!.id)}
+                  data-character={view.lord!.id}
+                  onClick={(e) => links.onCharacter?.(view.lord!.id, e)}
                 >
                   {view.lord.name}
                 </button>
@@ -202,6 +219,7 @@ export function PlacePage({
                   <button
                     type="button"
                     className="ref ref-location"
+                    data-location={t.id}
                     onClick={() => links.onLocation?.(t.id)}
                   >
                     {placeName(t)}
@@ -222,7 +240,8 @@ export function PlacePage({
             <button
               type="button"
               className="ref ref-character"
-              onClick={() => links.onCharacter?.(view.master!.id)}
+              data-character={view.master!.id}
+              onClick={(e) => links.onCharacter?.(view.master!.id, e)}
             >
               {view.master.name}
             </button>
@@ -338,7 +357,7 @@ function People({
   onCharacter,
 }: {
   people: readonly CharacterSummary[];
-  onCharacter?: (id: CharacterId) => void;
+  onCharacter?: (id: CharacterId, click?: LinkClick) => void;
 }) {
   return (
     <ul className="people">
@@ -349,7 +368,8 @@ function People({
             <button
               type="button"
               className={`ref ref-character${p.dead ? ' ref-dead' : ''}`}
-              onClick={() => onCharacter?.(p.id)}
+              data-character={p.id}
+              onClick={(e) => onCharacter?.(p.id, e)}
             >
               {p.name}
             </button>{' '}

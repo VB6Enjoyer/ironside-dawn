@@ -134,7 +134,12 @@ function Place({
   if (!id || !l) return <>the wilds</>;
   const name = `${l.article ? `${l.article} ` : ''}${l.name}`;
   return onLocation ? (
-    <button type="button" className="ref ref-location" onClick={() => onLocation(id)}>
+    <button
+      type="button"
+      className="ref ref-location"
+      data-location={id}
+      onClick={() => onLocation(id)}
+    >
       {name}
     </button>
   ) : (
@@ -144,7 +149,12 @@ function Place({
 
 function Who({ m, onCharacter }: { m: CaravanEntry } & ProseLinks) {
   return onCharacter ? (
-    <button type="button" className="ref ref-character" onClick={() => onCharacter(m.id)}>
+    <button
+      type="button"
+      className="ref ref-character"
+      data-character={m.id}
+      onClick={(e) => onCharacter(m.id, e)}
+    >
       {m.name}
     </button>
   ) : (

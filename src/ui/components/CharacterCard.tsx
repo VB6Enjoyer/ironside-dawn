@@ -47,7 +47,7 @@ import {
 } from '../../text';
 import { callingTitle, formatCount } from '../format';
 import { useQuery } from '../useHost';
-import { Prose, type ProseLinks } from './Prose';
+import { Prose, type LinkClick, type ProseLinks } from './Prose';
 
 const STAT_LABELS: Record<StatId, string> = {
   might: 'Might',
@@ -67,9 +67,11 @@ interface Props extends ProseLinks {
   refresh: unknown;
   names: NameResolver;
   following: boolean;
-  onCharacter(id: CharacterId): void;
+  onCharacter(id: CharacterId, click?: LinkClick): void;
   onFollow(follow: boolean): void;
   onProfile(): void;
+  /** Shows them on the world map. */
+  onMap?: () => void;
   onClose(): void;
 }
 
@@ -83,6 +85,7 @@ export function CharacterCard({
   onLocation,
   onFollow,
   onProfile,
+  onMap,
   onClose,
 }: Props) {
   useEffect(() => {
@@ -130,6 +133,11 @@ export function CharacterCard({
         <button type="button" onClick={onProfile}>
           Life story
         </button>
+        {onMap && (
+          <button type="button" onClick={onMap} title="Where they are on the world map">
+            Show on map
+          </button>
+        )}
         {!dead && (
           <button
             type="button"
@@ -262,7 +270,7 @@ export function CharacterCard({
         <dl className="facts">
           <dt>Gold</dt>
           <dd>
-            {formatCount(character.gold)}{' '}
+            <span className="mark mark-wealth">{formatCount(character.gold)}</span>{' '}
             <span className="muted">({formatCount(character.goldEarned)} earned)</span>
           </dd>
           {character.calling === 'merchant' ? (
@@ -360,7 +368,7 @@ function Bonds({
 }: {
   character: Character;
   world: WorldSlice;
-  onSelect(id: CharacterId): void;
+  onSelect(id: CharacterId, click?: LinkClick): void;
 }) {
   const link = (id: CharacterId) => {
     const other = world.characters.get(id);
@@ -369,7 +377,8 @@ function Bonds({
       <button
         type="button"
         className={`ref ref-character${other.dead ? ' ref-dead' : ''}`}
-        onClick={() => onSelect(id)}
+        data-character={id}
+        onClick={(e) => onSelect(id, e)}
       >
         {other.name}
       </button>
@@ -535,8 +544,10 @@ function Places({
               <Fragment key={id}>
                 <dt>{place?.name ?? id}</dt>
                 <dd>
-                  {e.trips} {e.trips === 1 ? 'trip' : 'trips'}, about {Math.round(e.reward)} gold
-                  each
+                  <span className="mark mark-delve">
+                    {e.trips} {e.trips === 1 ? 'trip' : 'trips'}
+                  </span>
+                  , about <span className="mark mark-wealth">{Math.round(e.reward)} gold</span> each
                   {fear >= 0.5 ? (
                     <span className="muted"> · feared</span>
                   ) : fear >= 0.25 ? (
@@ -607,7 +618,7 @@ function Kills({ kills }: { kills: Character['kills'] }) {
   const total = entries.reduce((sum, [, n]) => sum + n, 0);
   return (
     <>
-      {total}{' '}
+      <span className="mark mark-death">{total}</span>{' '}
       <span className="muted">
         (
         {entries

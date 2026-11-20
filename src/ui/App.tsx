@@ -17,6 +17,8 @@ import { CharacterCard } from './components/CharacterCard';
 import { Controls } from './components/Controls';
 import { DigestPanel } from './components/DigestPanel';
 import { DisplaySettings } from './components/DisplaySettings';
+import { HoverPreviews } from './components/HoverPreview';
+import type { LinkClick } from './components/Prose';
 import { SearchBox } from './components/SearchBox';
 import { StatusBar } from './components/StatusBar';
 import { WhatsNew } from './components/WhatsNew';
@@ -41,6 +43,7 @@ import {
   writeSpecToUrl,
   type WorldSpec,
 } from './seed';
+import { currentDisplay } from './display';
 import { packsByIds } from './packs';
 import { markNotesSeen, notesUnseen } from './releases';
 import { autosaveId, listSaves, readSave, writeSave } from './storage';
@@ -371,7 +374,20 @@ function Observatory({
   }, [host, save]);
 
   const links = {
-    onCharacter: setSelected,
+    // A click opens the card or the life story, as chosen under Display
+    // settings; with Ctrl (or Cmd) held, the other.
+    onCharacter: (id: CharacterId, click?: LinkClick) => {
+      const swapped = Boolean(click && (click.ctrlKey || click.metaKey));
+      const toPage = (currentDisplay().characterClick === 'page') !== swapped;
+      if (toPage) {
+        // Straight to the page, without the card beside it.
+        setSelected(null);
+        setDismissed(id);
+        go({ page: 'profile', id });
+      } else {
+        setSelected(id);
+      }
+    },
     onLocation: (id: LocationId) => go({ page: 'place', id }),
   };
   const toRegion = (id: string) => go({ page: 'region', id });
@@ -412,7 +428,7 @@ function Observatory({
             {tab.label}
           </a>
         ))}
-        <SearchBox host={host} onCharacter={setSelected} onLocation={links.onLocation} />
+        <SearchBox host={host} onCharacter={links.onCharacter} onLocation={links.onLocation} />
       </nav>
       <div className={`world-area${cardId ? ' with-card' : ''}`}>
         <main className="page-area">
@@ -437,6 +453,7 @@ function Observatory({
               names={names}
               time={snapshot.time}
               onRegion={toRegion}
+              onMap={() => go({ page: 'map', focus: { kind: 'place', id: route.id } })}
               {...links}
             />
           )}
@@ -452,6 +469,8 @@ function Observatory({
                 host={host}
                 time={snapshot.time}
                 following={snapshot.following}
+                focus={route.focus}
+                onClearFocus={() => go({ page: 'map' })}
                 onRegion={toRegion}
                 {...links}
               />
@@ -462,7 +481,14 @@ function Observatory({
             <HallsPage host={host} names={names} time={snapshot.time} {...links} />
           )}
           {route.page === 'profile' && (
-            <ProfilePage host={host} id={route.id} names={names} time={snapshot.time} {...links} />
+            <ProfilePage
+              host={host}
+              id={route.id}
+              names={names}
+              time={snapshot.time}
+              onMap={() => go({ page: 'map', focus: { kind: 'character', id: route.id } })}
+              {...links}
+            />
           )}
         </main>
         {cardId && (
@@ -475,12 +501,14 @@ function Observatory({
             following={snapshot.following.includes(cardId)}
             onFollow={(follow) => host.follow(follow ? [cardId] : [])}
             onProfile={() => go({ page: 'profile', id: cardId })}
+            onMap={() => go({ page: 'map', focus: { kind: 'character', id: cardId } })}
             onClose={closeCard}
             {...links}
           />
         )}
       </div>
       <StatusBar snapshot={snapshot} />
+      <HoverPreviews host={host} names={names} />
 
       {snapshot.digest && (
         <DigestPanel

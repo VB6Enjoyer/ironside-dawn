@@ -3,9 +3,17 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import { isDigest, type LogEntry } from '../../host';
 import type { CharacterId } from '../../sim';
-import { describeEvent, formatTimestamp, type NameResolver } from '../../text';
+import {
+  describeEvent,
+  EVENT_TONES,
+  eventTone,
+  formatTimestamp,
+  type NameResolver,
+} from '../../text';
 import { formatCount } from '../format';
 import { Prose, type ProseLinks } from './Prose';
+
+const TONE_SYMBOLS = Object.fromEntries(EVENT_TONES.map((t) => [t.id, t.symbol]));
 
 /** How close to the bottom still counts as "following the latest events". */
 const PIN_THRESHOLD_PX = 48;
@@ -96,6 +104,7 @@ export function EventLog({ log, names, selected, empty, onCharacter, onLocation 
                     style={{ transform: `translateY(${item.start}px)` }}
                   >
                     <time className="log-time">{formatTimestamp(event.t)}</time>
+                    <span className="tone-symbol" aria-hidden="true" />
                     <span className="log-text">
                       …and {formatCount(event.count)} minor{' '}
                       {event.count === 1 ? 'happening' : 'happenings'} across the realm.
@@ -103,17 +112,22 @@ export function EventLog({ log, names, selected, empty, onCharacter, onLocation 
                   </li>
                 );
               }
+              const tone = eventTone(event);
               return (
                 <li
                   key={item.key}
                   data-index={item.index}
                   ref={virtualizer.measureElement}
-                  className={`log-row importance-${event.importance}${
+                  className={`log-row importance-${event.importance}${tone ? ` tone tone-${tone}` : ''}${
                     selected && event.actors.includes(selected) ? ' log-row-selected' : ''
                   }`}
                   style={{ transform: `translateY(${item.start}px)` }}
                 >
                   <time className="log-time">{formatTimestamp(event.t)}</time>
+                  {/* Always there, empty for most rows, so every row's text lines up. */}
+                  <span className="tone-symbol" aria-hidden="true">
+                    {tone ? TONE_SYMBOLS[tone] : ''}
+                  </span>
                   <span className="log-text">
                     <Prose
                       segments={describeEvent(event, names)}

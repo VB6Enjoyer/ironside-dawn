@@ -17,7 +17,12 @@ export function HallsPage({
   if (!halls) return <p className="muted page-loading">Opening the halls…</p>;
   const who = (id: CharacterId, name: string) =>
     links.onCharacter ? (
-      <button type="button" className="ref ref-character" onClick={() => links.onCharacter!(id)}>
+      <button
+        type="button"
+        className="ref ref-character"
+        data-character={id}
+        onClick={(e) => links.onCharacter!(id, e)}
+      >
         {name}
       </button>
     ) : (
@@ -27,7 +32,12 @@ export function HallsPage({
     const l = names.location(id);
     const text = l ? `${l.article ? `${l.article} ` : ''}${l.name}` : 'the wilds';
     return links.onLocation ? (
-      <button type="button" className="ref ref-location" onClick={() => links.onLocation!(id)}>
+      <button
+        type="button"
+        className="ref ref-location"
+        data-location={id}
+        onClick={() => links.onLocation!(id)}
+      >
         {text}
       </button>
     ) : (
@@ -61,9 +71,9 @@ export function HallsPage({
                     <span className="muted">{SPECIES_NAMES[h.species].singular}</span>
                   </td>
                   <td>{h.level}</td>
-                  <td>{formatCount(h.kills)}</td>
+                  <td className="mark mark-death">{formatCount(h.kills)}</td>
                   <td>{h.legends || '—'}</td>
-                  <td>{formatCount(h.goldEarned)}</td>
+                  <td className="mark mark-wealth">{formatCount(h.goldEarned)}</td>
                 </tr>
               ))}
             </tbody>
@@ -96,7 +106,7 @@ export function HallsPage({
                   </td>
                   <td>{place(d.lairId)}</td>
                   <td>{d.level}</td>
-                  <td>{formatCount(d.slain)}</td>
+                  <td className="mark mark-death">{formatCount(d.slain)}</td>
                   <td>
                     {d.dead ? (
                       d.slayers.length > 0 ? (
@@ -148,7 +158,7 @@ export function HallsPage({
                   </td>
                   <td>{lifeYears(h.born, h.died)}</td>
                   <td>{h.level}</td>
-                  <td>{formatCount(h.kills)}</td>
+                  <td className="mark mark-death">{formatCount(h.kills)}</td>
                   <td>{h.legends || '—'}</td>
                 </tr>
               ))}
@@ -202,7 +212,7 @@ export function HallsPage({
           <ul className="wanted">
             {halls.wanted.map((w) => (
               <li key={w.id} className="wanted-poster">
-                <div className="wanted-bounty">{formatCount(w.bounty)} gold</div>
+                <div className="wanted-bounty mark mark-wealth">{formatCount(w.bounty)} gold</div>
                 <div>{who(w.id, w.name)}</div>
                 <div className="muted">
                   Level {w.level} {SPECIES_NAMES[w.species].singular} · {w.crimes}{' '}

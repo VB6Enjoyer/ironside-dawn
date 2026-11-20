@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import type { SimHost } from '../../host';
-import { HOUR, type CharacterId } from '../../sim';
+import type { MapView, SimHost } from '../../host';
+import { HOUR, type Character, type CharacterId } from '../../sim';
 import type { ProseLinks } from '../components/Prose';
-import { BIOME_COLORS, MapStage } from '../map/stage';
+import { BIOME_COLORS, MapStage, type StageFocus } from '../map/stage';
+import type { MapFocus } from '../route';
 import { useQuery } from '../useHost';
 
 const BIOME_NAMES = {
@@ -23,6 +24,8 @@ export default function MapPage({
   host,
   time,
   following,
+  focus,
+  onClearFocus,
   onCharacter,
   onLocation,
   onRegion,
@@ -30,6 +33,9 @@ export default function MapPage({
   host: SimHost;
   time: number;
   following: readonly CharacterId[];
+  /** Someone or somewhere to show: the map zooms to them and rings them. */
+  focus?: MapFocus;
+  onClearFocus?: () => void;
   onRegion?: (id: string) => void;
 } & ProseLinks) {
   // Travelers move between updates by the clock; the roads only need asking for now and then.
@@ -68,9 +74,31 @@ export default function MapPage({
     stage.current?.setTime(time, followed);
   }, [time, followed]);
 
+  // Where the one to show is: asked again each hour, as they move on.
+  const person = useQuery(
+    host,
+    focus?.kind === 'character' ? { kind: 'peek', id: focus.id } : null,
+    Math.floor(time / HOUR),
+  );
+  const target = focus && view ? stageFocus(focus, person ?? null, view) : null;
+  const targetKey = target ? `${target.kind}:${target.id}` : '';
+  useEffect(() => {
+    stage.current?.setFocus(target);
+    // The key says when the target really changed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [targetKey]);
+
   const biomes = [...new Set(view?.regions.map((r) => r.biome) ?? [])];
   return (
     <div className="page map-page">
+      {focus && (
+        <p className="map-focus" role="status">
+          <span>{focusText(focus, person ?? null, host)}</span>
+          <button type="button" onClick={onClearFocus}>
+            Show the whole map
+          </button>
+        </p>
+      )}
       <div className="map-frame" ref={holder} aria-label="World map" role="img" />
       <p className="map-hover" aria-live="polite">
         {hover ?? 'Drag to move, scroll to zoom. Click a place or a traveler.'}
@@ -106,4 +134,45 @@ export default function MapPage({
       </ul>
     </div>
   );
+}
+
+/**
+ * Where on the map someone is: their own dot on the road, their leader's if
+ * they travel in a party, or else the place they are at (or fell at).
+ */
+function stageFocus(focus: MapFocus, person: Character | null, view: MapView): StageFocus | null {
+  if (focus.kind === 'place') return { kind: 'place', id: focus.id };
+  if (!person) return null;
+  const onRoad = (id: CharacterId) => view.travelers.some((t) => t.id === id);
+  if (!person.death && onRoad(person.id)) return { kind: 'traveler', id: person.id };
+  const activity = person.activity;
+  if (!person.death && activity.kind === 'accompanying' && onRoad(activity.leaderId)) {
+    return { kind: 'traveler', id: activity.leaderId };
+  }
+  const place =
+    person.death?.locationId ??
+    person.locationId ??
+    (activity.kind === 'traveling' ? activity.leg.from : person.homeId);
+  return { kind: 'place', id: place };
+}
+
+/** "Showing Ragna Deepbeard, on the road to Faerlond." */
+function focusText(focus: MapFocus, person: Character | null, host: SimHost): string {
+  // Mid-sentence: "the Vaults of Ashes", not "The Vaults of Ashes".
+  const place = (id: Parameters<typeof host.places.get>[0]) => {
+    const p = host.places.get(id);
+    return p ? `${p.article ? 'the ' : ''}${p.name}` : 'somewhere';
+  };
+  if (focus.kind === 'place') return `Showing ${place(focus.id)}.`;
+  if (!person) return 'Looking for them…';
+  const name = `${person.givenName} ${person.familyName}`;
+  if (person.death) return `Showing where ${name} fell, in ${place(person.death.locationId)}.`;
+  const activity = person.activity;
+  if (activity.kind === 'traveling') {
+    return `Showing ${name}, on the road to ${place(activity.destinationId)}.`;
+  }
+  if (activity.kind === 'accompanying' && !person.locationId) {
+    return `Showing ${name}, on the road with their party.`;
+  }
+  return `Showing ${name}, in ${place(person.locationId ?? person.homeId)}.`;
 }

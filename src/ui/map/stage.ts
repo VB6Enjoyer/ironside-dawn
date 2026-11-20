@@ -52,6 +52,17 @@ const FOLLOWED = 0xffffff;
 /** Pixels per league in the land texture. */
 const TEXEL = 4;
 
+/** What the map is asked to show: a traveler's dot, or a place. */
+export type StageFocus =
+  | { readonly kind: 'traveler'; readonly id: CharacterId }
+  | { readonly kind: 'place'; readonly id: LocationId };
+
+/** How far in the map zooms to show something: at least this many pixels per league... */
+const FOCUS_SCALE = 18;
+/** ...and at least this many times closer than the whole map. */
+const FOCUS_ZOOM = 2.5;
+const HIGHLIGHT = 0xf0c14b;
+
 export interface StageEvents {
   onPlace(id: LocationId): void;
   onTraveler(id: CharacterId): void;
@@ -66,6 +77,14 @@ export class MapStage {
   private readonly roads = new Graphics();
   private readonly places = new Container();
   private readonly movers = new Container();
+  /** The ring around whatever the map was asked to show. */
+  private readonly highlight = new Graphics();
+  private focus: StageFocus | null = null;
+  /** A new focus not yet zoomed to (the canvas may still be getting ready). */
+  private focusChanged = false;
+  /** Whether the view keeps a moving focus in the middle: until the user pans or zooms. */
+  private tracking = false;
+  private pulse = 0;
   private ready = false;
   private destroyed = false;
   private view: MapView | null = null;
@@ -95,11 +114,14 @@ export class MapStage {
       return;
     }
     this.host.appendChild(this.app.canvas);
-    this.world.addChild(this.land, this.roads, this.places, this.movers);
+    this.world.addChild(this.land, this.roads, this.places, this.movers, this.highlight);
+    this.highlight.eventMode = 'none';
+    this.app.ticker.add((ticker) => this.animateHighlight(ticker.deltaMS));
     this.app.stage.addChild(this.world);
     this.panAndZoom();
     this.ready = true;
     if (this.view) this.setView(this.view);
+    this.applyFocus();
   }
 
   destroy(): void {
@@ -121,13 +143,83 @@ export class MapStage {
     this.drawPlaces(view);
     if (!this.fitted) this.fit(view);
     this.drawTravelers();
+    if (this.focusChanged) this.applyFocus();
+    else if (this.focus && this.tracking) this.centerOn(this.focus);
+  }
+
+  /**
+   * Shows someone or somewhere: zooms in, centres the view on them and rings
+   * them. A traveler stays in the middle as they move, until the user pans or
+   * zooms. Null clears it.
+   */
+  setFocus(focus: StageFocus | null): void {
+    const same =
+      focus && this.focus && focus.kind === this.focus.kind && focus.id === this.focus.id;
+    this.focus = focus;
+    if (focus && !same) this.focusChanged = true;
+    if (this.ready) this.applyFocus();
+  }
+
+  private applyFocus(): void {
+    const focus = this.focus;
+    if (!focus) {
+      this.highlight.clear();
+      return;
+    }
+    if (this.focusChanged && this.view) {
+      this.focusChanged = false;
+      this.tracking = true;
+      const { width, height } = this.app.screen;
+      const whole = Math.min(width / this.view.width, height / this.view.height);
+      const scale = Math.min(80, Math.max(this.world.scale.x, FOCUS_SCALE, whole * FOCUS_ZOOM));
+      this.world.scale.set(scale);
+      this.fitted = true;
+    }
+    this.centerOn(focus);
+  }
+
+  /** Where the focus is on the map now, in leagues, if it is there at all. */
+  private focusPoint(focus: StageFocus): { x: number; y: number } | null {
+    if (focus.kind === 'traveler') {
+      const dot = this.sprites.get(focus.id);
+      return dot ? { x: dot.x, y: dot.y } : null;
+    }
+    const place = this.view?.places.find((p) => p.id === focus.id);
+    return place ? { x: place.x, y: place.y } : null;
+  }
+
+  private centerOn(focus: StageFocus): void {
+    const point = this.focusPoint(focus);
+    if (!point) return;
+    const { width, height } = this.app.screen;
+    const scale = this.world.scale.x;
+    this.world.position.set(width / 2 - point.x * scale, height / 2 - point.y * scale);
+  }
+
+  /** A slow pulse, or a still ring for those who ask for less motion. */
+  private animateHighlight(deltaMS: number): void {
+    const point = this.focus && this.focusPoint(this.focus);
+    this.highlight.clear();
+    if (!point) return;
+    const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    this.pulse = (this.pulse + deltaMS / 1400) % 1;
+    const wave = still ? 0.5 : this.pulse;
+    // Sized in screen pixels, so the ring reads at any zoom.
+    const unit = 1 / this.world.scale.x;
+    this.highlight
+      .circle(point.x, point.y, (14 + 16 * wave) * unit)
+      .stroke({ width: 2.5 * unit, color: HIGHLIGHT, alpha: still ? 0.9 : 1 - wave })
+      .circle(point.x, point.y, 10 * unit)
+      .stroke({ width: 2 * unit, color: HIGHLIGHT, alpha: 0.95 });
   }
 
   /** The clock moved, or who is followed changed: move everyone along their roads. */
   setTime(time: number, following: ReadonlySet<CharacterId>): void {
     this.time = time;
     this.following = following;
-    if (this.ready) this.drawTravelers();
+    if (!this.ready) return;
+    this.drawTravelers();
+    if (this.focus && this.tracking) this.centerOn(this.focus);
   }
 
   private fit(view: MapView): void {
@@ -282,6 +374,7 @@ export class MapStage {
     let drag: { x: number; y: number } | null = null;
     stage.on('pointerdown', (e: FederatedPointerEvent) => {
       drag = { x: e.global.x - this.world.x, y: e.global.y - this.world.y };
+      this.tracking = false;
     });
     stage.on('pointermove', (e: FederatedPointerEvent) => {
       if (drag) this.world.position.set(e.global.x - drag.x, e.global.y - drag.y);
@@ -293,6 +386,7 @@ export class MapStage {
       'wheel',
       (e) => {
         e.preventDefault();
+        this.tracking = false;
         const factor = Math.exp(-e.deltaY * 0.0015);
         const scale = Math.max(2, Math.min(80, this.world.scale.x * factor));
         const rect = this.app.canvas.getBoundingClientRect();

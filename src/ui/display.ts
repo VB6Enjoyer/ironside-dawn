@@ -9,13 +9,31 @@ export interface Display {
   /** The whole width of the window, with room for side columns, or the narrow column of 0.1. */
   readonly layout: 'wide' | 'compact';
   readonly textSize: 'small' | 'normal' | 'large';
+  /** Colour for what things are about: deaths, wealth, dungeons, love, crime, magic. */
+  readonly colours: 'on' | 'off';
+  /**
+   * What a plain click on a character's name opens: their card, or their life
+   * story. Ctrl+click (Cmd+click on a Mac) opens the other.
+   */
+  readonly characterClick: 'card' | 'page';
+  /** A glance at whoever or wherever a name refers to, when the pointer rests on it. */
+  readonly previews: 'on' | 'off';
 }
 
-export const DISPLAY_DEFAULTS: Display = { layout: 'wide', textSize: 'normal' };
+export const DISPLAY_DEFAULTS: Display = {
+  layout: 'wide',
+  textSize: 'normal',
+  colours: 'on',
+  characterClick: 'card',
+  previews: 'on',
+};
 
 const CHOICES: { readonly [K in keyof Display]: readonly Display[K][] } = {
   layout: ['wide', 'compact'],
   textSize: ['small', 'normal', 'large'],
+  colours: ['on', 'off'],
+  characterClick: ['card', 'page'],
+  previews: ['on', 'off'],
 };
 
 const KEY = 'ironside-dawn/display';
@@ -42,6 +60,7 @@ function apply(display: Display): void {
   const root = document.documentElement;
   root.dataset.layout = display.layout;
   root.dataset.textSize = display.textSize;
+  root.dataset.colours = display.colours;
 }
 
 /** Applies the saved choices to the page; call before the first render. */
@@ -58,6 +77,11 @@ export function setDisplay(change: Partial<Display>): void {
   }
   apply(current);
   for (const listener of listeners) listener();
+}
+
+/** The choices as they stand, for code outside React's rendering (event handlers). */
+export function currentDisplay(): Display {
+  return current;
 }
 
 export function useDisplay(): Display {
