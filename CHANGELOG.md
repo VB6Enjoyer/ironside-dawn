@@ -12,6 +12,7 @@ The public notes players see under "What's new" are kept in `src/ui/releases.ts`
 
 - **Skip ahead** offers 50 and 100 years (`src/ui/components/Controls.tsx`). Like any skip, it can be stopped partway.
 - A light mode under Display settings (**Theme**), in dark ink on parchment; dark stays the default (`src/ui/styles.css`, `src/ui/display.ts`). Every colour has a light counterpart that keeps its meaning and stays readable.
+- The status bar under the log counts the living in green and the gone in red (`src/ui/components/StatusBar.tsx`).
 
 ### Added
 

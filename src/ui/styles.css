@@ -26,6 +26,7 @@
   --mark-love: #ef93c2;
   --mark-crime: #f09a52;
   --mark-magic: #82b4ec;
+  --mark-living: #86c27a;
 
   /* Chart series, in fixed order: the dark steps of the categorical palette,
      validated against --panel (worst adjacent CVD ΔE 8.4, all ≥ 3:1). */
@@ -81,6 +82,7 @@
   --mark-love: #a83d76;
   --mark-crime: #a85410;
   --mark-magic: #2a66ad;
+  --mark-living: #3a7529;
 
   --series-1: #2f6fc4;
   --series-2: #c4501f;
@@ -1944,6 +1946,10 @@ button.link-button {
 
 .mark-magic {
   color: var(--mark-magic);
+}
+
+.mark-living {
+  color: var(--mark-living);
 }
 
 :root[data-colours='off'] .mark {
