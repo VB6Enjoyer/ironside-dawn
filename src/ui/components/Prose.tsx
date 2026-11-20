@@ -6,7 +6,7 @@ export type LinkClick = Pick<MouseEvent, 'ctrlKey' | 'metaKey'>;
 
 export interface ProseLinks {
   onCharacter?: (id: CharacterId, click?: LinkClick) => void;
-  onLocation?: (id: LocationId) => void;
+  onLocation?: (id: LocationId, click?: LinkClick) => void;
 }
 
 /** Renders prose segments, turning names into buttons that open their card or page. */
@@ -52,7 +52,7 @@ export function Prose({
           type="button"
           className="ref ref-location"
           data-location={ref.id}
-          onClick={() => onLocation(ref.id)}
+          onClick={(e) => onLocation(ref.id, e)}
         >
           {segment.text}
         </button>

@@ -14,8 +14,9 @@ export interface Display {
   /** Colour for what things are about: deaths, wealth, dungeons, love, crime, magic. */
   readonly colours: 'on' | 'off';
   /**
-   * What a plain click on a character's name opens: their card, or their life
-   * story. Ctrl+click (Cmd+click on a Mac) opens the other.
+   * What a plain click on a character's or place's name opens: its card, or
+   * its page. Ctrl+click (Cmd+click on a Mac) opens the other. (Named for
+   * characters, which had cards first; kept so saved choices still apply.)
    */
   readonly characterClick: 'card' | 'page';
   /** A glance at whoever or wherever a name refers to, when the pointer rests on it. */

@@ -38,7 +38,7 @@ export function RegionPage({
       type="button"
       className="ref ref-location"
       data-location={pid}
-      onClick={() => links.onLocation?.(pid)}
+      onClick={(e) => links.onLocation?.(pid, e)}
     >
       {placeName(host.places.get(pid))}
     </button>
