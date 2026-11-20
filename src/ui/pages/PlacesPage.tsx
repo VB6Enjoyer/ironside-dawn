@@ -85,7 +85,12 @@ export function PlacesPage({
                 const entry = host.places.get(p.id);
                 return (
                   <li key={p.id}>
-                    <button type="button" className="place-card" onClick={() => onLocation(p.id)}>
+                    <button
+                      type="button"
+                      className="place-card"
+                      data-location={p.id}
+                      onClick={() => onLocation(p.id)}
+                    >
                       <span className="place-kind">{entry ? KIND_NAMES[entry.kind] : ''}</span>
                       <span className="place-name">{placeName(entry)}</span>
                       <span className="muted">
@@ -163,6 +168,7 @@ export function PlacePage({
               <button
                 type="button"
                 className="ref ref-location"
+                data-location={view.heldBy!.id}
                 onClick={() => links.onLocation?.(view.heldBy!.id)}
               >
                 {placeName(view.heldBy)}
@@ -183,6 +189,7 @@ export function PlacePage({
                 <button
                   type="button"
                   className="ref ref-character"
+                  data-character={view.lord!.id}
                   onClick={(e) => links.onCharacter?.(view.lord!.id, e)}
                 >
                   {view.lord.name}
@@ -202,6 +209,7 @@ export function PlacePage({
                   <button
                     type="button"
                     className="ref ref-location"
+                    data-location={t.id}
                     onClick={() => links.onLocation?.(t.id)}
                   >
                     {placeName(t)}
@@ -222,6 +230,7 @@ export function PlacePage({
             <button
               type="button"
               className="ref ref-character"
+              data-character={view.master!.id}
               onClick={(e) => links.onCharacter?.(view.master!.id, e)}
             >
               {view.master.name}
@@ -349,6 +358,7 @@ function People({
             <button
               type="button"
               className={`ref ref-character${p.dead ? ' ref-dead' : ''}`}
+              data-character={p.id}
               onClick={(e) => onCharacter?.(p.id, e)}
             >
               {p.name}

@@ -369,6 +369,7 @@ function Bonds({
       <button
         type="button"
         className={`ref ref-character${other.dead ? ' ref-dead' : ''}`}
+        data-character={id}
         onClick={(e) => onSelect(id, e)}
       >
         {other.name}

@@ -17,6 +17,7 @@ import { CharacterCard } from './components/CharacterCard';
 import { Controls } from './components/Controls';
 import { DigestPanel } from './components/DigestPanel';
 import { DisplaySettings } from './components/DisplaySettings';
+import { HoverPreviews } from './components/HoverPreview';
 import type { LinkClick } from './components/Prose';
 import { SearchBox } from './components/SearchBox';
 import { StatusBar } from './components/StatusBar';
@@ -496,6 +497,7 @@ function Observatory({
         )}
       </div>
       <StatusBar snapshot={snapshot} />
+      <HoverPreviews host={host} names={names} />
 
       {snapshot.digest && (
         <DigestPanel

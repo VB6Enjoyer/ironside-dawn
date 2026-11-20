@@ -15,6 +15,7 @@ The public notes players see under "What's new" are kept in `src/ui/releases.ts`
 - Colour cues for what things are about, the same everywhere: red for deaths and kills, gold for wealth, purple for dungeons, pink for love, orange for crime, blue for magic. Life stories colour their figures (`src/text/biography.ts`), as do the character card and the Halls; **Colour cues** under Display settings turns them off.
 - The live log tints the events that stand out, each with its colour and a symbol: deaths (✝), marriages and births (♥), crime and bounties (⚖), legendary finds and inheritances (◆), the dread rising (▼) and spells learned (✶) (`src/text/categories.ts`, `src/ui/components/EventLog.tsx`). Chips above the log name them and show only one kind when pressed.
 - Ctrl+click (Cmd+click on a Mac) on a character's name opens their life story straight away, without the card. **Clicking a name** under Display settings swaps it, so a plain click opens the life story and Ctrl/Cmd+click the card (`src/ui/App.tsx`, `src/ui/display.ts`).
+- Resting the pointer on a character's or place's name (or tabbing to it) shows a glance: who they are, what they're doing and their health, or what a place is and who is there (`src/ui/components/HoverPreview.tsx`). **Previews on hover** under Display settings turns them off.
 
 ### Changed
 

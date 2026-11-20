@@ -1984,3 +1984,60 @@ button.link-button {
     min-width: 23ch;
   }
 }
+
+/* Hover previews: a glance at a character or a place. */
+.hover-preview {
+  position: fixed;
+  z-index: 50;
+  padding: 10px 12px;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  color: var(--text);
+  background: var(--panel-raised);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+}
+
+.hover-preview p {
+  margin: 0;
+}
+
+.glance-name {
+  font-size: 1.05rem;
+  color: var(--character);
+}
+
+.glance-name.glance-place {
+  color: var(--location);
+}
+
+.glance-sub {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.glance-line {
+  margin-top: 6px !important;
+}
+
+.glance-bar {
+  height: 4px;
+  margin-top: 8px;
+  background: var(--grid);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.glance-bar span {
+  display: block;
+  height: 100%;
+  background: var(--hp);
+}
+
+.glance-hint {
+  margin-top: 8px !important;
+  font-size: 0.75rem;
+  color: var(--faint);
+}

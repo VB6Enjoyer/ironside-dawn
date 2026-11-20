@@ -20,6 +20,7 @@ export function HallsPage({
       <button
         type="button"
         className="ref ref-character"
+        data-character={id}
         onClick={(e) => links.onCharacter!(id, e)}
       >
         {name}
@@ -31,7 +32,12 @@ export function HallsPage({
     const l = names.location(id);
     const text = l ? `${l.article ? `${l.article} ` : ''}${l.name}` : 'the wilds';
     return links.onLocation ? (
-      <button type="button" className="ref ref-location" onClick={() => links.onLocation!(id)}>
+      <button
+        type="button"
+        className="ref ref-location"
+        data-location={id}
+        onClick={() => links.onLocation!(id)}
+      >
         {text}
       </button>
     ) : (

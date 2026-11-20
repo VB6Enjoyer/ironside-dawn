@@ -38,6 +38,7 @@ export function Prose({
           key={i}
           type="button"
           className="ref ref-character"
+          data-character={ref.id}
           onClick={(e) => onCharacter(ref.id, e)}
         >
           {segment.text}
@@ -50,6 +51,7 @@ export function Prose({
           key={i}
           type="button"
           className="ref ref-location"
+          data-location={ref.id}
           onClick={() => onLocation(ref.id)}
         >
           {segment.text}

@@ -423,6 +423,8 @@ export function createEngine(options: EngineOptions): Engine {
       switch (request.kind) {
         case 'character':
           return characterView(sim, request.id);
+        case 'peek':
+          return sim.world.characters.get(request.id) ?? null;
         case 'location':
           return locationView(sim, request.id);
         case 'places':

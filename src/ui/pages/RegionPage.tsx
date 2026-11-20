@@ -34,7 +34,12 @@ export function RegionPage({
   if (view === null) return <p className="muted page-loading">There is no such land.</p>;
 
   const place = (pid: Parameters<NonNullable<ProseLinks['onLocation']>>[0]) => (
-    <button type="button" className="ref ref-location" onClick={() => links.onLocation?.(pid)}>
+    <button
+      type="button"
+      className="ref ref-location"
+      data-location={pid}
+      onClick={() => links.onLocation?.(pid)}
+    >
       {placeName(host.places.get(pid))}
     </button>
   );
@@ -42,6 +47,7 @@ export function RegionPage({
     <button
       type="button"
       className="ref ref-character"
+      data-character={cid}
       onClick={(e) => links.onCharacter?.(cid, e)}
     >
       {name}

@@ -149,6 +149,7 @@ function FamilyTree({
           type="button"
           className={className}
           disabled={id === self || !onCharacter}
+          data-character={id}
           onClick={(e) => onCharacter?.(id, e)}
           title={person.legend ? 'Remembered in song' : undefined}
         >

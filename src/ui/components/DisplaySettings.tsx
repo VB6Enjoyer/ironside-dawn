@@ -89,6 +89,15 @@ export function DisplaySettings({ onClose }: { onClose(): void }) {
         hint={`${MODIFIER}+click opens the other.`}
       />
       <Choice
+        name="Previews on hover"
+        setting="previews"
+        options={[
+          { value: 'on', label: 'On' },
+          { value: 'off', label: 'Off' },
+        ]}
+        hint="Rest the pointer on a name for a glance at who or where it is."
+      />
+      <Choice
         name="Colour cues"
         setting="colours"
         options={[

@@ -75,6 +75,7 @@ export function LogPage({
               <button
                 type="button"
                 className="ref ref-character"
+                data-character={followed}
                 onClick={(e) => links.onCharacter?.(followed, e)}
               >
                 {names.character(followed)?.name ?? 'someone'}

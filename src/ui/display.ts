@@ -16,6 +16,8 @@ export interface Display {
    * story. Ctrl+click (Cmd+click on a Mac) opens the other.
    */
   readonly characterClick: 'card' | 'page';
+  /** A glance at whoever or wherever a name refers to, when the pointer rests on it. */
+  readonly previews: 'on' | 'off';
 }
 
 export const DISPLAY_DEFAULTS: Display = {
@@ -23,6 +25,7 @@ export const DISPLAY_DEFAULTS: Display = {
   textSize: 'normal',
   colours: 'on',
   characterClick: 'card',
+  previews: 'on',
 };
 
 const CHOICES: { readonly [K in keyof Display]: readonly Display[K][] } = {
@@ -30,6 +33,7 @@ const CHOICES: { readonly [K in keyof Display]: readonly Display[K][] } = {
   textSize: ['small', 'normal', 'large'],
   colours: ['on', 'off'],
   characterClick: ['card', 'page'],
+  previews: ['on', 'off'],
 };
 
 const KEY = 'ironside-dawn/display';
