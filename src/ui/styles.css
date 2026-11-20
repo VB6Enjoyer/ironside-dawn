@@ -1660,3 +1660,48 @@ button.link-button {
 .settings-grid input[type='number'] {
   width: 7em;
 }
+
+/* What's new */
+
+.whats-new .release-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin: 14px 0 4px;
+}
+
+.whats-new .release-heading strong {
+  font-size: 1.25rem;
+  font-weight: normal;
+  color: var(--character);
+}
+
+.whats-new .release ul {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.whats-new .release li + li {
+  margin-top: 4px;
+}
+
+.whats-new details {
+  margin: 6px 0;
+}
+
+.whats-new summary {
+  cursor: pointer;
+}
+
+.whats-new-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+.version-button {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  color: var(--muted);
+}

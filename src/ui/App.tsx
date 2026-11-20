@@ -18,6 +18,7 @@ import { Controls } from './components/Controls';
 import { DigestPanel } from './components/DigestPanel';
 import { SearchBox } from './components/SearchBox';
 import { StatusBar } from './components/StatusBar';
+import { WhatsNew } from './components/WhatsNew';
 import { WorldsDialog } from './components/WorldsDialog';
 import { ChroniclePage } from './pages/ChroniclePage';
 import { HallsPage } from './pages/HallsPage';
@@ -40,6 +41,7 @@ import {
   type WorldSpec,
 } from './seed';
 import { packsByIds } from './packs';
+import { markNotesSeen, notesUnseen } from './releases';
 import { autosaveId, listSaves, readSave, writeSave } from './storage';
 import { useHostSnapshot } from './useHost';
 
@@ -164,6 +166,8 @@ function sameSettings(saved: SavedGame['world'], spec: WorldSpec): boolean {
 export function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  // The notes open by themselves once after each update, and from the version button.
+  const [notesOpen, setNotesOpen] = useState(() => notesUnseen(APP_VERSION));
 
   // On arrival: the world named in the link, carried on from its autosave if
   // you've watched it here before. With no world named (a bare address, or
@@ -224,17 +228,35 @@ export function App() {
           <h1>Ironside Dawn</h1>
           <p className="tagline">A world you watch rather than play.</p>
         </div>
-        {session && (
-          <div className="world-seed">
-            <span>
-              Seed <code>{session.spec.seed}</code>
-            </span>
-            <button type="button" onClick={() => setDialogOpen(true)}>
-              Worlds…
-            </button>
-          </div>
-        )}
+        <div className="world-seed">
+          <button
+            type="button"
+            className="version-button"
+            onClick={() => setNotesOpen(true)}
+            title="What’s new in this version"
+          >
+            v{APP_VERSION} · What’s new
+          </button>
+          {session && (
+            <>
+              <span>
+                Seed <code>{session.spec.seed}</code>
+              </span>
+              <button type="button" onClick={() => setDialogOpen(true)}>
+                Worlds…
+              </button>
+            </>
+          )}
+        </div>
       </header>
+      {notesOpen && (
+        <WhatsNew
+          onClose={() => {
+            markNotesSeen(APP_VERSION);
+            setNotesOpen(false);
+          }}
+        />
+      )}
 
       {session ? (
         <WorldView
