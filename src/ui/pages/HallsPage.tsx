@@ -61,9 +61,9 @@ export function HallsPage({
                     <span className="muted">{SPECIES_NAMES[h.species].singular}</span>
                   </td>
                   <td>{h.level}</td>
-                  <td>{formatCount(h.kills)}</td>
+                  <td className="mark mark-death">{formatCount(h.kills)}</td>
                   <td>{h.legends || '—'}</td>
-                  <td>{formatCount(h.goldEarned)}</td>
+                  <td className="mark mark-wealth">{formatCount(h.goldEarned)}</td>
                 </tr>
               ))}
             </tbody>
@@ -96,7 +96,7 @@ export function HallsPage({
                   </td>
                   <td>{place(d.lairId)}</td>
                   <td>{d.level}</td>
-                  <td>{formatCount(d.slain)}</td>
+                  <td className="mark mark-death">{formatCount(d.slain)}</td>
                   <td>
                     {d.dead ? (
                       d.slayers.length > 0 ? (
@@ -148,7 +148,7 @@ export function HallsPage({
                   </td>
                   <td>{lifeYears(h.born, h.died)}</td>
                   <td>{h.level}</td>
-                  <td>{formatCount(h.kills)}</td>
+                  <td className="mark mark-death">{formatCount(h.kills)}</td>
                   <td>{h.legends || '—'}</td>
                 </tr>
               ))}
@@ -202,7 +202,7 @@ export function HallsPage({
           <ul className="wanted">
             {halls.wanted.map((w) => (
               <li key={w.id} className="wanted-poster">
-                <div className="wanted-bounty">{formatCount(w.bounty)} gold</div>
+                <div className="wanted-bounty mark mark-wealth">{formatCount(w.bounty)} gold</div>
                 <div>{who(w.id, w.name)}</div>
                 <div className="muted">
                   Level {w.level} {SPECIES_NAMES[w.species].singular} · {w.crimes}{' '}

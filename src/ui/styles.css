@@ -18,6 +18,15 @@
   --rare: #7aa7d9;
   --legendary: #e0a14a;
 
+  /* What things are about, coloured the same way everywhere (feed, life
+     stories, filters): each at least 6:1 against the panels. */
+  --mark-death: #e8806f;
+  --mark-wealth: #f0c14b;
+  --mark-delve: #b39af0;
+  --mark-love: #ef93c2;
+  --mark-crime: #f09a52;
+  --mark-magic: #82b4ec;
+
   /* Chart series, in fixed order: the dark steps of the categorical palette,
      validated against --panel (worst adjacent CVD ΔE 8.4, all ≥ 3:1). */
   --series-1: #3987e5;
@@ -1857,4 +1866,33 @@ button.link-button {
   :root[data-layout='wide'] .profile-columns .timeline > h2:first-child {
     margin-top: 0;
   }
+}
+
+/* Marked figures and phrases in prose ("120 foes", "4,200 gold"). */
+.mark-death {
+  color: var(--mark-death);
+}
+
+.mark-wealth {
+  color: var(--mark-wealth);
+}
+
+.mark-delve {
+  color: var(--mark-delve);
+}
+
+.mark-love {
+  color: var(--mark-love);
+}
+
+.mark-crime {
+  color: var(--mark-crime);
+}
+
+.mark-magic {
+  color: var(--mark-magic);
+}
+
+:root[data-colours='off'] .mark {
+  color: inherit;
 }

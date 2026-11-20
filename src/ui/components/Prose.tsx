@@ -20,6 +20,13 @@ export function Prose({
         </span>
       );
     }
+    if ('mark' in segment) {
+      return (
+        <span key={i} className={`mark mark-${segment.mark}`}>
+          {segment.text}
+        </span>
+      );
+    }
     if (!('ref' in segment)) return segment.text;
     const ref = segment.ref;
     if (ref.kind === 'character' && onCharacter) {

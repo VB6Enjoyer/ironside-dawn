@@ -262,7 +262,7 @@ export function CharacterCard({
         <dl className="facts">
           <dt>Gold</dt>
           <dd>
-            {formatCount(character.gold)}{' '}
+            <span className="mark mark-wealth">{formatCount(character.gold)}</span>{' '}
             <span className="muted">({formatCount(character.goldEarned)} earned)</span>
           </dd>
           {character.calling === 'merchant' ? (
@@ -535,8 +535,10 @@ function Places({
               <Fragment key={id}>
                 <dt>{place?.name ?? id}</dt>
                 <dd>
-                  {e.trips} {e.trips === 1 ? 'trip' : 'trips'}, about {Math.round(e.reward)} gold
-                  each
+                  <span className="mark mark-delve">
+                    {e.trips} {e.trips === 1 ? 'trip' : 'trips'}
+                  </span>
+                  , about <span className="mark mark-wealth">{Math.round(e.reward)} gold</span> each
                   {fear >= 0.5 ? (
                     <span className="muted"> · feared</span>
                   ) : fear >= 0.25 ? (
@@ -607,7 +609,7 @@ function Kills({ kills }: { kills: Character['kills'] }) {
   const total = entries.reduce((sum, [, n]) => sum + n, 0);
   return (
     <>
-      {total}{' '}
+      <span className="mark mark-death">{total}</span>{' '}
       <span className="muted">
         (
         {entries

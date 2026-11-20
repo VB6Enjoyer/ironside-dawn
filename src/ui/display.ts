@@ -9,13 +9,16 @@ export interface Display {
   /** The whole width of the window, with room for side columns, or the narrow column of 0.1. */
   readonly layout: 'wide' | 'compact';
   readonly textSize: 'small' | 'normal' | 'large';
+  /** Colour for what things are about: deaths, wealth, dungeons, love, crime, magic. */
+  readonly colours: 'on' | 'off';
 }
 
-export const DISPLAY_DEFAULTS: Display = { layout: 'wide', textSize: 'normal' };
+export const DISPLAY_DEFAULTS: Display = { layout: 'wide', textSize: 'normal', colours: 'on' };
 
 const CHOICES: { readonly [K in keyof Display]: readonly Display[K][] } = {
   layout: ['wide', 'compact'],
   textSize: ['small', 'normal', 'large'],
+  colours: ['on', 'off'],
 };
 
 const KEY = 'ironside-dawn/display';
@@ -42,6 +45,7 @@ function apply(display: Display): void {
   const root = document.documentElement;
   root.dataset.layout = display.layout;
   root.dataset.textSize = display.textSize;
+  root.dataset.colours = display.colours;
 }
 
 /** Applies the saved choices to the page; call before the first render. */

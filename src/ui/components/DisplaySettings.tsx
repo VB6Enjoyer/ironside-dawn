@@ -76,6 +76,15 @@ export function DisplaySettings({ onClose }: { onClose(): void }) {
           { value: 'large', label: 'Large' },
         ]}
       />
+      <Choice
+        name="Colour cues"
+        setting="colours"
+        options={[
+          { value: 'on', label: 'On' },
+          { value: 'off', label: 'Off' },
+        ]}
+        hint="Colour for what things are about: red for deaths and kills, gold for wealth, purple for dungeons, pink for love, orange for crime, blue for magic."
+      />
     </dialog>
   );
 }
