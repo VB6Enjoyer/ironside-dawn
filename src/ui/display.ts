@@ -6,6 +6,8 @@ import { useSyncExternalStore } from 'react';
  * styles key on. More are added as the interface grows.
  */
 export interface Display {
+  /** Dark (the default) or light. */
+  readonly theme: 'dark' | 'light';
   /** The whole width of the window, with room for side columns, or the narrow column of 0.1. */
   readonly layout: 'wide' | 'compact';
   readonly textSize: 'small' | 'normal' | 'large';
@@ -21,6 +23,7 @@ export interface Display {
 }
 
 export const DISPLAY_DEFAULTS: Display = {
+  theme: 'dark',
   layout: 'wide',
   textSize: 'normal',
   colours: 'on',
@@ -29,6 +32,7 @@ export const DISPLAY_DEFAULTS: Display = {
 };
 
 const CHOICES: { readonly [K in keyof Display]: readonly Display[K][] } = {
+  theme: ['dark', 'light'],
   layout: ['wide', 'compact'],
   textSize: ['small', 'normal', 'large'],
   colours: ['on', 'off'],
@@ -58,7 +62,13 @@ const listeners = new Set<() => void>();
 
 function apply(display: Display): void {
   const root = document.documentElement;
+  root.dataset.theme = display.theme;
   root.dataset.layout = display.layout;
+  // The browser's own parts (scrollbars, form controls) and the window's colour follow.
+  document.querySelector('meta[name="color-scheme"]')?.setAttribute('content', display.theme);
+  document
+    .querySelector('meta[name="theme-color"]')
+    ?.setAttribute('content', display.theme === 'light' ? '#f3efe6' : '#15171a');
   root.dataset.textSize = display.textSize;
   root.dataset.colours = display.colours;
 }

@@ -62,6 +62,14 @@ export function DisplaySettings({ onClose }: { onClose(): void }) {
       </header>
       <p className="muted">Kept in this browser. Changes apply at once.</p>
       <Choice
+        name="Theme"
+        setting="theme"
+        options={[
+          { value: 'dark', label: 'Dark' },
+          { value: 'light', label: 'Light' },
+        ]}
+      />
+      <Choice
         name="Layout"
         setting="layout"
         options={[

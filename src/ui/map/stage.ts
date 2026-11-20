@@ -103,7 +103,8 @@ export class MapStage {
 
   private async init(): Promise<void> {
     await this.app.init({
-      background: 0x15171a,
+      // See-through: the page's own background shows around the land, in either theme.
+      backgroundAlpha: 0,
       antialias: true,
       resizeTo: this.host,
       resolution: window.devicePixelRatio || 1,
