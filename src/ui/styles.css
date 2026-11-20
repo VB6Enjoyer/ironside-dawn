@@ -35,6 +35,24 @@
   background: var(--bg);
 }
 
+/* Display settings: text size scales everything sized in rem. */
+:root[data-text-size='small'] {
+  font-size: 14px;
+}
+
+:root[data-text-size='large'] {
+  font-size: 18px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
 *,
 *::before,
 *::after {
@@ -1704,4 +1722,55 @@ button.link-button {
   font-family: var(--mono);
   font-size: 0.8rem;
   color: var(--muted);
+}
+
+/* Display settings */
+
+.display-settings .setting {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 16px;
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+}
+
+.display-settings .setting-hint {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.segmented {
+  display: inline-flex;
+}
+
+.segmented button {
+  border-radius: 0;
+}
+
+.segmented button + button {
+  margin-left: -1px;
+}
+
+.segmented button:first-child {
+  border-radius: 4px 0 0 4px;
+}
+
+.segmented button:last-child {
+  border-radius: 0 4px 4px 0;
+}
+
+.segmented button.active {
+  position: relative;
+  color: var(--bg);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.settings-button {
+  padding: 4px 8px;
+  line-height: 1;
 }

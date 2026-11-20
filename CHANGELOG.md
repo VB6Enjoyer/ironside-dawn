@@ -8,6 +8,10 @@ The public notes players see under "What's new" are kept in `src/ui/releases.ts`
 
 ## [Unreleased]
 
+### Added
+
+- A **Display settings** panel (⚙ in the header) with a choice of text size, kept in this browser (`src/ui/display.ts`, `src/ui/components/DisplaySettings.tsx`). The one animation in the app stops for those whose system asks for reduced motion.
+
 ### Fixed
 
 - The character card on a life story page closes when its ✕ is pressed, instead of reopening at once (`src/ui/App.tsx`).

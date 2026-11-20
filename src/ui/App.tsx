@@ -16,6 +16,7 @@ import { defaultSettings, type CharacterId, type LocationId, type WorldSettings 
 import { CharacterCard } from './components/CharacterCard';
 import { Controls } from './components/Controls';
 import { DigestPanel } from './components/DigestPanel';
+import { DisplaySettings } from './components/DisplaySettings';
 import { SearchBox } from './components/SearchBox';
 import { StatusBar } from './components/StatusBar';
 import { WhatsNew } from './components/WhatsNew';
@@ -168,6 +169,7 @@ export function App() {
   const [dialogOpen, setDialogOpen] = useState(false);
   // The notes open by themselves once after each update, and from the version button.
   const [notesOpen, setNotesOpen] = useState(() => notesUnseen(APP_VERSION));
+  const [displayOpen, setDisplayOpen] = useState(false);
 
   // On arrival: the world named in the link, carried on from its autosave if
   // you've watched it here before. With no world named (a bare address, or
@@ -237,6 +239,15 @@ export function App() {
           >
             v{APP_VERSION} · What’s new
           </button>
+          <button
+            type="button"
+            className="settings-button"
+            onClick={() => setDisplayOpen(true)}
+            aria-label="Display settings"
+            title="Display settings"
+          >
+            ⚙
+          </button>
           {session && (
             <>
               <span>
@@ -249,6 +260,7 @@ export function App() {
           )}
         </div>
       </header>
+      {displayOpen && <DisplaySettings onClose={() => setDisplayOpen(false)} />}
       {notesOpen && (
         <WhatsNew
           onClose={() => {
