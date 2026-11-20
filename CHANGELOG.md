@@ -26,6 +26,7 @@ The public notes players see under "What's new" are kept in `src/ui/releases.ts`
 
 ### Changed
 
+- Desktop installers are built for Windows and Linux only (`.github/workflows/desktop.yml`): macOS won't open an app that isn't signed with a paid Apple developer certificate.
 - The log's timestamps take the same width whatever the day, so its text lines up.
 - Opening the app with no world named shows the main menu, instead of carrying on the last world watched (`src/ui/App.tsx`).
 

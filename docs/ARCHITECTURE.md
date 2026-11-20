@@ -42,7 +42,7 @@ Every technical decision below follows from these five pillars.
 | Tests           | **Vitest**                                       | Same config as Vite. Also used for determinism and statistical tests.                                                                |
 | Headless runner | **tsx** (Node)                                   | Runs `npm run sim -- --seed 42 --years 50` for balancing and debugging.                                                              |
 | Persistence     | **IndexedDB** (via `idb`)                        | Saves are larger than `localStorage` allows.                                                                                         |
-| Desktop         | **Tauri**                                        | Wraps the same web build as a native app for Windows, macOS, and Linux (`src-tauri/`).                                               |
+| Desktop         | **Tauri**                                        | Wraps the same web build as a native app for Windows and Linux (`src-tauri/`); no macOS build, as unsigned apps won't open there.    |
 
 ### Why HTML/React rather than a non-HTML GUI?
 

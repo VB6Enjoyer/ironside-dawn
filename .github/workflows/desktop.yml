@@ -1,8 +1,9 @@
 name: Desktop
 
-# Builds the desktop app (Tauri) for Windows, macOS and Linux. Run it by hand
-# from the Actions tab, or push a tag like v0.1.0 to build and attach the
-# installers to a draft release.
+# Builds the desktop app (Tauri) for Windows and Linux. Run it by hand from
+# the Actions tab, or push a tag like v0.2.0 to build and attach the
+# installers to a draft release. There is no macOS build: macOS won't open an
+# app that isn't signed with a paid Apple developer certificate.
 
 on:
   workflow_dispatch:
@@ -14,13 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - platform: ubuntu-22.04
-            args: ''
-          - platform: windows-latest
-            args: ''
-          - platform: macos-latest
-            args: '--target universal-apple-darwin'
+        platform: [ubuntu-22.04, windows-latest]
     runs-on: ${{ matrix.platform }}
     permissions:
       contents: write
@@ -31,8 +26,6 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
       - uses: swatinem/rust-cache@v2
         with:
           workspaces: src-tauri -> target
@@ -50,7 +43,6 @@ jobs:
           # its own: set the SHARE_URL repository variable to the hosted site.
           VITE_SHARE_URL: ${{ vars.SHARE_URL }}
         with:
-          args: ${{ matrix.args }}
           tagName: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || '' }}
           releaseName: 'Ironside Dawn ${{ github.ref_name }}'
           releaseDraft: true
@@ -59,7 +51,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: desktop-${{ matrix.platform }}
-          path: |
-            src-tauri/target/release/bundle/
-            src-tauri/target/universal-apple-darwin/release/bundle/
+          path: src-tauri/target/release/bundle/
           if-no-files-found: ignore
