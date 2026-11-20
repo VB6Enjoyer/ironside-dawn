@@ -33,6 +33,7 @@ The public notes players see under "What's new" are kept in `src/ui/releases.ts`
 
 ### Fixed
 
+- The world map's lands and their names show on every computer: they are drawn as shapes rather than a painted image, which some browsers and graphics drivers failed to show, and if drawing them ever fails the map tries again (`src/ui/map/stage.ts`, `src/ui/map/voronoi.ts`).
 - The character card on a life story page closes when its ✕ is pressed, instead of reopening at once (`src/ui/App.tsx`).
 - Place names on the Trade page link to their pages: where each merchant is or is bound, the caravans on the road, and the roads in trouble (`src/ui/pages/TradePage.tsx`).
 
