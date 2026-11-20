@@ -8,6 +8,16 @@ The public notes players see under "What's new" are kept in `src/ui/releases.ts`
 
 ## [Unreleased]
 
+### Added
+
+- A **Display settings** panel (⚙ in the header) with a choice of text size, kept in this browser (`src/ui/display.ts`, `src/ui/components/DisplaySettings.tsx`). The one animation in the app stops for those whose system asks for reduced motion.
+- A full-width layout, now the default: the app uses the whole window, and wide screens get side columns, with headlines beside the live log and a life story's timeline beside the story (`src/ui/styles.css`, `src/ui/pages/LogPage.tsx`, `src/ui/pages/ProfilePage.tsx`). The narrow single column stays as the **Compact** layout under Display settings.
+
+### Fixed
+
+- The character card on a life story page closes when its ✕ is pressed, instead of reopening at once (`src/ui/App.tsx`).
+- Place names on the Trade page link to their pages: where each merchant is or is bound, the caravans on the road, and the roads in trouble (`src/ui/pages/TradePage.tsx`).
+
 ## [0.1.2] - 2026-11-20
 
 ### Added
