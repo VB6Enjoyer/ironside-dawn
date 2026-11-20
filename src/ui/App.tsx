@@ -323,7 +323,13 @@ function Observatory({
   const [route, go] = useRoute();
   const [selected, setSelected] = useState<CharacterId | null>(null);
   const [note, setNote] = useState(session.note);
-  const closeCard = useCallback(() => setSelected(null), []);
+  // On a life story the card shows that character until closed: closing it
+  // there has to be remembered, or the page would bring it straight back.
+  const [dismissed, setDismissed] = useState<CharacterId | null>(null);
+  const closeCard = useCallback(() => {
+    setSelected(null);
+    if (route.page === 'profile') setDismissed(route.id);
+  }, [route]);
   const names = host.names;
 
   const save = useCallback(
@@ -357,7 +363,7 @@ function Observatory({
     onLocation: (id: LocationId) => go({ page: 'place', id }),
   };
   const toRegion = (id: string) => go({ page: 'region', id });
-  const cardId = selected ?? (route.page === 'profile' ? route.id : null);
+  const cardId = selected ?? (route.page === 'profile' && route.id !== dismissed ? route.id : null);
 
   return (
     <>

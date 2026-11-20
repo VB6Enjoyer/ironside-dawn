@@ -8,6 +8,10 @@ The public notes players see under "What's new" are kept in `src/ui/releases.ts`
 
 ## [Unreleased]
 
+### Fixed
+
+- The character card on a life story page closes when its ✕ is pressed, instead of reopening at once (`src/ui/App.tsx`).
+
 ## [0.1.2] - 2026-11-20
 
 ### Added
