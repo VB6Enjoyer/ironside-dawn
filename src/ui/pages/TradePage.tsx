@@ -22,10 +22,7 @@ export function TradePage({
 }: { host: SimHost; names: NameResolver; time: number } & ProseLinks) {
   const view = useQuery(host, { kind: 'trade' }, Math.floor(time / HOUR));
   if (!view) return <p className="muted page-loading">Asking around the trading houses…</p>;
-  const place = (id: LocationId | null) => {
-    const l = id ? names.location(id) : undefined;
-    return l ? `${l.article ? `${l.article} ` : ''}${l.name}` : 'the wilds';
-  };
+  const place = (id: LocationId | null) => <Place id={id} names={names} {...links} />;
   const onRoad = view.merchants.filter((m) => m.locationId === null && cargoUnits(m) > 0);
 
   return (
@@ -91,9 +88,11 @@ export function TradePage({
                     <span className="muted">{SPECIES_NAMES[m.species].singular}</span>
                   </td>
                   <td>
-                    {m.locationId
-                      ? place(m.locationId)
-                      : `on the road to ${place(m.destinationId)}`}
+                    {m.locationId ? (
+                      place(m.locationId)
+                    ) : (
+                      <>on the road to {place(m.destinationId)}</>
+                    )}
                   </td>
                   <td>{formatCount(m.gold)}</td>
                   <td className="tongues">{tongues(m)}</td>
@@ -122,6 +121,24 @@ export function TradePage({
         )}
       </section>
     </div>
+  );
+}
+
+/** A place's name, linked to its page; "the wilds" for nowhere in particular. */
+function Place({
+  id,
+  names,
+  onLocation,
+}: { id: LocationId | null; names: NameResolver } & ProseLinks) {
+  const l = id ? names.location(id) : undefined;
+  if (!id || !l) return <>the wilds</>;
+  const name = `${l.article ? `${l.article} ` : ''}${l.name}`;
+  return onLocation ? (
+    <button type="button" className="ref ref-location" onClick={() => onLocation(id)}>
+      {name}
+    </button>
+  ) : (
+    <>{name}</>
   );
 }
 

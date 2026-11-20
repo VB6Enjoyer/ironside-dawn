@@ -11,6 +11,7 @@ The public notes players see under "What's new" are kept in `src/ui/releases.ts`
 ### Fixed
 
 - The character card on a life story page closes when its ✕ is pressed, instead of reopening at once (`src/ui/App.tsx`).
+- Place names on the Trade page link to their pages: where each merchant is or is bound, the caravans on the road, and the roads in trouble (`src/ui/pages/TradePage.tsx`).
 
 ## [0.1.2] - 2026-11-20
 
