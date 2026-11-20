@@ -7,10 +7,12 @@ function Choice<K extends keyof Display>({
   name,
   setting,
   options,
+  hint,
 }: {
   name: string;
   setting: K;
   options: readonly { value: Display[K]; label: string }[];
+  hint?: string;
 }) {
   const display = useDisplay();
   return (
@@ -31,6 +33,7 @@ function Choice<K extends keyof Display>({
           </button>
         ))}
       </div>
+      {hint && <p className="setting-hint">{hint}</p>}
     </div>
   );
 }
@@ -55,6 +58,15 @@ export function DisplaySettings({ onClose }: { onClose(): void }) {
         </button>
       </header>
       <p className="muted">Kept in this browser. Changes apply at once.</p>
+      <Choice
+        name="Layout"
+        setting="layout"
+        options={[
+          { value: 'wide', label: 'Full width' },
+          { value: 'compact', label: 'Compact' },
+        ]}
+        hint="Full width uses the whole window, with side columns on wide screens. Compact keeps everything in one narrow column."
+      />
       <Choice
         name="Text size"
         setting="textSize"

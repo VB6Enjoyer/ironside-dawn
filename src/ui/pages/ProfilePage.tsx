@@ -57,51 +57,55 @@ export function ProfilePage({
         </p>
       </header>
 
-      <section className="biography">
-        {biography(c, events, names, heroes).map((paragraph, i) => (
-          <p key={i}>
-            <Prose segments={paragraph} {...links} />
-          </p>
-        ))}
-      </section>
+      <div className="profile-columns">
+        <div className="profile-main">
+          <section className="biography">
+            {biography(c, events, names, heroes).map((paragraph, i) => (
+              <p key={i}>
+                <Prose segments={paragraph} {...links} />
+              </p>
+            ))}
+          </section>
 
-      <FamilyTree
-        self={id}
-        family={view.family}
-        world={view.slice}
-        onCharacter={links.onCharacter}
-      />
+          <FamilyTree
+            self={id}
+            family={view.family}
+            world={view.slice}
+            onCharacter={links.onCharacter}
+          />
 
-      <div className="chart-grid-layout">
-        <LineChart
-          title="Level"
-          x={x}
-          xLabel={when}
-          series={[
-            {
-              id: 'level',
-              label: 'Level',
-              color: 'var(--series-1)',
-              values: samples.map(([, level]) => level),
-            },
-          ]}
-        />
-        <LineChart
-          title="Gold in hand"
-          x={x}
-          xLabel={when}
-          series={[
-            {
-              id: 'gold',
-              label: 'Gold',
-              color: 'var(--series-4)',
-              values: samples.map(([, , gold]) => gold),
-            },
-          ]}
-        />
+          <div className="chart-grid-layout">
+            <LineChart
+              title="Level"
+              x={x}
+              xLabel={when}
+              series={[
+                {
+                  id: 'level',
+                  label: 'Level',
+                  color: 'var(--series-1)',
+                  values: samples.map(([, level]) => level),
+                },
+              ]}
+            />
+            <LineChart
+              title="Gold in hand"
+              x={x}
+              xLabel={when}
+              series={[
+                {
+                  id: 'gold',
+                  label: 'Gold',
+                  color: 'var(--series-4)',
+                  values: samples.map(([, , gold]) => gold),
+                },
+              ]}
+            />
+          </div>
+        </div>
+
+        <Timeline events={events} names={names} links={links} />
       </div>
-
-      <Timeline events={events} names={names} links={links} />
     </div>
   );
 }

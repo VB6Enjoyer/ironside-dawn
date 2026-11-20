@@ -1,17 +1,21 @@
 import { useMemo, useState } from 'react';
 
 import { isDigest, type HostSnapshot, type SimHost } from '../../host';
-import type { CharacterId, LocationId } from '../../sim';
+import { HOUR, Importance, type CharacterId, type LocationId } from '../../sim';
 import type { SpeciesId } from '../../content';
 import {
+  describeEvent,
   EVENT_CATEGORIES,
   eventCategory,
+  formatTimestamp,
   SPECIES_NAMES,
   type EventCategory,
   type NameResolver,
 } from '../../text';
 import { EventLog } from '../components/EventLog';
-import type { ProseLinks } from '../components/Prose';
+import { Prose, type ProseLinks } from '../components/Prose';
+import { useDisplay } from '../display';
+import { useQuery } from '../useHost';
 import { placeName } from './PlacesPage';
 
 /** The live log, with filters by kind of event, place and people, and follow mode. */
@@ -31,6 +35,7 @@ export function LogPage({
   const [place, setPlace] = useState<LocationId | 'all'>('all');
   const [species, setSpecies] = useState<SpeciesId | 'all'>('all');
   const [onlyFollowed, setOnlyFollowed] = useState(true);
+  const { layout } = useDisplay();
   const followed = snapshot.following[0] ?? null;
   const followOnly = followed !== null && onlyFollowed;
 
@@ -56,83 +61,130 @@ export function LogPage({
 
   return (
     <div className="log-page">
-      {followed && (
-        <div className="follow-bar">
-          <span>
-            Following{' '}
-            <button
-              type="button"
-              className="ref ref-character"
-              onClick={() => links.onCharacter?.(followed)}
-            >
-              {names.character(followed)?.name ?? 'someone'}
+      <div className="log-main">
+        {followed && (
+          <div className="follow-bar">
+            <span>
+              Following{' '}
+              <button
+                type="button"
+                className="ref ref-character"
+                onClick={() => links.onCharacter?.(followed)}
+              >
+                {names.character(followed)?.name ?? 'someone'}
+              </button>
+            </span>
+            <label>
+              <input
+                type="checkbox"
+                checked={onlyFollowed}
+                onChange={(e) => setOnlyFollowed(e.target.checked)}
+              />{' '}
+              Only their doings
+            </label>
+            <button type="button" onClick={() => host.follow([])}>
+              Stop following
             </button>
-          </span>
-          <label>
-            <input
-              type="checkbox"
-              checked={onlyFollowed}
-              onChange={(e) => setOnlyFollowed(e.target.checked)}
-            />{' '}
-            Only their doings
-          </label>
-          <button type="button" onClick={() => host.follow([])}>
-            Stop following
-          </button>
-        </div>
-      )}
-      <div className="log-filters" role="group" aria-label="Filter the log">
-        <label>
-          Show
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value as EventCategory | 'all')}
-          >
-            <option value="all">Everything</option>
-            {EVENT_CATEGORIES.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Where
-          <select value={place} onChange={(e) => setPlace(e.target.value as LocationId | 'all')}>
-            <option value="all">Anywhere</option>
-            {[...host.places.values()].map((p) => (
-              <option key={p.id} value={p.id}>
-                {placeName(p)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Who
-          <select value={species} onChange={(e) => setSpecies(e.target.value as SpeciesId | 'all')}>
-            <option value="all">Anyone</option>
-            {(Object.keys(SPECIES_NAMES) as SpeciesId[]).map((s) => (
-              <option key={s} value={s}>
-                {capital(SPECIES_NAMES[s].plural)}
-              </option>
-            ))}
-          </select>
-        </label>
-        {filtered !== snapshot.log && (
-          <span className="muted">
-            {filtered.length} of {snapshot.log.length} entries
-          </span>
+          </div>
         )}
+        <div className="log-filters" role="group" aria-label="Filter the log">
+          <label>
+            Show
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value as EventCategory | 'all')}
+            >
+              <option value="all">Everything</option>
+              {EVENT_CATEGORIES.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Where
+            <select value={place} onChange={(e) => setPlace(e.target.value as LocationId | 'all')}>
+              <option value="all">Anywhere</option>
+              {[...host.places.values()].map((p) => (
+                <option key={p.id} value={p.id}>
+                  {placeName(p)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Who
+            <select
+              value={species}
+              onChange={(e) => setSpecies(e.target.value as SpeciesId | 'all')}
+            >
+              <option value="all">Anyone</option>
+              {(Object.keys(SPECIES_NAMES) as SpeciesId[]).map((s) => (
+                <option key={s} value={s}>
+                  {capital(SPECIES_NAMES[s].plural)}
+                </option>
+              ))}
+            </select>
+          </label>
+          {filtered !== snapshot.log && (
+            <span className="muted">
+              {filtered.length} of {snapshot.log.length} entries
+            </span>
+          )}
+        </div>
+        <EventLog
+          log={filtered}
+          names={names}
+          selected={selected}
+          empty={
+            filtered === snapshot.log ? undefined : 'Nothing in the log matches these filters.'
+          }
+          {...links}
+        />
       </div>
-      <EventLog
-        log={filtered}
-        names={names}
-        selected={selected}
-        empty={filtered === snapshot.log ? undefined : 'Nothing in the log matches these filters.'}
-        {...links}
-      />
+      {layout === 'wide' && <Headlines host={host} names={names} time={snapshot.time} {...links} />}
     </div>
   );
 }
+
+/** Beside the live log on wide screens: the notable and legendary, newest first. */
+function Headlines({
+  host,
+  names,
+  time,
+  ...links
+}: { host: SimHost; names: NameResolver; time: number } & ProseLinks) {
+  const events = useQuery(
+    host,
+    { kind: 'events', query: { minImportance: Importance.Notable, limit: HEADLINES } },
+    Math.floor(time / HOUR),
+  );
+  return (
+    <aside className="headlines" aria-label="Headlines">
+      <h3>Headlines</h3>
+      {!events ? null : events.length === 0 ? (
+        <p className="muted">Nothing worth telling yet.</p>
+      ) : (
+        <ol className="chronicle">
+          {[...events].reverse().map((event) => (
+            <li
+              key={event.id}
+              className={event.importance >= Importance.Legendary ? 'legendary' : undefined}
+            >
+              <time>{formatTimestamp(event.t)}</time>
+              <span>
+                <Prose segments={describeEvent(event, names)} {...links} />
+              </span>
+            </li>
+          ))}
+        </ol>
+      )}
+    </aside>
+  );
+}
+
+/** How many headlines are kept beside the log. */
+const HEADLINES = 40;
 
 const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);

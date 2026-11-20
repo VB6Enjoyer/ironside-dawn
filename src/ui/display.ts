@@ -6,12 +6,15 @@ import { useSyncExternalStore } from 'react';
  * styles key on. More are added as the interface grows.
  */
 export interface Display {
+  /** The whole width of the window, with room for side columns, or the narrow column of 0.1. */
+  readonly layout: 'wide' | 'compact';
   readonly textSize: 'small' | 'normal' | 'large';
 }
 
-export const DISPLAY_DEFAULTS: Display = { textSize: 'normal' };
+export const DISPLAY_DEFAULTS: Display = { layout: 'wide', textSize: 'normal' };
 
 const CHOICES: { readonly [K in keyof Display]: readonly Display[K][] } = {
+  layout: ['wide', 'compact'],
   textSize: ['small', 'normal', 'large'],
 };
 
@@ -37,6 +40,7 @@ const listeners = new Set<() => void>();
 
 function apply(display: Display): void {
   const root = document.documentElement;
+  root.dataset.layout = display.layout;
   root.dataset.textSize = display.textSize;
 }
 
