@@ -11,7 +11,7 @@ import { createSimulation } from './simulation';
  * one are told they replay the same world (`replaysHere`), so this must change
  * only together with `SAME_HISTORY_SINCE`.
  */
-const HISTORY = { since: '0.1.0', hash: '00243451ae6e6f' };
+const HISTORY = { since: '0.3.0', hash: '135c31235eb480' };
 
 function monthOfHistory(): string {
   const hash = new StreamHash();

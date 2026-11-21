@@ -73,7 +73,7 @@ export function ProfilePage({
       <div className="profile-columns">
         <div className="profile-main">
           <section className="biography">
-            {biography(c, events, names, heroes).map((paragraph, i) => (
+            {biography(c, events, names, heroes, time).map((paragraph, i) => (
               <p key={i}>
                 <Prose segments={paragraph} {...links} />
               </p>

@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest';
 
 import type { Character, LocationId } from '../model';
 import { testCharacter, testContext } from '../test-support';
-import { ambush, considerCrime, onCharacterKilled } from './outlaws';
+import { DAY } from '../core/time';
+import { ambush, considerCrime, onCharacterKilled, temptationReasons } from './outlaws';
 import { learnLanguage } from './social';
+import { nearestTown, standingIn } from './notoriety';
 
 const woods = 'witherwood' as LocationId;
 
@@ -24,28 +26,108 @@ function outlawAndTraveler(seed: string) {
 const speak = (c: Character, tongue: 'common' | 'sylvan') => (c.languages = { [tongue]: 100 });
 
 describe('turning outlaw', () => {
-  const turned = (traits: Partial<Character['traits']>, gold: number) => {
-    const ctx = testContext(`turn-${JSON.stringify(traits)}-${gold}`);
+  /** How many of 200 such characters turn outlaw within so many days. */
+  const turned = (
+    traits: Partial<Character['traits']>,
+    gold: number,
+    days: number,
+    shape: (c: Character, now: number) => void = () => {},
+  ) => {
+    const ctx = testContext(`turn-${JSON.stringify(traits)}-${gold}-${days}`);
     let count = 0;
     for (let i = 0; i < 200; i++) {
       const c = testCharacter(ctx);
       c.traits = { ...c.traits, ...traits };
       c.gold = gold;
-      for (let day = 0; day < 60 && !c.outlaw; day++) considerCrime(ctx, c);
+      shape(c, ctx.world.time);
+      for (let day = 0; day < days && !c.outlaw; day++) {
+        considerCrime(ctx, c);
+        ctx.world.time += DAY;
+      }
       if (c.outlaw) count++;
     }
     return count;
   };
+  const crooked = { honor: 0.05, greed: 0.95, compassion: 0.05 };
+  const decent = { honor: 0.95, greed: 0.1, compassion: 0.9 };
+  /** No ambition (greed too low), no thief's skills, no outlaw friends, no grudges. */
+  const unprovoked = { honor: 0.05, greed: 0.5, compassion: 0.05 };
 
-  it('comes to the broke, greedy and dishonorable, not the honorable or the comfortable', () => {
-    const crooked = { honor: 0.05, greed: 0.95, compassion: 0.05 };
-    expect(turned(crooked, 0)).toBeGreaterThan(20);
-    expect(turned({ honor: 0.95, greed: 0.1, compassion: 0.9 }, 0)).toBeLessThan(3);
-    expect(turned(crooked, 500)).toBe(0);
+  it('comes from want to the broke and dishonorable, not the honorable', () => {
+    expect(turned(crooked, 0, 120)).toBeGreaterThan(20);
+    expect(turned(decent, 0, 120)).toBeLessThan(3);
+  });
+
+  it('takes nobody in their first days broke, as a new arrival who bought their gear', () => {
+    expect(turned(unprovoked, 0, 9)).toBe(0);
+  });
+
+  it('comes to the comfortable only for a reason', () => {
+    expect(turned(unprovoked, 500, 360)).toBe(0);
+    expect(turned(decent, 500, 360)).toBe(0);
+  });
+
+  it('comes rarely to a thief at heart, and says why', () => {
+    const thief = (c: Character) => {
+      c.skills = {
+        ...c.skills,
+        stealth: 80,
+        blades: 10,
+        axes: 10,
+        blunt: 10,
+        polearms: 10,
+        bows: 10,
+      };
+    };
+    const n = turned(unprovoked, 500, 360, thief);
+    // Some, over a year, but far from all: one reason, rarely acted on.
+    expect(n).toBeGreaterThan(3);
+    expect(n).toBeLessThan(100);
+    const ctx = testContext('reason');
+    const c = testCharacter(ctx);
+    c.traits = { ...c.traits, ...unprovoked };
+    c.gold = 500;
+    thief(c);
+    for (let day = 0; day < 5000 && !c.outlaw; day++) {
+      considerCrime(ctx, c);
+      ctx.world.time += DAY;
+    }
+    expect(c.outlaw?.reason).toBe('skill');
+    expect(temptationReasons(ctx, c, ctx.world.time)).toContain('skill');
+  });
+
+  it('finds no hold on someone lately pardoned', () => {
+    const n = turned(unprovoked, 500, 360, (c, now) => {
+      c.skills = {
+        ...c.skills,
+        stealth: 80,
+        blades: 10,
+        axes: 10,
+        blunt: 10,
+        polearms: 10,
+        bows: 10,
+      };
+      c.pardonedAt = now;
+    });
+    expect(n).toBe(0);
   });
 });
 
 describe('ambushes', () => {
+  it('see the cruel strike without a word, now and then', () => {
+    let attacked = false;
+    for (let i = 0; i < 20 && !attacked; i++) {
+      const { ctx, outlaw, traveler, place } = outlawAndTraveler(`cruel-${i}`);
+      speak(outlaw, 'common');
+      speak(traveler, 'common');
+      outlaw.traits = { ...outlaw.traits, compassion: 0 };
+      ambush(ctx, traveler, place);
+      const event = ctx.events.find((e) => e.type === 'outlaw.ambush');
+      attacked = event?.type === 'outlaw.ambush' && event.data.parley === 'attacked';
+    }
+    expect(attacked).toBe(true);
+  });
+
   it('end in a fight when the two sides cannot understand each other', () => {
     const { ctx, outlaw, traveler, place } = outlawAndTraveler('misunderstood');
     speak(outlaw, 'common');
@@ -61,6 +143,14 @@ describe('ambushes', () => {
     speak(outlaw, 'common');
     speak(traveler, 'common');
     traveler.traits = { ...traveler.traits, bravery: 0.1 };
+    // They know the robber's face, so can name them.
+    traveler.opinions[outlaw.id] = {
+      affinity: 0,
+      trust: 0,
+      familiarity: 1,
+      lastSeen: 0,
+      bond: null,
+    };
     let robbed = false;
     for (let i = 0; i < 10 && !robbed; i++) {
       outlaw.activity = { kind: 'pastime', pastime: 'lurk', since: 0, until: 1e9 };
@@ -70,7 +160,25 @@ describe('ambushes', () => {
     expect(robbed).toBe(true);
     expect(traveler.gold).toBeLessThan(100);
     expect(ctx.world.bounties.get(outlaw.id)?.amount).toBeGreaterThan(0);
-    expect(outlaw.reputation[traveler.homeId]).toBeLessThan(0);
+    // Word starts in the nearest town, and is still on its way to the others.
+    expect(standingIn(outlaw, nearestTown(ctx, woods)!)).not.toBe('welcome');
+    expect(ctx.world.news.length).toBeGreaterThan(0);
+  });
+
+  it('often go unnamed when a stranger is robbed alone in the wilds', () => {
+    let unnamed = 0;
+    for (let i = 0; i < 40; i++) {
+      const { ctx, outlaw, traveler, place } = outlawAndTraveler(`unnamed-${i}`);
+      speak(outlaw, 'common');
+      speak(traveler, 'common');
+      traveler.traits = { ...traveler.traits, bravery: 0 };
+      ambush(ctx, traveler, place);
+      const robbery = ctx.events.find((e) => e.type === 'crime.robbery');
+      if (robbery?.type === 'crime.robbery' && robbery.data.known === false) unnamed++;
+    }
+    // Most are still named: a face seen up close is remembered.
+    expect(unnamed).toBeGreaterThan(2);
+    expect(unnamed).toBeLessThan(20);
   });
 
   it('take a merchant’s cargo along with the gold', () => {
@@ -106,7 +214,7 @@ describe('ambushes', () => {
 });
 
 describe('bounties', () => {
-  it('are paid to whoever kills the outlaw', () => {
+  it('are not paid on the spot: the killer takes the head instead', () => {
     const { ctx, outlaw, traveler } = outlawAndTraveler('claim');
     ctx.world.bounties.set(outlaw.id, {
       outlawId: outlaw.id,
@@ -121,8 +229,29 @@ describe('bounties', () => {
       cause: { kind: 'character', characterId: traveler.id },
     };
     onCharacterKilled(ctx, outlaw, traveler);
-    expect(traveler.gold).toBe(before + 80);
-    expect(ctx.world.bounties.has(outlaw.id)).toBe(false);
+    expect(traveler.gold).toBe(before);
+    expect(traveler.heads.map((h) => h.outlawId)).toEqual([outlaw.id]);
+    expect(ctx.world.bounties.has(outlaw.id)).toBe(true);
+  });
+
+  it('leave a murder with no witnesses unsolved, and sometimes the body hidden', () => {
+    let hidden = 0;
+    let unsolved = 0;
+    for (let i = 0; i < 30; i++) {
+      const { ctx, outlaw, traveler } = outlawAndTraveler(`desolate-${i}`);
+      traveler.death = {
+        at: 0,
+        locationId: woods,
+        cause: { kind: 'character', characterId: outlaw.id },
+      };
+      onCharacterKilled(ctx, traveler, outlaw, { witnesses: 0, familiarity: 0 });
+      expect(outlaw.crimes.at(-1)?.known).toBe(false);
+      expect(ctx.world.bounties.has(outlaw.id)).toBe(false);
+      if (traveler.death.hidden) hidden++;
+      unsolved += ctx.world.unsolved.length;
+    }
+    expect(hidden).toBeGreaterThan(5);
+    expect(unsolved).toBeGreaterThan(5);
   });
 
   it('grow with each murder', () => {

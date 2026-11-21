@@ -1,12 +1,18 @@
 import type { SimHost } from '../../host';
 import { DAY } from '../../sim';
-import { deathLine, formatTimestamp, SPECIES_NAMES, type NameResolver } from '../../text';
+import {
+  chargesPhrase,
+  deathLine,
+  formatTimestamp,
+  SPECIES_NAMES,
+  type NameResolver,
+} from '../../text';
 import { formatCount, lifeYears } from '../format';
 import { Prose, type ProseLinks } from '../components/Prose';
 import { useQuery } from '../useHost';
 import type { CharacterId } from '../../sim';
 
-/** Hall of Heroes, the Dread, Legends, Great Houses, Most Wanted, and the Graveyard. */
+/** Hall of Heroes, the Dread, Legends, Great Houses, Most Wanted, Behind Bars, the Gallows, and the Graveyard. */
 export function HallsPage({
   host,
   names,
@@ -227,6 +233,75 @@ export function HallsPage({
       </section>
 
       <section className="hall">
+        <h2>Behind Bars</h2>
+        <p className="muted">
+          Outlaws brought in alive: serving their years, or awaiting their execution.
+        </p>
+        {halls.prisoners.length === 0 ? (
+          <p className="muted">The jails stand empty.</p>
+        ) : (
+          <table className="hall-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Held in</th>
+                <th>Sentence</th>
+                <th>For</th>
+                <th>Until</th>
+              </tr>
+            </thead>
+            <tbody>
+              {halls.prisoners.map((p) => (
+                <tr key={p.id}>
+                  <td>
+                    {who(p.id, p.name)}{' '}
+                    <span className="muted">
+                      level {p.level} {SPECIES_NAMES[p.species].singular}
+                    </span>
+                  </td>
+                  <td>{place(p.townId)}</td>
+                  <td className={p.sentence === 'death' ? 'mark mark-death' : 'mark mark-crime'}>
+                    {p.sentence === 'death'
+                      ? 'death'
+                      : `${Math.max(1, Math.round((p.until - p.since) / (360 * DAY)))} years`}
+                  </td>
+                  <td className="muted">{chargesPhrase(p.charges) || '—'}</td>
+                  <td>{formatTimestamp(p.until)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </section>
+
+      <section className="hall">
+        <h2>The Gallows</h2>
+        <p className="muted">
+          Murderers put to death for their crimes, by each town's custom, the latest first.
+        </p>
+        {halls.hanged.length === 0 ? (
+          <p className="muted">Nobody has been put to death yet.</p>
+        ) : (
+          <ol className="graveyard">
+            {halls.hanged.map((f) => (
+              <li key={f.id}>
+                <div>
+                  {who(f.id, f.name)}{' '}
+                  <span className="muted">
+                    level {f.level} {SPECIES_NAMES[f.species].singular}
+                  </span>
+                </div>
+                <div className="epitaph">
+                  <Prose segments={deathLine(f.cause, f.diedIn, names)} {...links} />
+                  <span className="muted"> · {formatTimestamp(f.diedAt)}</span>
+                </div>
+              </li>
+            ))}
+          </ol>
+        )}
+      </section>
+
+      <section className="hall">
         <h2>The Graveyard</h2>
         <p className="muted">The most recently fallen.</p>
         {halls.fallen.length === 0 ? (
@@ -244,6 +319,7 @@ export function HallsPage({
                 </div>
                 <div className="epitaph">
                   <Prose segments={deathLine(f.cause, f.diedIn, names)} {...links} />
+                  {f.hidden && <span className="muted">; the body was never found</span>}
                   <span className="muted"> · {formatTimestamp(f.diedAt)}</span>
                 </div>
               </li>

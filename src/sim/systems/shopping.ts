@@ -12,6 +12,8 @@ import { gearScore, generateItem, takeGear } from './items';
 import { mint } from './ledger';
 import { townsfolkAt } from './lifecycle';
 import { buyFromHouse, goingPrice, payHouse, priceToBuy, sellToHouse, terms } from './market';
+import { fence } from './crime';
+import { isShunned } from './notoriety';
 
 /**
  * Adventurers at the market (ROADMAP.md Phase 7): they sell what they
@@ -57,9 +59,16 @@ function marketValueOf(item: LootItem): { good: GoodId; units: number } | { assa
   return { good: 'ore', units: item.value / SCRAP_GOLD_PER_ORE };
 }
 
-/** Whether a character can deal here at all: a market, and a tongue in common. */
+/**
+ * Whether a character can deal here at all: a market, a tongue in common, and
+ * a town that hasn't shut its doors to them.
+ */
 export function canTrade(ctx: SimContext, character: Character, town: Location): boolean {
-  return ctx.world.markets.has(town.id) && terms(character, town) !== null;
+  return (
+    ctx.world.markets.has(town.id) &&
+    terms(character, town) !== null &&
+    !isShunned(character, town.id)
+  );
 }
 
 /** Anything in the pack the trading house would take. */
@@ -88,6 +97,9 @@ export function lodging(ctx: SimContext, town: Location): number {
 export function visitMarket(ctx: SimContext, character: Character, town: Location): void {
   const market = ctx.world.markets.get(town.id);
   if (!market) return;
+  // Stolen goods go to a fence first, who asks no questions.
+  fence(ctx, character, town);
+  if (!canTrade(ctx, character, town)) return;
   sellPack(ctx, market, character, town);
   shop(ctx, market, character, town);
 }

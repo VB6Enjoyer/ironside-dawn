@@ -8,6 +8,7 @@ import {
   renownOf,
   toCalendar,
   type Character,
+  type Charges,
   type RegionId,
   type CharacterId,
   type EventQuery,
@@ -27,6 +28,7 @@ import type {
   FamilyTree,
   GoodQuote,
   HallsView,
+  PrisonerEntry,
   HeroEntry,
   HouseEntry,
   DreadEntry,
@@ -345,12 +347,34 @@ export function hallsView(sim: Simulation): HallsView {
     .filter((c) => c.death)
     .sort((a, b) => b.death!.at - a.death!.at)
     .slice(0, HALL_SIZE * 2)
-    .map((c) => ({
-      ...summarize(c),
-      diedAt: c.death!.at,
-      cause: c.death!.cause,
-      diedIn: c.death!.locationId,
-    }));
+    .map(fallenEntry);
+
+  const prisoners: PrisonerEntry[] = everyone
+    .flatMap((c) =>
+      !c.death && c.activity.kind === 'jailed'
+        ? [
+            {
+              ...summarize(c),
+              townId: c.locationId ?? c.homeId,
+              since: c.activity.since,
+              until: c.activity.until,
+              sentence: c.activity.sentence,
+              charges: lastCharges(c),
+            },
+          ]
+        : [],
+    )
+    .sort(
+      (a, b) =>
+        (a.sentence === 'death' ? 0 : 1) - (b.sentence === 'death' ? 0 : 1) || a.until - b.until,
+    )
+    .slice(0, HALL_SIZE * 2);
+
+  const hanged: FallenEntry[] = everyone
+    .filter((c) => c.death?.cause.kind === 'executed')
+    .sort((a, b) => b.death!.at - a.death!.at)
+    .slice(0, HALL_SIZE)
+    .map(fallenEntry);
 
   const wanted: WantedEntry[] = [...sim.world.bounties.values()]
     .map((b) => sim.world.characters.get(b.outlawId)!)
@@ -382,6 +406,27 @@ export function hallsView(sim: Simulation): HallsView {
     legends: legendEntries,
     houses: housesOf(sim),
     dread: dreadOf(sim),
+    prisoners,
+    hanged,
+  };
+}
+
+/** What the latest court convicted someone of. */
+function lastCharges(c: Character): Charges {
+  for (let i = c.justice.length - 1; i >= 0; i--) {
+    const j = c.justice[i]!;
+    if (j.kind === 'sentenced') return j.charges;
+  }
+  return {};
+}
+
+function fallenEntry(c: Character): FallenEntry {
+  return {
+    ...summarize(c),
+    diedAt: c.death!.at,
+    cause: c.death!.cause,
+    diedIn: c.death!.locationId,
+    ...(c.death!.hidden ? { hidden: true } : {}),
   };
 }
 

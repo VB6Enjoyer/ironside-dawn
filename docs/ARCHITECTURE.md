@@ -607,6 +607,105 @@ Built in Phase 11 (`src/sim/model/settings.ts`, `src/content/packs.ts`).
   wherever those packs have been added. Packs added from a file are kept in
   the browser. The headless runner takes `--pack <file>`.
 
+### 4.14 Crime, and word of it
+
+Built for 0.3.0 (`src/sim/systems/crime.ts`, `notoriety.ts`, `outlaws.ts`).
+
+- **Crimes against the nameless.** Besides robbing and killing named
+  travelers, outlaws hold up caravans on roads between towns (at the end of a
+  spell of lurking, likelier on busy roads), steal from shops and rob trading
+  houses at blade point by day, break into houses by night, make a nearby
+  town's farms pay, and spoil stores for spite. The take comes out of the
+  town's agents (§4.9): the trading house's gold and stock, the trades'
+  purses. Stolen goods ride in `cargo`, with the towns they came from in
+  `stolenFrom`, and are sold to a fence (40% of the going price) in any other
+  town that doesn't bar the thief. Each crime is recorded (`Character.crimes`,
+  capped) with its kind, place, town, worth and whether anyone knows who did
+  it, for restitution and sentencing later. An outlaw lies low for some days
+  after any crime, and works a town only once a month.
+- **Occasional crime.** Someone who is no outlaw may steal (theft by day,
+  burglary by night) when they have one of the reasons that tempt people into
+  crime, a conscience that gives way, need or greed, and it looks safe: not
+  their home town, a town that doesn't eye them, a good chance of getting
+  away, and months since the last time. Caught, they pay a fine on the spot,
+  or are outlawed if they can't.
+- **Word travels.** A known crime is heard at once by its town (the one it
+  was against, or the nearest within three days). Word then sets out for
+  every town within ten days' road (twenty for a murder), arriving after
+  about one and a half times the road's travel time (`World.news` holds what
+  is still on its way; the daily job delivers it). Each town keeps what it has
+  heard of each person (`Character.notoriety`): a heat that halves each year,
+  counts of crimes and murders, and the worth taken. Nearer towns weigh a
+  crime more than farther ones.
+- **Standing** follows from that: _suspected_ (prices 20% worse, honest folk
+  wary, no one joins them), _unwelcome_ (no inn, no trade but fences,
+  unwelcome to linger, posters up for hunters), _barred_ for anyone known to
+  have murdered (the guards turn them away; a town that bars someone inside
+  puts them out). Outlaws favour towns that haven't heard of them, and hunters
+  only chase outlaws their town has heard of. `reputation` now holds only
+  good standing, from deeds like claiming a bounty.
+- **Ways out** (`justice.ts`). _Restitution_: an outlaw with no murder on
+  their record or known anywhere, with some honor, who has tired of the life
+  (no crime for three months, doors shut in half the towns that know them, or
+  a heavy bounty), may pay, in any town with a court, what they took from
+  each town, with a quarter in interest and a quarter (at least 10) in fines;
+  the record is cleared and the bounty lifted, but each town's heat is only
+  brought down to _suspected_. _Heads_: killing an outlaw pays nothing on the
+  spot; an adventurer or merchant takes the head (`Character.heads`) and
+  claims the bounty in any town that has heard of the outlaw, split evenly with
+  their party there, the posting town's trading house paying what it can and
+  the claiming town the rest. A head kept 90 days, or its carrier's death,
+  loses it and the bounty. _Taken alive_: a hunter with the craft (stealth and
+  awareness) may lay a trap on reaching the quarry instead of attacking, or,
+  in a hunt, try a takedown when a blow leaves the outlaw at a quarter of their
+  health or less (`Encounter.out` gains `captured`). Captives are stripped of
+  most of their gold (held by the captors, `Captivity.gold`) and their gear (to
+  the captors' packs, legends aside), and travel as `accompanying` their
+  captor (`Character.escorting`), who heads for the nearest town that would
+  pay. Each leg of road they may escape (level and agility against the
+  escort's size and level). Delivered, the bounty pays two and a half times
+  over, the seized gold goes to the town, and the captive stands trial.
+- **Justice.** The court tries a prisoner on what is known of them: the most
+  any town has heard (`knownRecord`), never crimes nobody pinned on them. A
+  known murderer is `jailed` with sentence `death` and put to death three to
+  ten days later (death cause `executed`, with the town culture's `method`:
+  hanging by default, beheading, the axe, arrows, the chasm or stoning).
+  Anyone else serves a year, a quarter year per known crime (attempts
+  included) and a year per 500 gold taken, fifteen at most; prisoners can die
+  inside (3% a year, death cause `prison`) or of old age. Freed, they are no
+  outlaw, each town's heat is settled down to _suspected_, and they adventure
+  again or retire (`character.retire`, reason `prison`), likelier the longer
+  they served, the older and the more timid. A prisoner a murder is pinned on
+  while inside is sentenced again, to death.
+- **Crimes unheard of.** Crimes against named people are pinned on the culprit
+  only by chance (`identifyChance`): a base by place (town 0.8, wilds 0.55,
+  dungeon 0.35), more for each witness (victims who live, the victim's
+  companions still standing, bystanders) and for how well they know the
+  culprit, less by up to 30% for stealth (`slipOf`). Face-to-face crimes against
+  the nameless slip by half that. A murder nobody pins is `Unsolved`
+  (`World.unsolved`): it comes to light after about a year on average, by which
+  time it is news like any other. With no witnesses at all, the killer may hide
+  the body (`Death.hidden`, a `crime.conceal` event): then it comes out after
+  about four years, and 60% never do. Avengers rise only for murders known at
+  the time. The player always sees what happened; the towns don't.
+- **The record.** Each character keeps their dealings with justice in
+  `Character.justice` (`Judgment`: turned, reformed, captured, escaped,
+  delivered, sentenced with charges and method, freed, head taken, bounty
+  claimed or lost), so life stories don't depend on events still being in the
+  log. A killing's `DeathCause` records the weapon and whether it was murder;
+  `Death.pinnedAt` when an unseen murder came to light. Restitution pays each
+  known crime's take once, to the town it was against.
+- **Balance** (0.3.0 step 9). Temptation scales with how many outlaws are at
+  large (three times with none, half again with one, worked out once a day).
+  Bounties of 200 or more raise a posse (`rallyAgainst` with no limit on the
+  leader's level, and hunts weigh the posse). Hunters who find their quarry
+  gone may follow a trail (`trailOf`, within 16 road hours, 25% plus awareness
+  over 200). A hunted side's flee difficulty rises by 9 (`CORNERED_PENALTY`).
+  After two years an outlaw the towns shut out may flee (`considerFleeing`,
+  death cause `departed` with `fled`), twice as likely with blood on their
+  hands; one nobody knows of may stop. Restitution needs a year on the road and
+  180 days quiet, at 1% a day times honor.
+
 ---
 
 ## 5. UI ↔ simulation boundary
@@ -682,7 +781,10 @@ from it or any later version up to the one running replays the same world, and
 one from elsewhere is opened with a note that it turns out differently. A test
 (`src/sim/history.test.ts`) holds a month of one seed's history by hash, with
 the release it has held since, and fails if history changes without that
-marker being moved. Save files
+marker being moved. Between releases a change to history moves the marker
+to the coming version ahead of its release; `HISTORY_VERSION`, the later of
+the marker and the running version, is what new worlds and their links are
+stamped with, so they aren't mistaken for the last release's. Save files
 exported by each release that changed the shape of saves are kept in
 `src/sim/fixtures/`, and every one is loaded, run on and saved again in the
 tests. Files are gzipped JSON

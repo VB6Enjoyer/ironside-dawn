@@ -3,6 +3,7 @@ import {
   itemBase,
   materialDef,
   spellDef,
+  WEAPONS,
   type SkillId,
   type SpellId,
 } from '../content';
@@ -16,6 +17,12 @@ import { article } from './words';
 export function itemName(item: Item): string {
   if (item.uniqueName) return item.uniqueName;
   return plainName(item);
+}
+
+/** A weapon's plain name from its base ("katana"), or null for one no longer known. */
+export function weaponName(base: string): string | null {
+  const def = WEAPONS.find((w) => w.id === base);
+  return def ? def.name : null;
 }
 
 /** With an article, or bare for legendary items: "a keen axe", "Duskblade". */

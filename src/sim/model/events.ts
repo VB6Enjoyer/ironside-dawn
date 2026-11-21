@@ -15,6 +15,8 @@ import type { CreatureRef } from './encounter';
 import type { CharacterId, EntityId, EventId, LocationId, RegionId } from './ids';
 import type { Item } from './item';
 import type { Motive } from './mind';
+import type { OutlawReason } from './social';
+import type { Charges, CrimeKind, ExecutionMethod, Standing } from './crime';
 
 /**
  * Structured events: the single source of truth for "what happened"
@@ -80,7 +82,8 @@ export type EventBody =
         readonly destinationId: LocationId;
         /** Typical duration of the whole journey, in seconds. */
         readonly expectedDuration: number;
-        readonly reason: 'wander' | 'delve' | 'heal' | 'home' | 'hunt' | 'trade';
+        readonly reason:
+          'wander' | 'delve' | 'heal' | 'home' | 'hunt' | 'trade' | 'escort' | 'bounty';
         readonly why: readonly Motive[];
         /** Party members traveling along. */
         readonly companions: readonly CharacterId[];
@@ -216,12 +219,12 @@ export type EventBody =
       'party.leave',
       CharacterAt & {
         readonly leaderId: CharacterId;
-        readonly reason: 'quarrel' | 'outlaw' | 'retire';
+        readonly reason: 'quarrel' | 'outlaw' | 'retire' | 'captured';
       }
     >
   | Body<
       'party.disband',
-      CharacterAt & { readonly reason: 'death' | 'quarrel' | 'outlaw' | 'retire' }
+      CharacterAt & { readonly reason: 'death' | 'quarrel' | 'outlaw' | 'retire' | 'captured' }
     >
   | Body<
       'party.share',
@@ -232,14 +235,16 @@ export type EventBody =
       }
     >
   // Outlaws (characterId is the outlaw)
-  | Body<'outlaw.turn', CharacterAt>
+  /** `reason` is missing from events before 0.3.0, when only want turned anyone. */
+  | Body<'outlaw.turn', CharacterAt & { readonly reason?: OutlawReason }>
   | Body<
       'outlaw.ambush',
       CharacterAt & {
         readonly outlawIds: readonly CharacterId[];
         readonly victimIds: readonly CharacterId[];
         /** Whether the victims could talk their way through, and chose to. */
-        readonly parley: 'surrendered' | 'refused' | 'misunderstood';
+        /** `attacked`: the outlaws struck without a demand (0.3.0). */
+        readonly parley: 'surrendered' | 'refused' | 'misunderstood' | 'attacked';
       }
     >
   | Body<
@@ -249,13 +254,114 @@ export type EventBody =
         readonly gold: number;
         /** A merchant's cargo, taken too. */
         readonly goods?: Goods;
+        /** False when nobody could say who did it (0.3.0). */
+        readonly known?: boolean;
       }
     >
+  /**
+   * A crime against the nameless (0.3.0): a caravan held up, a house burgled,
+   * a shop robbed, farms extorted, stores spoiled. locationId is where it
+   * happened; townId the town it was against. `caught`: seen at it, and
+   * named; `foiled`: nothing taken. A fine paid on the spot is in `fine`.
+   */
+  | Body<
+      'crime.commit',
+      CharacterAt & {
+        readonly crime: CrimeKind;
+        readonly townId: LocationId | null;
+        readonly gold: number;
+        readonly goods?: Goods;
+        readonly value: number;
+        readonly known: boolean;
+        readonly foiled: boolean;
+        /** Hurt getting away. */
+        readonly hurt?: boolean;
+        readonly fine?: number;
+      }
+    >
+  /** Stolen goods sold to a fence, far from where they were taken (0.3.0). */
+  | Body<'crime.fence', CharacterAt & { readonly goods: Goods; readonly gold: number }>
+  /**
+   * Word of someone's crimes has made a town think worse of them (0.3.0).
+   * `driven`: they were there, and the guards put them out.
+   */
+  | Body<
+      'outlaw.notorious',
+      CharacterAt & { readonly standing: Standing; readonly driven?: boolean }
+    >
+  /** Guards turn someone away at the gates of a town that has barred them (0.3.0). */
+  | Body<'outlaw.barred', CharacterAt>
   /** locationId is the town posting it. */
   | Body<'bounty.post', CharacterAt & { readonly amount: number }>
-  /** characterId is the hunter. */
-  | Body<'bounty.claim', CharacterAt & { readonly outlawId: CharacterId; readonly amount: number }>
-  | Body<'outlaw.reform', CharacterAt>
+  /**
+   * characterId is the hunter, paid in the town at locationId. Since 0.3.0 a
+   * claim is made with the outlaw's head, or the outlaw alive (`alive`), and
+   * the reward is split with the party (`shares`, the hunter's included).
+   */
+  | Body<
+      'bounty.claim',
+      CharacterAt & {
+        readonly outlawId: CharacterId;
+        readonly amount: number;
+        readonly alive?: boolean;
+        readonly shares?: readonly { readonly characterId: CharacterId; readonly gold: number }[];
+      }
+    >
+  /** A hunter takes the head of an outlaw they killed, to claim the bounty (0.3.0). */
+  | Body<'bounty.head', CharacterAt & { readonly outlawId: CharacterId }>
+  /** A carried head is lost, its bounty with it (0.3.0). */
+  | Body<'bounty.lost', CharacterAt & { readonly outlawId: CharacterId }>
+  /**
+   * A try at taking an outlaw alive (0.3.0): a trap laid where they lurk, or
+   * a takedown once they are badly hurt. characterId is the hunter. A failed
+   * trap lets the outlaw slip away; a failed takedown may hurt or kill the
+   * hunter (`hurt`, `killed`).
+   */
+  | Body<
+      'capture.attempt',
+      CharacterAt & {
+        readonly outlawId: CharacterId;
+        readonly how: 'trap' | 'takedown';
+        readonly success: boolean;
+        readonly hurt?: boolean;
+        readonly killed?: boolean;
+      }
+    >
+  /** A captive gets away from their escort, leaving their gold and gear behind (0.3.0). */
+  | Body<'capture.escape', CharacterAt & { readonly captorId: CharacterId }>
+  /**
+   * Tried in the town they were brought to (0.3.0), on what is known of them:
+   * years in prison, until `until`, or, for a known murderer, death on that
+   * day. `freed` when they come out, to adventure again or settle down.
+   */
+  | Body<
+      'outlaw.sentenced',
+      CharacterAt & {
+        readonly sentence: 'prison' | 'death';
+        readonly until: number;
+        readonly crimes: number;
+        readonly murders: number;
+        readonly charges?: Charges;
+        readonly method?: ExecutionMethod;
+      }
+    >
+  | Body<'outlaw.freed', CharacterAt>
+  /** A murderer hides their victim's body: as far as anyone knows, the victim vanished (0.3.0). */
+  | Body<'crime.conceal', CharacterAt & { readonly victimId: CharacterId }>
+  /**
+   * Word gets out of who did a crime nobody had pinned on anyone (0.3.0).
+   * locationId is the town that hears first.
+   */
+  | Body<
+      'crime.pinned',
+      CharacterAt & {
+        readonly crime: CrimeKind;
+        readonly victimId?: CharacterId;
+        readonly at: number;
+      }
+    >
+  /** Gave up the outlaw life; since 0.3.0, by paying restitution (`paid`, with interest and fines). */
+  | Body<'outlaw.reform', CharacterAt & { readonly paid?: number }>
   // Trade
   | Body<'trade.sell', CharacterAt & { readonly items: readonly LootItem[]; readonly gold: number }>
   /** An adventurer buys from the trading house: healing draughts, a weapon, armor. */
@@ -285,7 +391,7 @@ export type EventBody =
       'character.retire',
       CharacterAt & {
         readonly occupation: Occupation | null;
-        readonly reason: 'age' | 'wealth' | 'family' | 'nerves';
+        readonly reason: 'age' | 'wealth' | 'family' | 'nerves' | 'prison';
         /** Retiring to trade instead. */
         readonly merchant: boolean;
       }
@@ -484,6 +590,18 @@ export const EVENT_IMPORTANCE: Record<EventType, Importance> = {
   'outlaw.turn': Importance.Notable,
   'outlaw.ambush': Importance.Normal,
   'crime.robbery': Importance.Notable,
+  'crime.commit': Importance.Normal,
+  'crime.fence': Importance.Normal,
+  'outlaw.notorious': Importance.Normal,
+  'outlaw.barred': Importance.Normal,
+  'bounty.head': Importance.Notable,
+  'bounty.lost': Importance.Normal,
+  'capture.attempt': Importance.Notable,
+  'capture.escape': Importance.Notable,
+  'outlaw.sentenced': Importance.Notable,
+  'crime.conceal': Importance.Notable,
+  'crime.pinned': Importance.Notable,
+  'outlaw.freed': Importance.Normal,
   'bounty.post': Importance.Normal,
   'bounty.claim': Importance.Notable,
   'outlaw.reform': Importance.Notable,

@@ -73,6 +73,7 @@ const GOAL_PHRASES: Record<Goal['kind'], string> = {
   wait: 'Biding time',
   hunt: 'Hunting',
   lurk: 'Lying in wait for travelers',
+  crime: 'Up to no good',
 };
 
 /** What a character is trying to do: "Off to delve in the Dungeon of Misery". */

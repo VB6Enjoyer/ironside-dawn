@@ -25,6 +25,7 @@ import type {
   World,
 } from '../model';
 import { burn, mint } from './ledger';
+import { priceSuspicion } from './notoriety';
 
 /**
  * Markets (ROADMAP.md Phase 7), after Doran & Parberry, "Emergent Economies
@@ -182,9 +183,13 @@ export function understanding(character: Character, town: Location): number {
   return u;
 }
 
-/** Price multipliers for a character dealing in this town: worse the less they understand. */
+/**
+ * Price multipliers for a character dealing in this town: worse the less they
+ * understand, and worse for someone the town suspects (0.3.0).
+ */
 export function terms(character: Character, town: Location): { buy: number; sell: number } {
-  const penalty = LANGUAGE_PENALTY * (1 - understanding(character, town));
+  const penalty =
+    LANGUAGE_PENALTY * (1 - understanding(character, town)) + priceSuspicion(character, town.id);
   return { buy: 1 + penalty, sell: 1 - penalty };
 }
 

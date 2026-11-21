@@ -26,6 +26,8 @@ import { rollLootItem } from './loot';
 import { cast, chooseSpell, type SpellChoice } from './magic';
 import { nudgeTrait, remember, satisfy } from './mind';
 import { onCharacterKilled } from './outlaws';
+import { bystanders } from './notoriety';
+import { capture, TAKEDOWN_BELOW, takedownChance, wantsAlive } from './justice';
 import { endRaid } from './raids';
 import { adjustOpinion, partyOf } from './social';
 import { addDeed, gainXp, practice } from './progress';
@@ -421,6 +423,14 @@ function reportAttack(
     const skill = weaponSkillOf(c.equipment.weapon);
     if (skill) practice(ctx, c, skill, WEAPON_PRACTICE, encounter.locationId);
   }
+  if (
+    action.hit &&
+    attacker.kind === 'character' &&
+    target.kind === 'character' &&
+    tryTakedown(ctx, encounter, slots, fighters, action)
+  ) {
+    return;
+  }
   if (!action.hit || action.targetHp > 0) return;
 
   if (target.kind === 'creature') {
@@ -439,6 +449,76 @@ function reportAttack(
   }
 }
 
+/**
+ * A hunter, landing a blow that leaves the outlaw badly hurt, may try to take
+ * them alive instead (0.3.0): pulling the blow and closing to grapple. It can
+ * fail, and the outlaw's desperate answer can wound or kill the hunter.
+ * Returns whether a takedown was tried.
+ */
+function tryTakedown(
+  ctx: SimContext,
+  encounter: Encounter,
+  slots: readonly Slot[],
+  fighters: readonly FighterState[],
+  action: Extract<FightAction, { kind: 'attack' }>,
+): boolean {
+  const attackerSlot = slots[action.attacker]!;
+  const targetSlot = slots[action.target]!;
+  if (encounter.kind !== 'hunt' || attackerSlot.kind !== 'character') return false;
+  if (targetSlot.kind !== 'character' || attackerSlot.side !== 0 || targetSlot.side !== 1) {
+    return false;
+  }
+  const world = ctx.world;
+  const hunter = world.characters.get(attackerSlot.id)!;
+  const outlaw = world.characters.get(targetSlot.id)!;
+  const fighter = fighters[action.target]!;
+  if (!outlaw.outlaw || encounter.out[outlaw.id] || encounter.out[hunter.id]) return false;
+  if (action.targetHp > fighter.maxHp * TAKEDOWN_BELOW) return false;
+  const tried = (encounter.tried ??= []);
+  if (tried.includes(hunter.id) || !wantsAlive(ctx, hunter, outlaw)) return false;
+  tried.push(hunter.id);
+  const allies = encounter.sides[0].characters.filter((id) => !encounter.out[id]).length - 1;
+  const success = ctx.rng.combat.chance(takedownChance(hunter, outlaw, allies));
+  // The blow is pulled: whatever happens, they live through it.
+  fighter.hp = Math.max(1, action.targetHp);
+  outlaw.hp = fighter.hp;
+  let hurt = false;
+  let killed = false;
+  if (success) {
+    encounter.out[outlaw.id] = 'captured';
+    fighter.out = 'fled';
+  } else {
+    const hunterFighter = fighters[action.attacker]!;
+    const wound = Math.round(hunter.maxHp * (0.15 + 0.4 * ctx.rng.combat.next()));
+    hunterFighter.hp = Math.max(0, hunterFighter.hp - wound);
+    hunter.hp = hunterFighter.hp;
+    hurt = true;
+    killed = hunter.hp <= 0;
+  }
+  ctx.emit(
+    {
+      type: 'capture.attempt',
+      data: {
+        characterId: hunter.id,
+        locationId: encounter.locationId,
+        outlawId: outlaw.id,
+        how: 'takedown',
+        success,
+        ...(hurt ? { hurt } : {}),
+        ...(killed ? { killed } : {}),
+      },
+    },
+    [hunter.id, outlaw.id],
+    encounter.locationId,
+  );
+  if (killed) {
+    encounter.out[hunter.id] = 'dead';
+    fighters[action.attacker]!.out = 'dead';
+    killCharacter(ctx, hunter, outlaw, encounter);
+  }
+  return true;
+}
+
 /** One character kills another: the killer takes their purse, and the law takes note. */
 function killCharacter(
   ctx: SimContext,
@@ -454,8 +534,20 @@ function killCharacter(
   const slayers = (side?.characters ?? [])
     .filter((id) => encounter.out[id] !== 'dead')
     .map((id) => ctx.world.characters.get(id)!);
-  die(ctx, victim, { kind: 'character', characterId: killer.id });
-  onCharacterKilled(ctx, victim, killer);
+  die(ctx, victim, {
+    kind: 'character',
+    characterId: killer.id,
+    weapon: killer.equipment.weapon.base,
+    ...(killer.outlaw ? { murder: true } : {}),
+  });
+  // Who lived to see it: the victim's companions still on their feet, and anyone else about.
+  const theirs = encounter.sides.find((s) => s.characters.includes(victim.id))?.characters ?? [];
+  const seen = theirs
+    .filter((id) => id !== victim.id && encounter.out[id] !== 'dead')
+    .map((id) => ctx.world.characters.get(id)!);
+  const others = bystanders(ctx, encounter.locationId, new Set(everyoneIn(encounter)));
+  const familiarity = Math.max(0, ...seen.map((c) => c.opinions[killer.id]?.familiarity ?? 0));
+  onCharacterKilled(ctx, victim, killer, { witnesses: seen.length + others, familiarity });
   if (killer.calling === 'dread') dreadKilled(ctx, killer, victim, encounter.locationId);
   if (victim.calling === 'dread') dreadFell(ctx, victim, slayers, encounter.locationId);
 }
@@ -657,11 +749,19 @@ function end(ctx: SimContext, encounter: Encounter, winner: Side | null): void {
     return;
   }
 
+  // Taken alive in a hunt the hunters won: led away. If the outlaws won, their own free them.
+  const captured = everyoneIn(encounter).filter((id) => encounter.out[id] === 'captured');
+  if (captured.length > 0 && winner === 0) {
+    const place = world.locations.get(encounter.locationId)!;
+    const captors = standingOn(0).map((id) => world.characters.get(id)!);
+    for (const id of captured) capture(ctx, world.characters.get(id)!, captors, place, 'takedown');
+  }
   // Everywhere else, survivors pick up their lives where they are. A hunt,
   // won or not, scratches the same itch as a delve.
   for (const id of everyoneIn(encounter)) {
     if (!alive(id)) continue;
     const c = world.characters.get(id)!;
+    if (c.captive) continue;
     if (encounter.kind === 'hunt') satisfy(c, 'purpose', 0.6);
     if (settleAfterFight(ctx, c)) continue;
     c.activity = { kind: 'idle' };

@@ -32,7 +32,20 @@ export type { Dungeon, Fortress, Location, Region, Route } from './location';
 export type { Myth, Tally, World, WorldSample } from './world';
 export type { WorldSettings, WorldSize } from './settings';
 export type { DriveId, Drives, Expectation, Goal, Memory, MemoryEvent, Motive } from './mind';
-export type { Bounty, Opinion, Outlaw, Party } from './social';
+export type { Bounty, Opinion, Outlaw, OutlawReason, Party } from './social';
+export type {
+  Captivity,
+  Charges,
+  Crime,
+  ExecutionMethod,
+  CrimeKind,
+  Head,
+  Judgment,
+  News,
+  Notoriety,
+  Standing,
+  Unsolved,
+} from './crime';
 export type {
   Belief,
   Ledger,

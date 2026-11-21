@@ -995,6 +995,259 @@ missed.** Notes from building it (design in `ARCHITECTURE.md` §4.13):
 
 ---
 
+## 0.3.0 — The Outlaws Update
+
+**Status: released as 0.3.0 (2026-11-21).** Every step below is done; the notes under each say what was built and what it measured.
+
+**Goal:** Crime is a living part of every world, large or small, and a
+hard life: each crime makes the next one harder to get away with, news of it
+travels town to town, and an outlaw's career ends in a pardon, a bounty
+collected on their head, or a cell or a scaffold.
+
+**Why (measured on 0.2.0):** turning outlaw has one trigger, being an
+adventurer with under 40 gold. Adventurers start with 7–17 gold, so every
+world opens with a burst of outlaws; after their first delves they are broke
+only 0.2–0.4% of the time, so crime then almost stops. Four 20-adventurer
+worlds made 3–13 outlaws in a century, in 2–5 distinct years, and the top two
+outlaws committed 76–100% of all crimes (one world had outlaws but no crimes
+at all). Crimes only ever have named victims, and a crime lowers an outlaw's
+standing in every town at once.
+
+**Already in place to build on:** standing per town (-1 to 1) and being
+_wanted_ in a town (no inn, unwelcome to linger); bounties posted by the
+victim's home town and paid on the outlaw's death; hunters weighing bounties;
+avengers raised by murder; and going straight by paying half one's purse.
+
+Each step is its own pull request, keeps saves loading (a `SAVE_VERSION` bump
+and a migration whenever the shape of saves changes, since `main` is the live
+site), and is checked against the targets below with the crime audit.
+
+### Steps
+
+1. **Measure first.** _Done:_ `npm run audit:crime` (`tools/crime-audit.ts`)
+   runs several worlds side by side (default four 20-adventurer worlds for a
+   century; `--seeds`, `--adventurers`, `--years`, `--json`) and reports
+   turnings and the people behind them, the year of the first, the share of
+   decades with one, robberies, ambushes and murders, the top two outlaws'
+   share of crimes, how careers end (reformed, bountied, died, at large) and
+   how often honest adventurers are broke, checked against the targets. The
+   0.2.0 baseline:
+
+   | world   | outlaws | decades with one | robberies | ambushes | top outlaw's share |
+   | ------- | ------: | ---------------: | --------: | -------: | -----------------: |
+   | alpha   |       4 |              40% |        50 |       67 |                94% |
+   | bravo   |       5 |              40% |       128 |      192 |               100% |
+   | charlie |       3 |              20% |         0 |        0 |                  — |
+   | delta   |      13 |              30% |       685 |      937 |                53% |
+
+   All 25 turned from want. At 200 adventurers over 15 years, 38 and 43
+   outlaws, with the top outlaw at 17–29% of crimes.
+
+2. **More ways in, and fair starting purses.** _Done._
+   - Adventurers start with 40–67 gold (was 7–17), above the broke line, so
+     worlds don't open with a burst of outlaws.
+   - Want needs ten days of hardship (no gold and nothing to sell) before it
+     can turn anyone, and grows more pressing with the days and with a bad
+     run (vivid memories of near deaths and flights).
+   - Temptation, rarely, for someone who isn't broke, and only with a good
+     reason: ambition (cold and greedy), a thief's skill (stealth or
+     lockpicking 60+, better than any weapon, and little honor), outlaw
+     friends, or a vivid grudge. Each reason adds a little to a small chance
+     scaled by a weak conscience; the honorable and kind are never tempted,
+     and a pardoned outlaw isn't for three years.
+   - The cruel (compassion under 0.25) sometimes fall on their victims
+     without a word.
+   - Each outlaw keeps why they turned; the log and life stories say it.
+   - Measured, four 20-adventurer worlds over a century: 9–31 turnings each,
+     the first in years 0–7, a turning in 50–100% of decades and no
+     opening burst (was 3–13, in 20–40% of decades). Reasons: a thief's skill
+     46, outlaw friends 8, ambition 5, grudges 5, want 2. At 200 adventurers
+     over 15 years: 28 and 54 turnings, most from want.
+   - The top outlaw still commits 23–57% of a world's crimes. That is down to
+     the crimes, not who turns: the only crime is lying in wait for named
+     travelers, which the strongest outlaw wins most. The spread target moves
+     to step 3.
+   - Willing to steal once is not becoming an outlaw: a character who would
+     take a safe chance now and then, and otherwise live honestly, needs the
+     nameless crimes of step 3, and is built there.
+
+3. **Crimes against the nameless.** _Done_ (`src/sim/systems/crime.ts`).
+   - Outlaws hold up caravans on roads between towns (at the end of a spell of
+     lurking, likelier on busy roads; a well-guarded caravan fights back), steal
+     from shops and rob trading houses at blade point by day, break into houses
+     by night (stealth and lockpicking against the town watch, which is sharper
+     in big towns and for the suspect), make a nearby town's farms pay, and
+     spoil stores for spite (the cruel and the shunned).
+   - The take comes out of the town's trading house and trades; stolen goods
+     are carried and sold to fences, at 40% of the going price, in any other
+     town that doesn't bar the thief.
+   - Each crime is recorded with its kind, place, town, worth and whether
+     anyone knows who did it. Outlaws lie low for five days after any crime
+     and work a town once a month.
+   - Occasional crime: someone who is no outlaw may steal (theft, burglary)
+     when they have a reason to be tempted, a conscience that gives way, need
+     or greed, and it looks safe: away from home, in a town that doesn't eye
+     them, with a good chance of getting away, months after the last time.
+     Caught, they pay a fine, or are outlawed if they can't.
+   - Measured, four 20-adventurer worlds over a century: 1,500–4,200 crimes
+     against the nameless each, 72–100% of all crimes (caravans most, then
+     burglaries, holdups and thefts); towns lose 2,300–6,900 gold a year to
+     crime, and their gold and prices stay in the range they had on 0.2.0. The
+     top outlaw commits 19–36% of a world's crimes. People who are no outlaws
+     stole 5–32 times a century per world.
+   - Not met in big worlds: at 200 adventurers over 15 years only 20–45% of
+     crimes are nameless, since named travelers crowd the roads where outlaws
+     lurk. Left for step 9's balance.
+
+4. **Reputation that travels.** _Done_ (`src/sim/systems/notoriety.ts`).
+   - A known crime is heard at once by its town (the one it was against, or
+     the nearest within three days). Word then reaches every town within ten
+     days' road (twenty for a murder), after about one and a half times the
+     road's travel time, so each town knows a different part of a record at
+     different times. Nearer towns weigh a crime more.
+   - What a town has heard fades (it halves each year), but a known murder is
+     never forgotten:
+     - suspected: prices 20% worse, the watch keeps an eye on them, honest
+       folk are wary, nobody teams up with them or answers their call;
+     - unwelcome: no inn, no trade but fences, unwelcome to linger, posters up
+       (hunters chase only outlaws their town has heard of);
+     - barred: always so for a known murderer. They don't go there; the
+       guards turn them away if word arrived while they were on the road, and
+       put them out if they are inside when it comes.
+   - Outlaws favour towns that haven't heard of them, and an outlaw nobody has
+     heard of makes friends like anyone else. Standing (`reputation`) keeps
+     only good deeds; the old instant drop everywhere is gone. Saves move to
+     version 7, and old standing becomes what each town has heard.
+   - Not yet: standing mended by good deeds; for now it only fades.
+
+5. **Way out: restitution.** _Done_ (`src/sim/systems/justice.ts`).
+   - An outlaw with no blood on their hands (none on their record, none known
+     anywhere) and a little honor (0.15 or more) who has tired of the life (no
+     crime in three months, doors shut in half the towns that know them, or a
+     bounty of 150 or more) may pay at any town's court: in every town that
+     knows of their crimes, what they took plus a quarter in interest and a
+     quarter in fines (at least 10). The bounty is lifted and the record
+     cleared; the towns still hold them _suspected_ until time earns their
+     trust back. Murderers can't buy their way out.
+   - Measured (four 20-adventurer worlds, a century): 0–7 per world go straight
+     this way.
+
+6. **Way out: a price on their head.** _Done._
+   - Killing an outlaw pays nothing on the spot. An adventurer or merchant who
+     kills one takes the head and carries it to a town that has heard of the
+     outlaw; there the reward is split evenly with their party. The posting
+     town pays what it can, the claiming town the rest. A head is lost with its
+     carrier, or after 90 days, and the bounty with it.
+   - Bounties stop growing at 300 gold, plus 150 for each murder: with crimes
+     against the nameless, prolific outlaws had run them into the tens of
+     thousands.
+
+7. **Way out: taken alive.** _Done._
+   - A trap: a hunter with the craft (stealth and awareness, 35 or more)
+     sometimes lays one on reaching the quarry instead of attacking, against
+     the outlaw's awareness. Caught, the outlaw is taken; sprung wrong, the
+     outlaw slips away.
+   - A takedown: in a hunt, a blow that leaves the outlaw at a quarter of their
+     health or less may be pulled to grapple them instead, the hunter's level
+     and might against the outlaw's level and agility. Failing, the hunter is
+     wounded, sometimes killed.
+   - Hunters who are honorable or greedy try more often; one bent on revenge
+     rarely does.
+   - Captives lose most of their gold and their gear to the captors and are led
+     to the nearest town that would pay. On each leg of road they may escape,
+     better at a higher level and agility, worse against a bigger, stronger
+     escort; one who does leaves what was taken.
+   - Delivered, the bounty pays two and a half times over, split with the
+     party. Until step 8, the captive is jailed for a year plus a month per
+     crime (three times as long for blood, ten years at most) and walks out no
+     outlaw; old age can take them inside.
+   - Measured (same worlds): 1–5 outlaws taken alive per world per century, a
+     few escaping on the way; 0–1 heads claimed. Hunts rarely end in a kill, as
+     before, so captures outnumber heads; balancing that is step 9's. At 200
+     adventurers over 15 years: 14–22 taken alive and 6–10 heads claimed per
+     world, 4 going straight.
+
+8. **Justice.** _Done_ (`src/sim/systems/justice.ts`, `notoriety.ts`).
+   - An outlaw brought in alive is tried on what any town knows of them.
+     Theft, assault and the like earn a year in prison, plus a quarter year per
+     known crime and a year per 500 gold taken (fifteen at most). Prisoners can
+     die there (3% a year, and of old age); freed, they are no outlaws, still
+     eyed warily for a while, and go back to adventuring or retire, likelier to
+     retire the longer they served and the older and more timid they are.
+   - A known murderer is sentenced to death, carried out three to ten days
+     later before a crowd, in the live feed and the chronicle.
+   - Life stories, the character card and the Halls (Most Wanted, **Behind
+     Bars**, **The Gallows**) show it all.
+   - Towns put murderers to death by their custom: hanging by default,
+     beheading in the Japonic lands, the axe in the Norse north, arrows among
+     the elves, the chasm under the dwarven halls, stoning on the steppe.
+   - Every step is kept on the character (`Character.justice`), so life
+     stories tell it in full however old: turning outlaw, murders and hidden
+     bodies, restitution and its cost, capture, escape, who brought them in,
+     the trial's place and charges, the sentence and the years left, release,
+     and who took their head and who claimed the bounty. A murder victim's
+     story tells who killed them and with what, and whether the body was found
+     or hidden, and when word got out.
+   - Crimes can go unheard of: whether a robbery or murder is pinned on anyone
+     depends on witnesses (victims who live, companions, bystanders), how well
+     they know the culprit, the place (a town, the wilds, a dungeon) and the
+     culprit's stealth; most are still pinned. A murder nobody pins comes out
+     after about a year, if ever; with nobody about, the killer may hide the
+     body, and the victim is thought to have vanished (most such murders are
+     never pinned). Trials only count what is known.
+   - Measured (four 20-adventurer worlds, a century): 1–9 taken alive per
+     world, then tried; 0–3 executed, a few dying in prison, the rest freed (most
+     settling down). About one robbery in six goes unnamed; 1–9 bodies hidden
+     and 0–13 murders pinned later per world. At 200 adventurers over 15
+     years: 17–19 taken alive, 8–10 jailed, 4 executed and 2–4 dead in prison
+     per world.
+   - _Exit:_ outlaws' careers end in every way above. In proportion is still
+     to tune: hunts rarely kill, so heads stay scarce in small worlds.
+
+9. **Balance and release.** _Done._
+   - A prisoner a murder is later pinned on is tried again, for their life.
+   - Measured first: careers were mostly short, but a few outlaws outlevelled
+     every hunter and ran for 50–90 years with 400–900 crimes, so crime piled
+     up on them, and some decades of a small world saw no crime at all.
+   - Each crime worth less than the last: rich outlaws lurk less (a haul
+     matters less to a full purse); towns close as word spreads (step 4); and
+     bounties of 200 or more raise a posse, so the worst draw bands of hunters
+     rather than lone ones. Hunters who find their quarry gone may follow a
+     fresh trail to somewhere near (likelier with awareness), and a hunted
+     outlaw finds it harder to slip away.
+   - The long road tells: after two years, an outlaw shut out by the towns
+     (twice as likely for a murderer, who can buy no pardon) may flee for
+     distant lands, a price still on their head; one nobody knows of may
+     simply stop. Restitution takes a year on the road and half a year quiet.
+   - Temptation is a little commoner (0.3% a day per good reason, scaled by
+     conscience), three times as easy with no outlaw at large and half again
+     with one, so every era has outlaws without flooding busy worlds.
+   - Measured, eight 20-adventurer worlds over a century: every target holds.
+     Crime in every decade; median careers 2.5–4.3 years, 55–97% ending within
+     five, at most 132 crimes in one career; no murderer died of old age (0 of
+     14); the top outlaw commits 6–12% of a world's crimes; 61–100% of crimes
+     have no named victim. Careers end in every way: going straight 3–37 per
+     world, heads 0–6, taken alive 2–18 (then tried, a few executed, some
+     dying in prison, the rest freed), fled or killed the rest. Town gold and
+     prices stay in their 0.2.0 range.
+   - At 200 adventurers over 15 years, every target holds but one: in one of
+     two worlds only 32% of crimes are nameless, as named travelers crowd the
+     roads. Heads come in more often there (9–14 a world, with 23–31 taken
+     alive).
+   - Still uneven: in small worlds hunters rarely win outright against the
+     outlaws they find, so heads stay rarer than captures. A large world runs
+     about 10% slower than on 0.2.0.
+   - Released as 0.3.0: players' notes, changelog, a save from 0.2.0 kept as a
+     fixture (its standing carried over as what the towns have heard).
+     (`SAME_HISTORY_SINCE` moved to 0.3.0 with step 2.)
+
+**Alongside (separately, as 0.2.1 if wanted):** magic is used thousands of
+times a century but hidden at most speeds, and no creature casts. Make casts
+that matter (killing blows, the dread's spells, a new spell's first use)
+_Notable_, and give a few powerful creatures spell-like attacks.
+
+---
+
 ## Beyond (ideas parking lot)
 
 Not planned or committed. Ideas stay here until they earn a phase.

@@ -16,7 +16,7 @@ const EXHAUSTED_DEFENSE_PENALTY = 1;
 /** Fleeing succeeds on d20 + agility >= this + the fastest enemy's agility. */
 export const FLEE_DIFFICULTY = 6;
 /** Extra difficulty for a cornered side: hunters come ready to cut off escape. */
-export const CORNERED_PENALTY = 5;
+export const CORNERED_PENALTY = 9;
 
 export type FightAction =
   | {

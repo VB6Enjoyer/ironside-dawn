@@ -18,7 +18,10 @@ import { learnSpells } from './magic';
 import { payHouse } from './market';
 import { markVisited, satisfy, updateDrives } from './mind';
 import { practice } from './progress';
-import { confrontQuarry, isWantedIn } from './outlaws';
+import { confrontQuarry } from './outlaws';
+import { commitCrime, nightWork, waylayCaravan } from './crime';
+import { claimHeads, escort, needsPosse, release, trailOf } from './justice';
+import { isBarred, isShunned } from './notoriety';
 import { carouse, lodging, visitMarket } from './shopping';
 import { followersOf, gatherParty, rallyAgainst, releaseFollowers, socialize } from './social';
 import { bestOutlet, hasCargo, notePrices, planRun, setOut, staleTown, unload } from './merchants';
@@ -69,14 +72,35 @@ export function wakeCharacter(ctx: SimContext, character: Character): void {
     case 'fighting':
     case 'accompanying':
       return;
+    case 'jailed':
+      if (ctx.world.time < activity.until) return;
+      release(ctx, character);
+      // Hanged, or settled down in town: there is nothing more to decide.
+      if (character.activity.kind !== 'idle') return;
+      break;
     case 'traveling': {
       if (finishLeg(ctx, character) !== 'arrived') return;
       const here = locationOf(ctx, character);
       for (const c of [character, ...followersOf(ctx, character)]) markVisited(c, here.id);
+      // Word reached the town while they were on the way: the gates are shut to them.
+      if (here.kind === 'town' && isBarred(character, here.id)) {
+        ctx.emit(
+          { type: 'outlaw.barred', data: { characterId: character.id, locationId: here.id } },
+          [character.id],
+          here.id,
+        );
+      }
       const goal = character.goal;
       if (goal?.kind === 'hunt' && goal.targetId) {
         const quarry = ctx.world.characters.get(goal.targetId);
         if (quarry && confrontQuarry(ctx, character, quarry, here)) return;
+        // Gone: a sharp-eyed hunter may pick up the trail to somewhere near (0.3.0).
+        const trail = quarry ? trailOf(ctx, character, quarry, here) : null;
+        if (trail && quarry) {
+          const companions = gatherParty(ctx, character, here);
+          character.goal = { kind: 'hunt', locationId: trail, why: goal.why, targetId: quarry.id };
+          if (startJourney(ctx, character, trail, 'hunt', goal.why, companions)) return;
+        }
       }
       decide(ctx, character);
       return;
@@ -112,6 +136,22 @@ function decide(ctx: SimContext, character: Character): void {
 
   if (isNight(now)) {
     rest(ctx, character, location);
+    return;
+  }
+
+  // Bounties are paid in town: heads handed in, a captive led to the nearest town that pays.
+  if (location.kind === 'town') claimHeads(ctx, character, location);
+  if (
+    character.escorting &&
+    escort(ctx, character, location, (to) =>
+      startJourney(ctx, character, to, 'escort', [], gatherParty(ctx, character, location)),
+    )
+  ) {
+    character.goal = {
+      kind: 'travel',
+      locationId: character.activity.kind === 'traveling' ? character.activity.destinationId : null,
+      why: [],
+    };
     return;
   }
 
@@ -236,6 +276,16 @@ function act(
       }
       return started;
     }
+    case 'crime': {
+      releaseFollowers(ctx, character);
+      character.goal = { kind: 'crime', locationId: location.id, why };
+      commitCrime(ctx, character, location, action.crime);
+      // Lying low a while after.
+      const now = ctx.world.time;
+      character.activity = { kind: 'idle' };
+      wakeAt(ctx, character, now + HOUR + ctx.rng.behavior.int(0, HOUR));
+      return true;
+    }
     case 'delve':
       character.goal = { kind: 'delve', locationId: location.id, why };
       enterDelve(ctx, character, location, why, gatherParty(ctx, character, location));
@@ -258,8 +308,19 @@ function act(
       if (master && !master.death && action.reason === 'delve' && location.kind === 'town') {
         rallyAgainst(ctx, character, location, master);
       }
-      // The party comes along to delve or hunt; otherwise everyone goes their own way.
-      const together = action.reason === 'delve' || action.reason === 'hunt';
+      // After an outlaw with a big price on their head, they raise a posse (0.3.0).
+      const quarry = action.target ? ctx.world.characters.get(action.target) : undefined;
+      if (
+        quarry &&
+        action.reason === 'hunt' &&
+        location.kind === 'town' &&
+        needsPosse(ctx, quarry)
+      ) {
+        rallyAgainst(ctx, character, location, quarry, Infinity);
+      }
+      // The party comes along to delve, hunt or claim a bounty; otherwise everyone goes their own way.
+      const together =
+        action.reason === 'delve' || action.reason === 'hunt' || action.reason === 'bounty';
       if (!together) releaseFollowers(ctx, character);
       const companions = together ? gatherParty(ctx, character, location) : [];
       return startJourney(ctx, character, action.to, action.reason, why, companions);
@@ -269,14 +330,18 @@ function act(
 
 function rest(ctx: SimContext, character: Character, location: Location): void {
   releaseFollowers(ctx, character);
-  // Wanted outlaws find every inn door shut.
+  // Some have work to do in the dark before they sleep.
+  if (location.kind === 'town' && !isBarred(character, location.id)) {
+    nightWork(ctx, character, location);
+  }
+  // Those a town has shut its doors to find every inn door shut.
   const market = ctx.world.markets.get(location.id);
   const price = lodging(ctx, location);
   // Nobody spends their last coins on a bed: they sleep rough instead.
   const paid =
     location.kind === 'town' &&
     character.gold >= price * INN_RESERVE_NIGHTS &&
-    !isWantedIn(character, location.id);
+    !isShunned(character, location.id);
   if (paid) {
     if (market) payHouse(market, character, price);
     else character.gold -= price;
@@ -384,6 +449,11 @@ function learnFromPastime(
       const rate = STUDY_PER_HOUR * (character.gifted ? 2 : 1);
       practice(ctx, character, 'arcana', rate * hours, locationId);
       learnSpells(ctx, character, locationId);
+      return;
+    }
+    case 'lurk': {
+      const here = ctx.world.locations.get(locationId);
+      if (here) waylayCaravan(ctx, character, here, hours);
       return;
     }
     default:

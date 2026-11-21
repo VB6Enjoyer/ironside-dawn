@@ -8,6 +8,49 @@ The public notes players see under "What's new" are kept in `src/ui/releases.ts`
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-21
+
+### Added
+
+- `npm run audit:crime`, a headless crime audit over several worlds (`tools/crime-audit.ts`): who turns outlaw and when, crimes by kind and how they spread across outlaws, how careers end, how often adventurers are broke, against the targets of the Outlaws Update.
+- More ways into crime than being broke (`src/sim/systems/outlaws.ts`): rarely, an adventurer who isn't broke is tempted, but only with a good reason, such as cold ambition, a thief's skills, outlaw friends or a vivid grudge, and never the honorable and kind. The log and life stories say why each outlaw turned (`src/text/describe.ts`, `src/text/biography.ts`).
+- Cruel outlaws sometimes fall on their victims without a word instead of demanding their purse.
+- Crimes against the nameless (`src/sim/systems/crime.ts`): outlaws hold up caravans on the roads, steal from shops and rob trading houses at blade point, break into houses by night, make farmers pay and spoil stores for spite. What they take comes out of the town's trading house and trades, and stolen goods are sold to fences in other towns. The live feed tells of each crime, and life stories say what kinds of crime someone committed.
+- Now and then someone who is no outlaw steals, when they have a reason to be tempted and it looks safe and worth it. A thief caught at it pays a fine on the spot, or is outlawed if they can't.
+- Word of a crime travels (`src/sim/systems/notoriety.ts`): it is known first where it happened and reaches other towns along the roads days later; the farthest never hear of petty crimes. What a town has heard sets how it treats someone: _suspected_ (worse prices, kept at arm's length), _unwelcome_ (no inn, no trade) or _barred_ (turned away at the gate, always so for a known murderer). Petty crimes are forgotten over the years.
+- The character card lists the towns where word of someone's crimes has got about, and how each treats them (`src/ui/components/CharacterCard.tsx`).
+- Restitution (`src/sim/systems/justice.ts`): an outlaw with no blood on their hands who has tired of the life can pay back what they took in every town that knows of it, with interest and a fine, to clear their name and lift the bounty. The towns still eye them warily until time earns their trust back.
+- Bounties are paid in town: whoever kills an outlaw takes the head and must carry it to a town that has heard of them, where the reward is split with their party. A head carried too long is lost, and the bounty with it.
+- Outlaws can be taken alive: a hunter with the craft may lay a trap where the outlaw lurks, or try a takedown once the outlaw is badly hurt in a fight. Either can fail, and a failed takedown can wound or kill the hunter. A live capture pays two and a half times the bounty. The captive is stripped of gold and gear and led to the nearest town that would pay, and may escape on the road, leaving what was taken from them with the captors. Delivered, they stand trial.
+- Trials (`src/sim/systems/justice.ts`): an outlaw brought in alive is tried on what any town knows of them. A known murderer is sentenced to death, and put to death a few days later before a crowd. Anyone else goes to prison for a year or more, longer for more crimes and more taken (fifteen years at most). A prisoner a murder is later pinned on is tried again, for their life. Prisoners can die behind bars; freed, they are no longer outlaws, the towns still eye them for a while, and they go back to adventuring or settle down in town.
+- Crimes can go unheard of (`src/sim/systems/notoriety.ts`, `src/sim/systems/outlaws.ts`). Whether anyone can name the culprit of a robbery or murder depends on how many saw it, how well they knew the culprit, and where it happened (a town, the wilds, a dungeon); stealthy outlaws slip by more often, though most crimes are still pinned on someone. A murder with no witnesses is pinned on its killer only months or years later, if ever, and the killer may hide the body, so that as far as anyone knows the victim simply vanished. The live feed shows every crime as it happens, and says when nobody could tell who did it.
+- Life stories tell the whole of someone's dealings with justice, kept on the character so they never fade from the record (`src/text/biography.ts`, `src/sim/model/crime.ts`): when they turned outlaw (each time), whom they murdered and whose bodies they hid, going straight at a town's court and what it cost, who took them alive and where, escapes, who handed them over and for how much, where they were tried, on what charges, and the sentence (with the years left for someone still inside), release, and who took their head and who claimed the bounty on it (or that it was lost). A murder victim's story says who murdered them and with what, and whether the body was found or hidden (folk taking them for vanished, or gone to distant lands), and when word got out of who did it. The character card and Behind Bars show the charges.
+- Towns put murderers to death by their own custom (`src/sim/systems/justice.ts`): hanging by default, beheading by sword in the Japonic lands, the axe in the Norse north, arrows among the elves, the chasm under the dwarven halls, stoning on the steppe. The live feed, life stories and the Gallows say which.
+- The Halls of the world gain **Behind Bars** (prisoners and the condemned, with their sentences) and **The Gallows** (those put to death); the Graveyard notes bodies never found; the character card shows a prisoner's sentence (`src/ui/pages/HallsPage.tsx`, `src/host/views.ts`, `src/ui/components/CharacterCard.tsx`).
+- The live feed tells of heads taken and claimed, traps and takedowns, escapes, sentences, executions, deaths in prison, releases, hidden bodies and old crimes coming to light; life stories tell of being taken alive, tried, jailed, put to death or escaping, of restitution paid, and of bodies never found; the character card shows a head carried or a captive led (`src/text/describe.ts`, `src/text/biography.ts`, `src/ui/components/CharacterCard.tsx`).
+- The crime audit counts crimes against the nameless by kind, crimes by people who are no outlaws, what the towns lost and fences paid, how word spread, bounties paid, heads lost, capture tries, escapes, sentences, executions and deaths in prison, crimes that went unnamed, hidden or pinned later, and how long outlaw careers last, how they end and what becomes of murderers, against the targets of the Outlaws Update.
+
+### Changed
+
+- Adventurers start with 40–67 gold instead of 7–17 (`src/sim/gen/people.ts`), so new worlds no longer open with a burst of outlaws.
+- Being broke turns someone outlaw only after ten days of hardship with nothing left to sell, and sooner after a run of near deaths and flights.
+- An outlaw who goes straight isn't tempted again for three years.
+- Saves move to save version 7 (`src/sim/save.ts`). Older saves still load, and the old standing in every town becomes what each town has heard of someone's crimes.
+- A crime no longer lowers someone's standing in every town at once; towns hear of it as word travels. Standing (`reputation`) now records only good deeds.
+- Known outlaws are shunned only where their crimes are known: an outlaw nobody has heard of can make friends like anyone else. Honest folk won't team up with, or answer the call of, someone their town has heard of, and bounty hunters only chase outlaws their own town has posters up for (`src/sim/systems/social.ts`, `src/sim/systems/decide.ts`).
+- Outlaws favour towns that haven't heard of them yet, and lie low for a few days after each crime (`src/sim/systems/decide.ts`).
+- Crime is balanced so careers end within a few years and no outlaw runs for decades (`src/sim/systems/justice.ts`, `src/sim/systems/outlaws.ts`, `src/sim/systems/decide.ts`):
+  - A bounty of 200 gold or more raises a posse: hunters setting out call the able in town to ride along, and weigh the hunt with them.
+  - Hunters who find their quarry gone may pick up a fresh trail to somewhere near, and a hunted outlaw finds it harder to slip away from a fight (`src/sim/systems/combat-core.ts`).
+  - An outlaw long on the road, whom the towns have shut out (or a murderer, who can buy no pardon), may flee for distant lands with a price on their head; one nobody knows of may simply give it up.
+  - Rich outlaws lurk by the road less: each haul matters less to a full purse.
+  - Going straight takes at least a year on the road and half a year without a crime.
+  - Temptation comes a little more often, and more easily still when no outlaw is at large, so every era has its outlaws.
+- Killing an outlaw no longer pays the bounty on the spot (`src/sim/systems/outlaws.ts`). Bounties stop growing at 300 gold, and 150 more for each murder.
+- Going straight now takes paying restitution, and is no longer open to murderers; it used to cost half one's purse, paid to one's home town.
+- A murder's death now records the killer's weapon and that it was murder, and the live feed says "murdered by" (`src/sim/systems/combat.ts`).
+- Worlds now turn out differently from their seed than in 0.2.0, so links from 0.2.0 open with a note that history differs. Worlds begun now are stamped with the coming version, 0.3.0 (`src/host/version.ts`).
+
 ## [0.2.0] - 2026-11-20
 
 ### Added
@@ -60,7 +103,8 @@ The public notes players see under "What's new" are kept in `src/ui/releases.ts`
 
 - The first release: procedural worlds with their people, markets, generations, cultures and myths; the observatory to watch them; world settings, content packs, saves and links; and the desktop app. How it was built is told phase by phase in `docs/ROADMAP.md`.
 
-[Unreleased]: https://github.com/VB6Enjoyer/ironside-dawn/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/VB6Enjoyer/ironside-dawn/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/VB6Enjoyer/ironside-dawn/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/VB6Enjoyer/ironside-dawn/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/VB6Enjoyer/ironside-dawn/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/VB6Enjoyer/ironside-dawn/releases/tag/v0.1.0

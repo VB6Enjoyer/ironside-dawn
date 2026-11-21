@@ -1,13 +1,14 @@
-import type { GoodId, Goods } from '../../content';
+import { goodDef, type GoodId, type Goods } from '../../content';
 import { HOUR } from '../core/time';
 import type { SimContext } from '../context';
 import { createCharacter } from '../gen/people';
-import type { Character, Location, LocationId } from '../model';
+import type { Character, CharacterId, Location, OutlawReason, World } from '../model';
 import { startBrawl } from './combat';
 import { isAlive } from './condition';
-import { burn } from './ledger';
-import { payHouse } from './market';
-import { remember, wealthNeed } from './mind';
+import { remember, vividness, wealthNeed } from './mind';
+import { hasSellable } from './decide';
+import { bystanders, identifyChance, leaveUnsolved, nearestTown, recordCrime } from './notoriety';
+import { considerFleeing, considerRestitution, isHeld, layTrap, takeHead } from './justice';
 import { wakeAt } from './wake';
 import {
   adjustOpinion,
@@ -25,71 +26,183 @@ import { charactersAt } from './whereabouts';
  * earn bounties that draw hunters. Some go straight again.
  */
 
-/** Daily chance of turning outlaw, for the most susceptible and desperate. */
+/** Daily chance of turning outlaw from want, for the most susceptible and desperate. */
 const TURN_CHANCE = 0.04;
 /** Below this much gold an adventurer counts as broke. */
 const BROKE = 40;
-const ROBBERY_BOUNTY = 25;
-const MURDER_BOUNTY = 60;
+/**
+ * Days broke, with nothing left to sell, before want can turn anyone: a new
+ * arrival who has just bought their gear, or a bad week, doesn't.
+ */
+const HARDSHIP_DAYS = 10;
+/** Days of hardship after that over which desperation builds to the full. */
+const DESPERATION_DAYS = 30;
+/**
+ * Daily chance of giving in to temptation, for someone with no conscience, for
+ * each good reason they have. Without one, nobody is tempted at all.
+ */
+const TEMPTATION_CHANCE = 0.003;
+/** Reasons it takes before temptation can turn someone. */
+const REASONS_NEEDED = 1;
+/** Years after a pardon in which temptation finds no hold. */
+const PARDON_YEARS = 3;
+const YEAR = 360 * 86_400;
 /** Share of a surrendering victim's purse an outlaw takes. */
 const ROBBERY_TAKE = 0.6;
 /** Outlaws try their luck against parties up to this much stronger than theirs. */
 const NERVE = 0.7;
-const REFORM_CHANCE = 0.05;
-const REFORM_QUIET_DAYS = 60;
+/** Compassion below which an outlaw may attack without a demand, more often the crueler. */
+const CRUELTY = 0.25;
 const DAY = 86_400;
 const MINUTE = 60;
 
 /** Once a day, per character: some turn to crime; some outlaws go straight. */
 export function considerCrime(ctx: SimContext, character: Character): void {
   if (!isAlive(character)) return;
-  const rng = ctx.rng.outlaws;
   const now = ctx.world.time;
-  const { honor, greed, compassion } = character.traits;
-  const locationId = character.locationId ?? character.homeId;
 
   if (!character.outlaw) {
-    if (character.gold >= BROKE || character.activity.kind === 'fighting') return;
     // Only adventurers take to the road this way; a broke merchant borrows and tries again.
-    if (character.calling !== 'adventurer') return;
-    const susceptibility = (1 - honor) * (0.5 + greed) * (1.2 - compassion);
-    if (!rng.chance(TURN_CHANCE * susceptibility ** 2 * wealthNeed(character))) return;
-    character.outlaw = {
-      since: now,
-      crimes: 0,
-      murders: 0,
-      lastCrimeAt: now,
-      lastSeenAt: locationId,
-    };
-    if (character.partyId) leaveParty(ctx, character, 'outlaw');
-    ctx.emit(
-      { type: 'outlaw.turn', data: { characterId: character.id, locationId } },
-      [character.id],
-      locationId,
-    );
+    if (character.calling !== 'adventurer' || character.activity.kind === 'fighting') return;
+    const reason = wantOf(ctx, character, now) ?? temptationOf(ctx, character, now);
+    if (reason) turnOutlaw(ctx, character, reason);
     return;
   }
 
-  // Prosperous, quiet and not without honor: some put it behind them.
-  const quiet = now - character.outlaw.lastCrimeAt > REFORM_QUIET_DAYS * DAY;
-  if (quiet && character.gold > 120 && honor > 0.35 && rng.chance(REFORM_CHANCE)) {
-    // Restitution: half their purse, paid to their home town, buys a pardon and the bounty is lifted.
-    const home = ctx.world.markets.get(character.homeId);
-    const restitution = Math.ceil(character.gold / 2);
-    if (home) payHouse(home, character, restitution);
-    else {
-      character.gold -= restitution;
-      burn(ctx.world, 'upkeep', restitution);
-    }
-    character.outlaw = null;
-    ctx.world.bounties.delete(character.id);
-    if (character.partyId) leaveParty(ctx, character, 'outlaw');
-    ctx.emit(
-      { type: 'outlaw.reform', data: { characterId: character.id, locationId } },
-      [character.id],
-      locationId,
-    );
+  // Held, they can do nothing; free, some tire of the life and pay what they owe.
+  if (isHeld(character)) return;
+  if (considerRestitution(ctx, character)) return;
+  considerFleeing(ctx, character);
+}
+
+/** Someone takes to the road as an outlaw, leaving any honest party. */
+export function turnOutlaw(ctx: SimContext, character: Character, reason: OutlawReason): void {
+  const now = ctx.world.time;
+  const locationId = character.locationId ?? character.homeId;
+  character.outlaw = {
+    since: now,
+    reason,
+    crimes: 0,
+    murders: 0,
+    lastCrimeAt: now,
+    lastSeenAt: locationId,
+  };
+  delete character.hardshipSince;
+  character.justice.push({ kind: 'turned', at: now, reason });
+  if (character.partyId) leaveParty(ctx, character, 'outlaw');
+  ctx.emit(
+    { type: 'outlaw.turn', data: { characterId: character.id, locationId, reason } },
+    [character.id],
+    locationId,
+  );
+}
+
+/** How the conscience holds: 0 for the honorable and kind, up to about 1.6 for neither. */
+export function weakConscience(character: Character): number {
+  const { honor, compassion } = character.traits;
+  return (1 - honor) * (1.2 - compassion);
+}
+
+/**
+ * Want: broke for a while with nothing left to sell, growing more desperate
+ * the longer it lasts, and sooner after a bad run (narrow escapes, flight).
+ */
+function wantOf(ctx: SimContext, character: Character, now: number): OutlawReason | null {
+  if (character.gold >= BROKE || hasSellable(character) || character.stolenFrom.length > 0) {
+    delete character.hardshipSince;
+    return null;
   }
+  character.hardshipSince ??= now;
+  const days = (now - character.hardshipSince) / DAY;
+  if (days < HARDSHIP_DAYS) return null;
+  const badRun = character.memories
+    .filter((m) => m.kind === 'near-death' || m.kind === 'fled')
+    .reduce((sum, m) => sum + vividness(m, now), 0);
+  const desperation = Math.min(1, (days - HARDSHIP_DAYS) / DESPERATION_DAYS + 0.3 * badRun);
+  const susceptibility = weakConscience(character) * (0.5 + character.traits.greed);
+  const chance = TURN_CHANCE * susceptibility ** 2 * wealthNeed(character) * desperation;
+  return ctx.rng.outlaws.chance(chance) ? 'want' : null;
+}
+
+/**
+ * Temptation: someone who isn't broke turns to crime only with good reason: a
+ * ruthless ambition, a thief's skills and little honor, an outlaw for a
+ * friend, or a fresh grudge in a hard heart. Even then it is rare, likelier
+ * with more than one reason, and rarer the stronger their conscience.
+ */
+function temptationOf(ctx: SimContext, character: Character, now: number): OutlawReason | null {
+  // Someone who has just paid for their crimes isn't tempted again so soon.
+  if (character.pardonedAt !== undefined && now - character.pardonedAt < PARDON_YEARS * YEAR) {
+    return null;
+  }
+  const reasons = temptationReasons(ctx, character, now);
+  if (reasons.length < REASONS_NEEDED) return null;
+  const chance =
+    TEMPTATION_CHANCE *
+    (weakConscience(character) / 1.6) ** 2 *
+    reasons.length *
+    emptyRoads(ctx.world);
+  return ctx.rng.outlaws.chance(chance) ? reasons[0]! : null;
+}
+
+/** Each day's count of outlaws at large, worked out once a day. */
+const atLarge = new WeakMap<World, { readonly day: number; readonly count: number }>();
+
+/**
+ * With no outlaws on the roads, caravans go unguarded and purses unwatched:
+ * temptation comes easier. Three times as easy with none at large, half
+ * again with one, as usual with more (step 9).
+ */
+function emptyRoads(world: World): number {
+  const day = Math.floor(world.time / DAY);
+  let cached = atLarge.get(world);
+  if (!cached || cached.day !== day) {
+    let count = 0;
+    for (const c of world.characters.values()) {
+      if (c.outlaw && !c.death && !isHeld(c)) count++;
+    }
+    cached = { day, count };
+    atLarge.set(world, cached);
+  }
+  return cached.count === 0 ? 3 : cached.count === 1 ? 1.5 : 1;
+}
+
+/** Skill at which stealth or lockpicking makes crime look easy. */
+const THIEFS_HANDS = 60;
+/** A grudge vivid enough to act on. */
+const FRESH_GRUDGE = 0.3;
+
+/** What could draw someone into crime who doesn't need to, most telling first. */
+export function temptationReasons(
+  ctx: SimContext,
+  character: Character,
+  now: number,
+): OutlawReason[] {
+  const { honor, greed, compassion } = character.traits;
+  const reasons: OutlawReason[] = [];
+  if (compassion < 0.3 && greed > 0.65) reasons.push('ambition');
+  // A thief at heart: quiet feet or quick fingers are their best skills, and good ones.
+  const { stealth, lockpicking, blades, axes, blunt, polearms, bows } = character.skills;
+  const hands = Math.max(stealth, lockpicking);
+  const arms = Math.max(blades, axes, blunt, polearms, bows);
+  if (hands >= THIEFS_HANDS && hands > arms && honor < 0.4) reasons.push('skill');
+  if (honor < 0.5 && outlawFriend(ctx, character)) reasons.push('company');
+  const grudge = character.memories.some(
+    (m) => m.kind === 'wronged' && vividness(m, now) >= FRESH_GRUDGE,
+  );
+  if (grudge && compassion < 0.4) reasons.push('grudge');
+  return reasons;
+}
+
+/** Whether a friend of theirs is a living outlaw. */
+function outlawFriend(ctx: SimContext, character: Character): boolean {
+  for (const id in character.opinions) {
+    const opinion = character.opinions[id as CharacterId];
+    if (opinion?.bond !== 'friend') continue;
+    const friend = ctx.world.characters.get(id as CharacterId);
+    if (friend?.outlaw && isAlive(friend)) return true;
+  }
+  return false;
 }
 
 /**
@@ -116,11 +229,20 @@ export function ambush(ctx: SimContext, traveler: Character, location: Location)
   if (hostility(leader, traveler) < 0) return false;
 
   const understood = communication(leader, traveler) >= 0.3;
+  // The cruel don't always bother to ask.
+  const cruel = rng.chance(Math.max(0, CRUELTY - leader.traits.compassion) * 2);
   const yields =
+    !cruel &&
     understood &&
     (traveler.traits.bravery < 0.45 || strength(victims) < strength(lurkers) * 0.8) &&
     rng.chance(0.8);
-  const parley = !understood ? 'misunderstood' : yields ? 'surrendered' : 'refused';
+  const parley = cruel
+    ? 'attacked'
+    : !understood
+      ? 'misunderstood'
+      : yields
+        ? 'surrendered'
+        : 'refused';
   ctx.emit(
     {
       type: 'outlaw.ambush',
@@ -156,6 +278,16 @@ export function ambush(ctx: SimContext, traveler: Character, location: Location)
         0.7,
       );
       adjustOpinion(victim, leader.id, { affinity: -0.6, trust: -1 }, world.time);
+      // The robbed know they were robbed; whether they can say by whom is another matter.
+      const named = rng.chance(
+        identifyChance(
+          leader,
+          location,
+          victims.length +
+            bystanders(ctx, location.id, new Set([...lurkers, ...victims].map((c) => c.id))),
+          victim.opinions[leader.id]?.familiarity ?? 0,
+        ),
+      );
       ctx.emit(
         {
           type: 'crime.robbery',
@@ -165,13 +297,22 @@ export function ambush(ctx: SimContext, traveler: Character, location: Location)
             victimId: victim.id,
             gold,
             ...(Object.keys(goods).length > 0 ? { goods } : {}),
+            ...(named ? {} : { known: false }),
           },
         },
         [leader.id, victim.id],
         location.id,
       );
       ctx.world.tally.robberies++;
-      registerCrime(ctx, leader, victim, 'robbery', location.id);
+      recordCrime(ctx, leader, {
+        kind: 'robbery',
+        at: world.time,
+        locationId: location.id,
+        townId: nearestTown(ctx, location.id),
+        victimId: victim.id,
+        value: gold + worthOf(goods),
+        known: named,
+      });
     }
     // A good haul: off to spend it before the alarm is raised.
     for (const outlaw of lurkers) {
@@ -184,43 +325,60 @@ export function ambush(ctx: SimContext, traveler: Character, location: Location)
   return true;
 }
 
-/** One character killed another: murder, or justice with a bounty paid. */
-export function onCharacterKilled(ctx: SimContext, victim: Character, killer: Character): void {
+/** One character killed another: murder, or justice, with a head taken for the bounty. */
+export function onCharacterKilled(
+  ctx: SimContext,
+  victim: Character,
+  killer: Character,
+  /** Who saw it and how well they knew the killer; by default, plenty who knew them. */
+  seen: { readonly witnesses: number; readonly familiarity: number } = {
+    witnesses: 3,
+    familiarity: 1,
+  },
+): void {
   const locationId = victim.death?.locationId ?? killer.locationId ?? killer.homeId;
   if (victim.outlaw && !killer.outlaw) {
-    const bounty = ctx.world.bounties.get(victim.id);
-    if (!bounty) return;
-    ctx.world.bounties.delete(victim.id);
-    ctx.world.tally.bountiesClaimed++;
-    // The posting town's trading house pays, as much as it has.
-    const town = ctx.world.markets.get(bounty.townId);
-    const paid = town ? Math.min(bounty.amount, Math.floor(town.house.gold)) : 0;
-    if (town) town.house.gold -= paid;
-    killer.gold += paid;
-    killer.goldEarned += paid;
-    killer.reputation[bounty.townId] = Math.min(1, (killer.reputation[bounty.townId] ?? 0) + 0.3);
-    ctx.emit(
-      {
-        type: 'bounty.claim',
-        data: {
-          characterId: killer.id,
-          locationId: bounty.townId,
-          outlawId: victim.id,
-          amount: bounty.amount,
-        },
-      },
-      // The outlaw is named in the data; the dead take no further part.
-      [killer.id],
-      bounty.townId,
-    );
+    // The bounty stands until the head is brought to a town that knows it (0.3.0).
+    if (ctx.world.bounties.has(victim.id)) takeHead(ctx, killer, victim, locationId);
     return;
   }
   // Whatever else, a dead outlaw's bounty lapses.
   ctx.world.bounties.delete(victim.id);
   if (killer.outlaw) {
     ctx.world.tally.murders++;
-    registerCrime(ctx, killer, victim, 'murder', locationId);
-    if (!victim.outlaw) raiseAvenger(ctx, victim, killer);
+    const place = ctx.world.locations.get(locationId)!;
+    const rng = ctx.rng.outlaws;
+    const known = rng.chance(identifyChance(killer, place, seen.witnesses, seen.familiarity));
+    // With nobody about, a cool-headed killer may hide the body: the victim simply vanishes.
+    const hidden =
+      seen.witnesses === 0 &&
+      victim.death !== null &&
+      rng.chance(
+        Math.min(0.85, 0.15 + 0.3 * (1 - killer.traits.compassion) + 0.004 * killer.skills.stealth),
+      );
+    const crime = {
+      kind: 'murder',
+      at: ctx.world.time,
+      locationId,
+      townId: nearestTown(ctx, locationId),
+      victimId: victim.id,
+      value: 0,
+      known,
+    } as const;
+    recordCrime(ctx, killer, crime);
+    if (hidden) {
+      victim.death = { ...victim.death!, hidden: true };
+      ctx.emit(
+        {
+          type: 'crime.conceal',
+          data: { characterId: killer.id, locationId, victimId: victim.id },
+        },
+        [killer.id],
+        locationId,
+      );
+    }
+    if (!known) leaveUnsolved(ctx, killer, crime, hidden);
+    else if (!victim.outlaw) raiseAvenger(ctx, victim, killer);
   }
   // Those the dread kill may leave someone sworn to destroy it.
   if (killer.calling === 'dread') raiseAvenger(ctx, victim, killer);
@@ -256,45 +414,13 @@ function raiseAvenger(ctx: SimContext, victim: Character, killer: Character): vo
   );
 }
 
-/** A crime is known: the outlaw's bounty grows, and every town thinks less of them. */
-function registerCrime(
-  ctx: SimContext,
-  outlaw: Character,
-  victim: Character,
-  kind: 'robbery' | 'murder',
-  locationId: LocationId,
-): void {
-  const record = outlaw.outlaw!;
-  record.crimes++;
-  if (kind === 'murder') record.murders++;
-  record.lastCrimeAt = ctx.world.time;
-  record.lastSeenAt = locationId;
-
-  const add = kind === 'murder' ? MURDER_BOUNTY : ROBBERY_BOUNTY;
-  const existing = ctx.world.bounties.get(outlaw.id);
-  const bounty = existing ?? {
-    outlawId: outlaw.id,
-    amount: 0,
-    townId: victim.homeId,
-    postedAt: ctx.world.time,
-  };
-  bounty.amount += add;
-  ctx.world.bounties.set(outlaw.id, bounty);
-  for (const town of ctx.world.locations.values()) {
-    if (town.kind !== 'town') continue;
-    outlaw.reputation[town.id] = Math.max(
-      -1,
-      (outlaw.reputation[town.id] ?? 0) - (kind === 'murder' ? 0.4 : 0.2),
-    );
+/** What goods are worth at their base value, for the record. */
+export function worthOf(goods: Goods): number {
+  let worth = 0;
+  for (const [good, units] of Object.entries(goods) as [GoodId, number][]) {
+    worth += units * goodDef(good).value;
   }
-  ctx.emit(
-    {
-      type: 'bounty.post',
-      data: { characterId: outlaw.id, locationId: bounty.townId, amount: bounty.amount },
-    },
-    [outlaw.id],
-    bounty.townId,
-  );
+  return Math.round(worth);
 }
 
 /** Hunters reach where their quarry was last seen. If it is there, they attack. */
@@ -304,10 +430,12 @@ export function confrontQuarry(
   quarry: Character,
   location: Location,
 ): boolean {
-  if (!isAlive(quarry) || quarry.locationId !== location.id) return false;
+  if (!isAlive(quarry) || quarry.locationId !== location.id || isHeld(quarry)) return false;
   const busy = quarry.activity.kind === 'fighting' || quarry.activity.kind === 'traveling';
   if (busy) return false;
   const hunters = [hunter, ...followersOf(ctx, hunter)];
+  // One with the craft, who wants them alive, lays a trap instead of attacking.
+  if (layTrap(ctx, hunters, quarry, location)) return true;
   const gang = partyOf(ctx, quarry);
   const outlaws = [
     quarry,
@@ -323,9 +451,4 @@ export function confrontQuarry(
   ];
   startBrawl(ctx, 'hunt', hunters, outlaws, location);
   return true;
-}
-
-/** Whether a town will serve this character: wanted outlaws find doors shut. */
-export function isWantedIn(character: Character, townId: LocationId): boolean {
-  return Boolean(character.outlaw) && (character.reputation[townId] ?? 0) < -0.3;
 }

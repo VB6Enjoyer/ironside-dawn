@@ -43,6 +43,23 @@ describe('save files from earlier releases', () => {
     ).toBe(sim.world.time);
   });
 
+  it('carry 0.2.0 standing over as what each town has heard of someone', () => {
+    const game = open('save-0.2.0.json.gz');
+    expect(game.madeWith).toBe('0.2.0');
+    const sim = createSimulation({ seed: game.seed, restore: game.world, watch: 'none' });
+    const everyone = [...sim.world.characters.values()];
+    expect(sim.world.news).toEqual([]);
+    expect(sim.world.unsolved).toEqual([]);
+    for (const c of everyone) {
+      expect(c.crimes).toEqual([]);
+      expect(c.justice).toEqual([]);
+      expect(c.heads).toEqual([]);
+      // Standing keeps only good deeds; ill repute became word in the towns.
+      for (const r of Object.values(c.reputation)) expect(r).toBeGreaterThanOrEqual(0);
+    }
+    expect(everyone.some((c) => Object.keys(c.notoriety).length > 0)).toBe(true);
+  });
+
   it('say which version began a world from the first release', () => {
     expect(open('save-0.1.0.json.gz').madeWith).toBe('0.1.0');
   });

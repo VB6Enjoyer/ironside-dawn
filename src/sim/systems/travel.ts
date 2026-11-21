@@ -7,6 +7,7 @@ import { followersOf } from './social';
 import { wakeAt } from './wake';
 import { travelFactor } from './weather';
 import { waylay } from './wilds';
+import { captiveOf, tryEscape } from './justice';
 import { moveTo } from './whereabouts';
 
 export type TravelReason = EventOfType<'travel.depart'>['data']['reason'];
@@ -65,8 +66,13 @@ export function finishLeg(
 
   const here = activity.leg.to;
   const companions = followersOf(ctx, character);
-  for (const c of [character, ...companions]) moveTo(ctx.world, c, here);
+  const captive = captiveOf(ctx, character);
+  for (const c of [character, ...companions, ...(captive ? [captive] : [])]) {
+    moveTo(ctx.world, c, here);
+  }
   const place = ctx.world.locations.get(here)!;
+  // Each stretch of road gives a captive a chance to get away.
+  if (captive) tryEscape(ctx, character, place);
   if (ambush(ctx, character, place) || waylay(ctx, character, place)) return 'ambushed';
 
   const [nextStop, ...remaining] = activity.remaining;
@@ -128,7 +134,10 @@ function beginLeg(
   const departedAt = ctx.world.time;
   const arrivesAt = departedAt + Math.round(link.route.duration * factor);
 
-  for (const c of [character, ...followersOf(ctx, character)]) moveTo(ctx.world, c, null);
+  const captive = captiveOf(ctx, character);
+  for (const c of [character, ...followersOf(ctx, character), ...(captive ? [captive] : [])]) {
+    moveTo(ctx.world, c, null);
+  }
   character.activity = {
     kind: 'traveling',
     destinationId,

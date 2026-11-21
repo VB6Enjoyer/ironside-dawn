@@ -12,7 +12,9 @@ import type {
 } from '../model';
 import { isDizzy, isFitToDelve, needsRecovery } from './condition';
 import { fearOf, hasVisited, healthNeed, wealthNeed } from './mind';
-import { isWantedIn } from './outlaws';
+import { canFence, dayCrimes, farmsToExtort, lyingLow, type DayCrime } from './crime';
+import { isBarred, isKnownIn, isShunned, standingIn } from './notoriety';
+import { bountyTowns, isHeld, needsPosse } from './justice';
 import { roleOf } from './progress';
 import { canTrade, wantsToShop } from './shopping';
 import { lairOdds } from './delve';
@@ -34,6 +36,8 @@ export type Action =
   | { readonly kind: 'convalesce' }
   | { readonly kind: 'pastime'; readonly pastime: PastimeId }
   | { readonly kind: 'delve' }
+  /** A crime by day in town, or making a nearby town's farms pay (0.3.0). */
+  | { readonly kind: 'crime'; readonly crime: DayCrime | 'extortion' }
   | {
       readonly kind: 'travel';
       readonly to: LocationId;
@@ -129,12 +133,26 @@ function pick(
   return scored[scored.length - 1]!;
 }
 
+function sameMotive(a: Motive, b: Motive): boolean {
+  return a === b || (a.kind === b.kind && JSON.stringify(a) === JSON.stringify(b));
+}
+
 /** The two weightiest named motives behind a choice, weightiest first. */
 function reasons(terms: readonly Term[]): Motive[] {
   let first: Term | null = null;
   let second: Term | null = null;
   for (const t of terms) {
     if (t.motive === null || t.value < NAMED_REASON) continue;
+    // The same reason twice (loot to sell, from two pulls) is named once, the stronger.
+    if (first && sameMotive(first.motive!, t.motive)) {
+      if (t.value > first.value) first = t;
+      continue;
+    }
+    if (second && sameMotive(second.motive!, t.motive)) {
+      if (t.value > second.value) second = t;
+      if (second.value > first!.value) [first, second] = [second, first];
+      continue;
+    }
     if (!first || t.value > first.value) {
       second = first;
       first = t;
@@ -157,10 +175,20 @@ function optionsAt(ctx: SimContext, character: Character, here: Location): Optio
 
   switch (here.kind) {
     case 'town': {
+      // Barred: the guards keep them outside the walls, where there's nothing to do but leave.
+      if (isBarred(character, here.id)) break;
       // Only worth asking whether they can deal here if there's dealing to do.
       const shopping = !loot && wantsToShop(ctx, character, here);
       const trading = (loot || shopping) && canTrade(ctx, character, here);
-      if (trading && loot) {
+      if (canFence(character, here)) {
+        options.push({
+          action: { kind: 'sell' },
+          terms: [
+            { value: 1.2, motive: LOOT },
+            { value: 0.3 * wealth, motive: DRIVE.wealth },
+          ],
+        });
+      } else if (trading && loot) {
         options.push({
           action: { kind: 'sell' },
           terms: [
@@ -182,14 +210,23 @@ function optionsAt(ctx: SimContext, character: Character, here: Location): Optio
           terms: [{ value: 1.2 + health, motive: DRIVE.health }],
         });
       }
-      const wanted = isWantedIn(character, here.id);
+      const shunned = isShunned(character, here.id);
       for (const pastime of pastimesAt(here, character)) {
         // A quiet day in town has its own appeal.
         const terms: Term[] = [{ value: TOWN_COMFORT * (1 - drives.purpose), motive: null }];
         addPastimeTerms(terms, character, pastime);
-        // A wanted outlaw is not welcome to linger.
-        if (wanted) terms.push({ value: -0.25, motive: null });
+        // Someone the town has shut its doors to is not welcome to linger.
+        if (shunned) terms.push({ value: -0.25, motive: null });
         options.push({ action: { kind: 'pastime', pastime }, terms });
+      }
+      if (!recovering) {
+        for (const { crime, appeal } of dayCrimes(ctx, character, here)) {
+          if (appeal <= 0) continue;
+          options.push({
+            action: { kind: 'crime', crime },
+            terms: [{ value: appeal, motive: DRIVE.wealth }],
+          });
+        }
       }
       break;
     }
@@ -208,17 +245,29 @@ function optionsAt(ctx: SimContext, character: Character, here: Location): Optio
       break;
     }
     case 'wilderness': {
-      if (!recovering && character.outlaw) {
+      if (!recovering && character.outlaw && !lyingLow(ctx, character)) {
         options.push({
           action: { kind: 'pastime', pastime: 'lurk' },
           terms: [
-            { value: 0.35, motive: null },
-            { value: 0.6 * wealth, motive: DRIVE.wealth },
+            // A full purse takes the edge off: each haul matters less to the rich.
+            { value: 0.2, motive: null },
+            { value: 0.7 * wealth, motive: DRIVE.wealth },
             { value: 0.2 * traits.greed, motive: null },
             // Where they were run to ground or nearly killed, they are wary of lingering.
             { value: -0.5 * fearOf(character, here.id, now), motive: null },
           ],
         });
+        // The farms of a town nearby, made to pay.
+        if (farmsToExtort(ctx, character, here)) {
+          options.push({
+            action: { kind: 'crime', crime: 'extortion' },
+            terms: [
+              { value: 0.1, motive: null },
+              { value: 0.3 * wealth, motive: DRIVE.wealth },
+              { value: 0.1 * traits.greed, motive: null },
+            ],
+          });
+        }
       }
       if (!recovering) {
         for (const pastime of pastimesAt(here, character)) {
@@ -259,6 +308,7 @@ const plans = new WeakMap<
     readonly loot: boolean;
     readonly partyId: string | null;
     readonly outlaw: boolean;
+    readonly heads: number;
     readonly options: Option[];
   }
 >();
@@ -274,6 +324,7 @@ function roadOptions(
   const now = ctx.world.time;
   const partyId = character.partyId ?? null;
   const outlaw = Boolean(character.outlaw);
+  const heads = character.heads.length;
   const plan = plans.get(character);
   if (
     plan &&
@@ -282,12 +333,32 @@ function roadOptions(
     plan.recovering === recovering &&
     plan.loot === loot &&
     plan.partyId === partyId &&
-    plan.outlaw === outlaw
+    plan.outlaw === outlaw &&
+    plan.heads === heads
   ) {
     return plan.options;
   }
   const options: Option[] = [];
   const { traits, drives } = character;
+  // A head to hand in: the towns that would pay for it call.
+  const paying = heads > 0 ? bountyTowns(ctx, character) : null;
+  if (paying) {
+    for (const townId of paying) {
+      if (townId === here.id) continue;
+      const hours = (findPath(ctx.world, here.id, townId)?.duration ?? Infinity) / HOUR;
+      if (!Number.isFinite(hours)) continue;
+      const nearness = 1 / (1 + hours / DISTANCE_HALVING_HOURS);
+      options.push({
+        action: { kind: 'travel', to: townId, reason: 'bounty' },
+        terms: [
+          {
+            value: 0.9 * nearness + 0.2,
+            motive: { kind: 'bounty', outlawId: character.heads[0]!.outlawId },
+          },
+        ],
+      });
+    }
+  }
   // Journeys elsewhere: anywhere within the nearest few places, and home.
   for (const { id, duration } of journeysFrom(ctx, character, here)) {
     const there = ctx.world.locations.get(id)!;
@@ -301,6 +372,8 @@ function roadOptions(
     const terms: Term[] = [];
     let reason: TravelReason = 'wander';
 
+    // Barred: the guards would only turn them away at the gate.
+    if (there.kind === 'town' && isBarred(character, there.id)) continue;
     if (recovering) {
       // Hurt: only towns appeal, the nearer the better, and only if not in one already.
       if (there.kind !== 'town' || here.kind === 'town') continue;
@@ -330,8 +403,13 @@ function roadOptions(
       if (character.outlaw && there.kind === 'wilderness') {
         terms.push({ value: 0.4 * nearness, motive: DRIVE.wealth });
       }
-      if (there.kind === 'town' && isWantedIn(character, there.id)) {
-        terms.push({ value: -0.3, motive: null });
+      if (there.kind === 'town') {
+        const standing = standingIn(character, there.id);
+        if (standing === 'unwelcome') terms.push({ value: -0.3, motive: null });
+        else if (standing === 'suspected') terms.push({ value: -0.1, motive: null });
+        // Outlaws favour towns that haven't heard of them, the more so with stolen goods to sell.
+        else if (character.outlaw) terms.push({ value: 0.15 * nearness, motive: null });
+        if (canFence(character, there)) terms.push({ value: 0.5 * nearness, motive: LOOT });
       }
       // A band is mustering there against one of the dread: the able answer the call.
       if (there.kind === 'town' && !character.outlaw) {
@@ -360,7 +438,16 @@ function roadOptions(
   if (here.kind === 'town' && !character.outlaw && !recovering) {
     options.push(...huntOptions(ctx, character, here));
   }
-  plans.set(character, { at: now, here: here.id, recovering, loot, partyId, outlaw, options });
+  plans.set(character, {
+    at: now,
+    here: here.id,
+    recovering,
+    loot,
+    partyId,
+    outlaw,
+    heads,
+    options,
+  });
   return options;
 }
 
@@ -454,13 +541,19 @@ function huntOptions(ctx: SimContext, character: Character, here: Location): Opt
   const eagerness = Math.min(1, drives.purpose / RESTLESS);
   for (const bounty of ctx.world.bounties.values()) {
     const outlaw = ctx.world.characters.get(bounty.outlawId);
-    if (!outlaw?.outlaw || outlaw.death || outlaw.id === character.id) continue;
+    if (!outlaw?.outlaw || outlaw.death || outlaw.id === character.id || isHeld(outlaw)) continue;
+    // Only outlaws this town has heard of: there are posters up for them.
+    if (!isKnownIn(outlaw, here.id)) continue;
     const affinity = character.opinions[outlaw.id]?.affinity ?? 0;
     if (affinity > 0.3) continue; // won't hunt a friend
     const revenge = affinity <= -0.5;
     // Too content to bother, unless it's personal.
     if (eagerness < 0.3 && !revenge) continue;
-    const party = 1 + followersOrMembers(ctx, character);
+    // A big bounty raises a posse: the able in town would ride along.
+    const posse = needsPosse(ctx, outlaw)
+      ? Math.min(CRUSADE_SIZE - 1, willingRecruits(ctx, character, here, outlaw).length)
+      : 0;
+    const party = 1 + followersOrMembers(ctx, character) + posse;
     const outmatched = character.level + 2 * (party - 1) < outlaw.level - 1;
     if (outmatched && !(revenge && traits.bravery >= 0.6)) continue;
 
@@ -578,7 +671,7 @@ export function sellable(character: Character): LootItem[] {
  */
 const sellableCache = new WeakMap<LootItem[], { length: number; any: boolean }>();
 
-function hasSellable(character: Character): boolean {
+export function hasSellable(character: Character): boolean {
   const pack = character.pack;
   const cached = sellableCache.get(pack);
   if (cached && cached.length === pack.length) return cached.any;

@@ -15,7 +15,7 @@ export const FIRST_RELEASE = '0.1.0';
  * history here. Move it to the coming version whenever a change alters
  * history: `src/sim/history.test.ts` fails until it is moved.
  */
-export const SAME_HISTORY_SINCE = '0.1.0';
+export const SAME_HISTORY_SINCE = '0.3.0';
 
 const VERSION = /^(\d+)\.(\d+)\.(\d+)$/;
 
@@ -43,10 +43,19 @@ export function compareVersions(a: string, b: string): number {
   return 0;
 }
 
+/**
+ * The version whose rules this build plays worlds by: its own, or, between
+ * releases, the coming one, when a change to how worlds turn out has come in
+ * ahead of its release. Worlds begun here are stamped with it, so their links
+ * aren't mistaken for the last release's.
+ */
+export const HISTORY_VERSION =
+  compareVersions(SAME_HISTORY_SINCE, APP_VERSION) > 0 ? SAME_HISTORY_SINCE : APP_VERSION;
+
 /** Whether a world begun in `madeWith` follows the same history from its seed in this version. */
 export function replaysHere(madeWith: string): boolean {
   return (
     compareVersions(madeWith, SAME_HISTORY_SINCE) >= 0 &&
-    compareVersions(madeWith, APP_VERSION) <= 0
+    compareVersions(madeWith, HISTORY_VERSION) <= 0
   );
 }

@@ -11,6 +11,7 @@ export {
   compareVersions,
   currentName,
   FIRST_RELEASE,
+  HISTORY_VERSION,
   isVersion,
   replaysHere,
   SAME_HISTORY_SINCE,

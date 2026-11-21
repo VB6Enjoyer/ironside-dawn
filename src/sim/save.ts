@@ -10,7 +10,7 @@ import type { World, WorldSettings } from './model';
 
 export const SAVE_FORMAT = 'ironside-dawn/world';
 /** Bump when the world's shape changes in a way old saves can't be read as. */
-export const SAVE_VERSION = 6;
+export const SAVE_VERSION = 7;
 
 export interface WorldSave {
   readonly format: typeof SAVE_FORMAT;
@@ -86,7 +86,45 @@ type SaveData = Record<string, unknown> & { version: number };
  * on under the new version's rules from where it was. Saves kept from each
  * release (`src/sim/fixtures`) test this.
  */
-const MIGRATIONS: Readonly<Record<number, (save: SaveData) => Record<string, unknown>>> = {};
+const MIGRATIONS: Readonly<Record<number, (save: SaveData) => Record<string, unknown>>> = {
+  6: toCrimesThatTravel,
+};
+
+type Encoded = Record<string, unknown>;
+
+/**
+ * 0.3.0: crimes are recorded, and towns know of them as word travels. Before,
+ * a crime lowered someone's standing in every town at once; that is carried
+ * over as what each town has heard, and standing keeps only good deeds.
+ */
+function toCrimesThatTravel(save: SaveData): Record<string, unknown> {
+  const world = save.world as Encoded;
+  const characters = (world.characters as { $map: [unknown, Encoded][] }).$map;
+  for (const [, c] of characters) {
+    const outlaw = c.outlaw as { crimes: number; murders: number } | null;
+    const reputation = (c.reputation ?? {}) as Record<string, number>;
+    const notoriety: Record<string, unknown> = {};
+    const good: Record<string, number> = {};
+    for (const [town, standing] of Object.entries(reputation)) {
+      if (standing > 0) good[town] = standing;
+      if (standing >= 0) continue;
+      notoriety[town] = {
+        heat: -standing * 6,
+        crimes: outlaw?.crimes ?? 1,
+        murders: outlaw?.murders ?? 0,
+        value: 0,
+        heardAt: world.time,
+      };
+    }
+    c.reputation = good;
+    c.notoriety = notoriety;
+    c.crimes = [];
+    c.stolenFrom = [];
+    c.heads = [];
+    c.justice = [];
+  }
+  return { ...save, world: { ...world, news: [], unsolved: [] } };
+}
 
 /**
  * Checks that something read from a file or the database is a world save, and

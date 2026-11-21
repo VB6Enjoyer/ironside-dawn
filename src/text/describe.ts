@@ -17,11 +17,13 @@ import type {
   EventType,
   LocationId,
   Occupation,
+  OutlawReason,
   SimEvent,
 } from '../sim';
 import { describeDuration, seasonName } from './calendar';
 import { anItem, itemName, legendTitle, SKILL_PHRASES, spellName } from './items';
 import { goodsList } from './goods';
+import { chargesPhrase, EXECUTED, withWeapon } from './justice';
 import { describeWhy } from './mind';
 import { peopleName, roleTitle, type NameResolver } from './names';
 import {
@@ -69,6 +71,27 @@ export type Segment =
     };
 
 type Part = string | Segment;
+
+/** How someone turning outlaw reads, by what drove them to it: two phrasings each. */
+const TURNED: Record<OutlawReason, readonly [string, string]> = {
+  want: [', broke and bitter, turns to banditry.', ' takes to the roads as an outlaw.'],
+  ambition: [
+    ' decides that honest work is for lesser folk, and turns outlaw.',
+    ', hungry for more than adventuring pays, takes to banditry.',
+  ],
+  skill: [
+    ', with quick fingers and few scruples, turns to crime.',
+    ' puts a thief’s skills to a thief’s use, and turns outlaw.',
+  ],
+  company: [
+    ' falls in with outlaw friends, and takes to the roads.',
+    ' joins their outlaw friends on the wrong side of the law.',
+  ],
+  grudge: [
+    ', nursing an old wrong, turns outlaw.',
+    ', bitter at what was done to them, takes to banditry.',
+  ],
+};
 
 interface Helpers {
   /** A character's name. */
@@ -193,11 +216,106 @@ function attackVerb(h: Helpers, attacker: Combatant): string {
   return verbs ? h.pick(verbs) : 'strikes';
 }
 
+/** A crime against the nameless, told as it went. */
+function describeCrime(e: EventOfType<'crime.commit'>, h: Helpers): Part[] {
+  const { crime, foiled, gold, goods, hurt, fine, value } = e.data;
+  const who = h.c(e.data.characterId);
+  const town = h.place(e.data.townId ?? e.data.locationId);
+  const here = h.l(e.data.locationId);
+  const took = [
+    ...(goods && Object.keys(goods).length > 0 ? [goodsList(goods)] : []),
+    ...(gold > 0 ? [`${gold} gold`] : []),
+  ];
+  const haul = took.length > 0 ? listOf(took) : null;
+  let told: Part[];
+  switch (crime) {
+    case 'waylay':
+      told = foiled
+        ? [
+            who,
+            ' tries to hold up a caravan bound for ',
+            town,
+            ' in ',
+            here,
+            `, but its guards drive them off${hurt ? ', wounded' : ''}.`,
+          ]
+        : [
+            who,
+            ' holds up a caravan bound for ',
+            town,
+            ' in ',
+            here,
+            haul ? `, making off with ${haul}.` : ', but it carries nothing worth taking.',
+          ];
+      break;
+    case 'burglary':
+      told = foiled
+        ? [
+            who,
+            ' is disturbed breaking into a house in ',
+            town,
+            ' by night',
+            hurt ? ' and is hurt getting away.' : ' and flees empty-handed.',
+          ]
+        : [
+            who,
+            ' breaks into a house in ',
+            town,
+            ' by night',
+            haul ? ` and makes off with ${haul}.` : ' but finds nothing worth taking.',
+          ];
+      break;
+    case 'theft':
+      told = foiled
+        ? [who, ' is caught trying to slip something from a stall in ', town, '.']
+        : [who, ' slips ', haul ?? 'a trifle', ' from a stall in ', town, ' unseen.'];
+      break;
+    case 'holdup':
+      told = foiled
+        ? [
+            who,
+            ' tries to rob the trading house of ',
+            town,
+            ' at blade point, but the watch drives them off',
+            hurt ? ', and they get away hurt.' : '.',
+          ]
+        : [
+            who,
+            ' robs the trading house of ',
+            town,
+            ' at blade point',
+            haul ? `, taking ${haul}.` : '.',
+          ];
+      break;
+    case 'extortion':
+      told = foiled
+        ? ['The farmers around ', town, ' refuse to pay ', who, ' and run them off.']
+        : [who, ' makes the farmers around ', town, ' pay', haul ? ` ${haul}.` : '.'];
+      break;
+    case 'vandalism':
+      told = foiled
+        ? [who, ' is chased off trying to spoil the stores of ', town, '.']
+        : [who, ' spoils the stores of ', town, ` out of spite, ruining ${value} gold’s worth.`];
+      break;
+    default:
+      told = [who, ' commits a crime in ', town, '.'];
+  }
+  if (fine !== undefined) told.push(` Caught, they pay a fine of ${fine} gold.`);
+  return told;
+}
+
+/** A prison term in whole years: "a year", "seven years". */
+function prisonTerm(seconds: number): string {
+  const years = Math.max(1, Math.round(seconds / (360 * 86_400)));
+  return years === 1 ? 'a year' : `${countWord(years)} years`;
+}
+
 const RETIRE_REASONS = {
   age: 'at last, their best years behind them,',
   wealth: 'with a fortune made',
   family: 'for the sake of their family',
   nerves: 'after one narrow escape too many',
+  prison: 'after their years behind bars',
 } as const;
 
 export const OCCUPATION_NAMES: Record<Occupation, string> = {
@@ -311,16 +429,34 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
         return [c, ` is consumed by a backfiring ${spellName(cause.spell)} in `, l, `${legacy}.`];
       }
       if (cause.kind === 'character') {
+        const weapon = withWeapon(cause.weapon);
+        if (cause.murder) {
+          return [c, ' is murdered by ', h.c(cause.characterId), `${weapon} in `, l, `${legacy}.`];
+        }
         return h.pick<Part[]>([
-          [c, ' is cut down by ', h.c(cause.characterId), ' in ', l, `${legacy}.`],
+          [c, ' is cut down by ', h.c(cause.characterId), `${weapon} in `, l, `${legacy}.`],
           [c, ' dies at the hands of ', h.c(cause.characterId), ' in ', l, `${legacy}.`],
         ]);
+      }
+      if (cause.kind === 'departed' && cause.fled) {
+        return [c, ' flees ', l, ' for distant lands, a price still on their head.'];
       }
       if (cause.kind === 'departed') {
         return h.pick<Part[]>([
           [c, ' leaves ', l, ' for distant lands.'],
           [c, ' sells up and leaves ', l, ', never to return.'],
         ]);
+      }
+      if (cause.kind === 'executed') {
+        return [
+          c,
+          ` is ${EXECUTED[cause.method ?? 'hanging']} for murder before a crowd in `,
+          h.place(e.data.locationId),
+          '.',
+        ];
+      }
+      if (cause.kind === 'prison') {
+        return [c, ' dies in the jail of ', h.place(e.data.locationId), ', their time unserved.'];
       }
       if (cause.kind === 'age') {
         return h.pick<Part[]>([
@@ -380,6 +516,10 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
               `, ${describeDuration(e.data.expectedDuration)} away.`,
             ],
           ]);
+        case 'escort':
+          return [c, ' leads a captive out of ', from, ', bound for ', to, '.'];
+        case 'bounty':
+          return [c, ' sets out from ', from, ' for ', to, ', to claim a bounty.'];
         case 'wander':
           return h.pick<Part[]>([
             [c, ' sets out from ', from, ' toward ', to, '.'],
@@ -846,7 +986,9 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
           ]
         : e.data.reason === 'retire'
           ? [h.c(e.data.characterId), ' leaves ', h.c(e.data.leaderId), "'s party to settle down."]
-          : [h.c(e.data.characterId), ' leaves ', h.c(e.data.leaderId), "'s party in disgust."],
+          : e.data.reason === 'captured'
+            ? [h.c(e.data.characterId), ' is taken, lost to ', h.c(e.data.leaderId), "'s gang."]
+            : [h.c(e.data.characterId), ' leaves ', h.c(e.data.leaderId), "'s party in disgust."],
   ],
   'party.disband': [
     (e, h) => {
@@ -859,6 +1001,8 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
           return [h.c(e.data.characterId), "'s party breaks up."];
         case 'retire':
           return [h.c(e.data.characterId), "'s companions go their separate ways."];
+        case 'captured':
+          return [h.c(e.data.characterId), "'s gang scatters."];
       }
     },
   ],
@@ -872,8 +1016,8 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
           ],
   ],
   'outlaw.turn': [
-    (e, h) => [h.c(e.data.characterId), ', broke and bitter, turns to banditry.'],
-    (e, h) => [h.c(e.data.characterId), ' takes to the roads as an outlaw.'],
+    (e, h) => [h.c(e.data.characterId), TURNED[e.data.reason ?? 'want'][0]],
+    (e, h) => [h.c(e.data.characterId), TURNED[e.data.reason ?? 'want'][1]],
   ],
   'outlaw.ambush': [
     (e, h) => {
@@ -894,6 +1038,8 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
           return [...lead, ', but they refuse to pay.'];
         case 'misunderstood':
           return [...lead, ', but neither side understands the other.'];
+        case 'attacked':
+          return [...lead, ' and fall on them without a word.'];
       }
     },
   ],
@@ -905,6 +1051,47 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
       e.data.goods && Object.keys(e.data.goods).length > 0
         ? ` of ${e.data.gold} gold and ${goodsList(e.data.goods)}.`
         : ` of ${e.data.gold} gold.`,
+      e.data.known === false ? ' Nobody will be able to say who it was.' : '',
+    ],
+  ],
+  'crime.commit': [(e, h) => describeCrime(e, h)],
+  'crime.fence': [
+    (e, h) => [
+      h.c(e.data.characterId),
+      ` sells ${goodsList(e.data.goods)}, stolen, to a fence in `,
+      h.l(e.data.locationId),
+      ` for ${e.data.gold} gold.`,
+    ],
+  ],
+  'outlaw.notorious': [
+    (e, h) => {
+      const who = h.c(e.data.characterId);
+      const town = h.place(e.data.locationId);
+      switch (e.data.standing) {
+        case 'suspected':
+          return [
+            'Word of ',
+            who,
+            '’s misdeeds reaches ',
+            town,
+            ', where folk now eye them warily.',
+          ];
+        case 'unwelcome':
+          return [town, ' shuts its doors to ', who, ': word of their crimes has got about.'];
+        default:
+          return e.data.driven
+            ? ['Word of ', who, '’s bloody deeds reaches ', town, ', and the guards put them out.']
+            : [town, ' bars ', who, ' from its gates: word of their bloody deeds has reached it.'];
+      }
+    },
+  ],
+  'outlaw.barred': [
+    (e, h) => [
+      'The guards of ',
+      h.place(e.data.locationId),
+      ' turn ',
+      h.c(e.data.characterId),
+      ' away at the gate.',
     ],
   ],
   'bounty.post': [
@@ -916,15 +1103,147 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
     ],
   ],
   'bounty.claim': [
+    (e, h) => {
+      const shared = (e.data.shares?.length ?? 0) > 1 ? ', shared with their party' : '';
+      if (e.data.alive) {
+        return [
+          h.c(e.data.characterId),
+          ' hands ',
+          h.c(e.data.outlawId),
+          ' over to the watch of ',
+          h.place(e.data.locationId),
+          ` alive, for ${e.data.amount} gold${shared}.`,
+        ];
+      }
+      if (!e.data.shares) {
+        return [
+          h.c(e.data.characterId),
+          ` claims the ${e.data.amount}-gold bounty on `,
+          h.c(e.data.outlawId),
+          '.',
+        ];
+      }
+      return [
+        h.c(e.data.characterId),
+        ' brings the head of ',
+        h.c(e.data.outlawId),
+        ' to ',
+        h.place(e.data.locationId),
+        ` and claims the ${e.data.amount}-gold bounty${shared}.`,
+      ];
+    },
+  ],
+  'bounty.head': [
     (e, h) => [
       h.c(e.data.characterId),
-      ` claims the ${e.data.amount}-gold bounty on `,
+      ' takes the head of ',
       h.c(e.data.outlawId),
-      '.',
+      ', to claim the bounty on it.',
+    ],
+  ],
+  'bounty.lost': [
+    (e, h) => ['The head of ', h.c(e.data.outlawId), ' is lost, and the bounty with it.'],
+  ],
+  'capture.attempt': [
+    (e, h) => {
+      const hunter = h.c(e.data.characterId);
+      const outlaw = h.c(e.data.outlawId);
+      const here = h.l(e.data.locationId);
+      if (e.data.how === 'trap') {
+        return e.data.success
+          ? [hunter, ' springs a trap on ', outlaw, ' in ', here, ' and takes them alive.']
+          : [outlaw, ' spots the trap ', hunter, ' laid in ', here, ' and slips away.'];
+      }
+      if (e.data.success) {
+        return [hunter, ' wrestles the wounded ', outlaw, ' to the ground and binds them.'];
+      }
+      if (e.data.killed) return [hunter, ' closes to take ', outlaw, ' alive, and is cut down.'];
+      return [
+        hunter,
+        ' tries to take ',
+        outlaw,
+        ' alive, but is beaten off',
+        e.data.hurt ? ', wounded.' : '.',
+      ];
+    },
+  ],
+  'capture.escape': [
+    (e, h) => [
+      h.c(e.data.characterId),
+      ' gets away from ',
+      h.c(e.data.captorId),
+      ' in ',
+      h.l(e.data.locationId),
+      ', with nothing but the clothes on their back.',
+    ],
+  ],
+  'outlaw.sentenced': [
+    (e, h) =>
+      e.data.sentence === 'death'
+        ? [
+            h.c(e.data.characterId),
+            ' is tried in ',
+            h.place(e.data.locationId),
+            ` and sentenced to death for murder, to be ${EXECUTED[e.data.method ?? 'hanging']} ${describeDuration(e.data.until - e.t)} hence.`,
+          ]
+        : [
+            h.c(e.data.characterId),
+            ' is tried in ',
+            h.place(e.data.locationId),
+            e.data.charges && chargesPhrase(e.data.charges)
+              ? ` for ${chargesPhrase(e.data.charges)}`
+              : '',
+            ` and sentenced to ${prisonTerm(e.data.until - e.t)} in prison.`,
+          ],
+  ],
+  'crime.conceal': [
+    (e, h) => [
+      h.c(e.data.characterId),
+      ' hides the body of ',
+      h.c(e.data.victimId),
+      ' in ',
+      h.l(e.data.locationId),
+      ', where no one will find it.',
+    ],
+  ],
+  'crime.pinned': [
+    (e, h) =>
+      e.data.victimId
+        ? [
+            'Word reaches ',
+            h.place(e.data.locationId),
+            ' at last: it was ',
+            h.c(e.data.characterId),
+            ' who killed ',
+            h.c(e.data.victimId),
+            '.',
+          ]
+        : [
+            'Word reaches ',
+            h.place(e.data.locationId),
+            ' of who was behind an old crime: ',
+            h.c(e.data.characterId),
+            '.',
+          ],
+  ],
+  'outlaw.freed': [
+    (e, h) => [
+      h.c(e.data.characterId),
+      ' walks free from the jail of ',
+      h.place(e.data.locationId),
+      ', their time served.',
     ],
   ],
   'outlaw.reform': [
-    (e, h) => [h.c(e.data.characterId), ' pays restitution and gives up the outlaw life.'],
+    (e, h) =>
+      e.data.paid !== undefined && e.data.paid > 0
+        ? [
+            h.c(e.data.characterId),
+            ` pays back what they took, ${e.data.paid} gold with interest and fines, and gives up the outlaw life.`,
+          ]
+        : e.data.paid === 0
+          ? [h.c(e.data.characterId), ' gives up the outlaw life.']
+          : [h.c(e.data.characterId), ' pays restitution and gives up the outlaw life.'],
   ],
   'trade.sell': [
     (e, h) => [

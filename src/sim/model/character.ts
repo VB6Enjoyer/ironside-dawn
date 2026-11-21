@@ -16,6 +16,7 @@ import type {
 import type { CreatureRef } from './encounter';
 import type { CharacterId, EncounterId, ItemId, LocationId, PartyId } from './ids';
 import type { Opinion, Outlaw } from './social';
+import type { Captivity, Crime, ExecutionMethod, Head, Judgment, Notoriety } from './crime';
 import type { Equipment, Item } from './item';
 import type { Drives, Expectation, Goal, Memory } from './mind';
 import type { PriceNote } from './market';
@@ -108,8 +109,29 @@ export interface Character {
   languages: Partial<Record<LanguageId, number>>;
   partyId: PartyId | null;
   outlaw: Outlaw | null;
-  /** How each town sees them, -1 (wanted) to 1 (celebrated). */
+  /**
+   * Since when an adventurer has been broke with nothing left to sell, while
+   * they are (0.3.0): want turns no one overnight. Missing from older saves.
+   */
+  hardshipSince?: number;
+  /** When they last went straight, if ever (0.3.0). Missing from older saves. */
+  pardonedAt?: number;
+  /** How each town sees them for their good deeds, 0 to 1 (celebrated). */
   reputation: Partial<Record<LocationId, number>>;
+  /** Their crimes, newest last; the oldest are dropped past a cap (0.3.0). */
+  crimes: Crime[];
+  /** What each town has heard of their crimes, by town (0.3.0). */
+  notoriety: Partial<Record<LocationId, Notoriety>>;
+  /** Towns the stolen goods they carry (in `cargo`) came from, where no fence will touch them. */
+  stolenFrom: LocationId[];
+  /** Outlaws' heads carried to claim the bounties on them (0.3.0). */
+  heads: Head[];
+  /** Their dealings with justice, oldest first, for their life story (0.3.0). */
+  justice: Judgment[];
+  /** Taken alive and under escort (0.3.0). */
+  captive?: Captivity;
+  /** The captive they are escorting to justice (0.3.0). */
+  escorting?: CharacterId;
 
   /** Healing draughts carried, drunk when a fight goes badly. */
   potions: number;
@@ -166,16 +188,34 @@ export interface Death {
   readonly at: number;
   readonly locationId: LocationId;
   readonly cause: DeathCause;
+  /** Their killer hid the body: as far as anyone knows, they vanished (0.3.0). */
+  readonly hidden?: boolean;
+  /** When word got out of who killed them, for a murder nobody saw (0.3.0). */
+  readonly pinnedAt?: number;
 }
 
 export type DeathCause =
   | { readonly kind: 'creature'; readonly creature: CreatureRef }
-  | { readonly kind: 'character'; readonly characterId: CharacterId }
+  | {
+      readonly kind: 'character';
+      readonly characterId: CharacterId;
+      /** The killer's weapon, by base (0.3.0). */
+      readonly weapon?: string;
+      /** Killed by an outlaw: murder (0.3.0). */
+      readonly murder?: boolean;
+    }
   | { readonly kind: 'trap'; readonly trap: TrapId }
   | { readonly kind: 'magic'; readonly spell: SpellId }
   | { readonly kind: 'age'; readonly age: number }
-  /** Not a death: they left for distant lands, and the world stopped following them. */
-  | { readonly kind: 'departed' };
+  /** Put to death for murder, by the town's way of it (0.3.0). */
+  | { readonly kind: 'executed'; readonly method?: ExecutionMethod }
+  /** Died behind bars (0.3.0). */
+  | { readonly kind: 'prison' }
+  /**
+   * Not a death: they left for distant lands, and the world stopped following
+   * them; `fled` for an outlaw running from the law (0.3.0).
+   */
+  | { readonly kind: 'departed'; readonly fled?: boolean };
 
 export interface DelveProgress {
   readonly locationId: LocationId;
@@ -219,8 +259,18 @@ export type Activity =
     }
   | ({ readonly kind: 'delving' } & DelveProgress)
   | { readonly kind: 'fighting'; readonly encounterId: EncounterId }
-  /** Traveling or delving with a party, led by `leaderId`, who decides for all. */
+  /**
+   * Traveling or delving with a party, led by `leaderId`, who decides for all;
+   * or, for a captive, led under escort.
+   */
   | { readonly kind: 'accompanying'; readonly leaderId: CharacterId }
+  /** Held in a town's jail until `until`: released, or, sentenced to death, hanged (0.3.0). */
+  | {
+      readonly kind: 'jailed';
+      readonly since: number;
+      readonly until: number;
+      readonly sentence: 'prison' | 'death';
+    }
   | { readonly kind: 'dead' };
 
 export interface TravelLeg {
