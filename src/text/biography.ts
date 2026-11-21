@@ -82,7 +82,7 @@ export function causeOfDeath(cause: DeathCause, names: NameResolver): Segment[] 
     case 'prison':
       return [{ text: 'in prison' }];
     case 'departed':
-      return [{ text: 'left for distant lands' }];
+      return [{ text: cause.fled ? 'fled for distant lands' : 'left for distant lands' }];
   }
 }
 
@@ -494,9 +494,13 @@ export function biography(
   // The end.
   if (c.death?.cause.kind === 'departed') {
     paragraphs.push([
-      { text: `In ${whenIn(c.death.at)}, ${c.givenName} left ` },
+      { text: `In ${whenIn(c.death.at)}, ${c.givenName} ${c.death.cause.fled ? 'fled' : 'left'} ` },
       place(c.death.locationId, names),
-      { text: ' for distant lands, and was not heard of again.' },
+      {
+        text: c.death.cause.fled
+          ? ' for distant lands with a price on their head, beyond the reach of the law, and was not heard of again.'
+          : ' for distant lands, and was not heard of again.',
+      },
     ]);
   } else if (c.death) {
     paragraphs.push([

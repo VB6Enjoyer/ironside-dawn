@@ -2,13 +2,13 @@ import { goodDef, type GoodId, type Goods } from '../../content';
 import { HOUR } from '../core/time';
 import type { SimContext } from '../context';
 import { createCharacter } from '../gen/people';
-import type { Character, CharacterId, Location, OutlawReason } from '../model';
+import type { Character, CharacterId, Location, OutlawReason, World } from '../model';
 import { startBrawl } from './combat';
 import { isAlive } from './condition';
 import { remember, vividness, wealthNeed } from './mind';
 import { hasSellable } from './decide';
 import { bystanders, identifyChance, leaveUnsolved, nearestTown, recordCrime } from './notoriety';
-import { considerRestitution, isHeld, layTrap, takeHead } from './justice';
+import { considerFleeing, considerRestitution, isHeld, layTrap, takeHead } from './justice';
 import { wakeAt } from './wake';
 import {
   adjustOpinion,
@@ -41,7 +41,7 @@ const DESPERATION_DAYS = 30;
  * Daily chance of giving in to temptation, for someone with no conscience, for
  * each good reason they have. Without one, nobody is tempted at all.
  */
-const TEMPTATION_CHANCE = 0.001;
+const TEMPTATION_CHANCE = 0.003;
 /** Reasons it takes before temptation can turn someone. */
 const REASONS_NEEDED = 1;
 /** Years after a pardon in which temptation finds no hold. */
@@ -71,7 +71,8 @@ export function considerCrime(ctx: SimContext, character: Character): void {
 
   // Held, they can do nothing; free, some tire of the life and pay what they owe.
   if (isHeld(character)) return;
-  considerRestitution(ctx, character);
+  if (considerRestitution(ctx, character)) return;
+  considerFleeing(ctx, character);
 }
 
 /** Someone takes to the road as an outlaw, leaving any honest party. */
@@ -136,8 +137,34 @@ function temptationOf(ctx: SimContext, character: Character, now: number): Outla
   }
   const reasons = temptationReasons(ctx, character, now);
   if (reasons.length < REASONS_NEEDED) return null;
-  const chance = TEMPTATION_CHANCE * (weakConscience(character) / 1.6) ** 2 * reasons.length;
+  const chance =
+    TEMPTATION_CHANCE *
+    (weakConscience(character) / 1.6) ** 2 *
+    reasons.length *
+    emptyRoads(ctx.world);
   return ctx.rng.outlaws.chance(chance) ? reasons[0]! : null;
+}
+
+/** Each day's count of outlaws at large, worked out once a day. */
+const atLarge = new WeakMap<World, { readonly day: number; readonly count: number }>();
+
+/**
+ * With no outlaws on the roads, caravans go unguarded and purses unwatched:
+ * temptation comes easier. Three times as easy with none at large, half
+ * again with one, as usual with more (step 9).
+ */
+function emptyRoads(world: World): number {
+  const day = Math.floor(world.time / DAY);
+  let cached = atLarge.get(world);
+  if (!cached || cached.day !== day) {
+    let count = 0;
+    for (const c of world.characters.values()) {
+      if (c.outlaw && !c.death && !isHeld(c)) count++;
+    }
+    cached = { day, count };
+    atLarge.set(world, cached);
+  }
+  return cached.count === 0 ? 3 : cached.count === 1 ? 1.5 : 1;
 }
 
 /** Skill at which stealth or lockpicking makes crime look easy. */

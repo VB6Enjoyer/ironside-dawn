@@ -593,13 +593,15 @@ export function rallyAgainst(
   leader: Character,
   location: Location,
   master: Character,
+  /** How far below the foe the leader may be and still call a band: a posse after an outlaw needs no hero to lead it. */
+  reach = 10,
 ): void {
   const world = ctx.world;
   const now = world.time;
   const existing = partyOf(ctx, leader);
   if (existing && existing.leaderId !== leader.id) return;
   // Only those who could lead such a band call for one.
-  if (leader.level < master.level - 10) return;
+  if (leader.level < master.level - reach) return;
   const party: Party = existing ?? {
     id: `p${world.nextPartyNumber}` as PartyId,
     leaderId: leader.id,

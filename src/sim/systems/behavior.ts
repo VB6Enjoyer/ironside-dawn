@@ -20,7 +20,7 @@ import { markVisited, satisfy, updateDrives } from './mind';
 import { practice } from './progress';
 import { confrontQuarry } from './outlaws';
 import { commitCrime, nightWork, waylayCaravan } from './crime';
-import { claimHeads, escort, release } from './justice';
+import { claimHeads, escort, needsPosse, release, trailOf } from './justice';
 import { isBarred, isShunned } from './notoriety';
 import { carouse, lodging, visitMarket } from './shopping';
 import { followersOf, gatherParty, rallyAgainst, releaseFollowers, socialize } from './social';
@@ -94,6 +94,13 @@ export function wakeCharacter(ctx: SimContext, character: Character): void {
       if (goal?.kind === 'hunt' && goal.targetId) {
         const quarry = ctx.world.characters.get(goal.targetId);
         if (quarry && confrontQuarry(ctx, character, quarry, here)) return;
+        // Gone: a sharp-eyed hunter may pick up the trail to somewhere near (0.3.0).
+        const trail = quarry ? trailOf(ctx, character, quarry, here) : null;
+        if (trail && quarry) {
+          const companions = gatherParty(ctx, character, here);
+          character.goal = { kind: 'hunt', locationId: trail, why: goal.why, targetId: quarry.id };
+          if (startJourney(ctx, character, trail, 'hunt', goal.why, companions)) return;
+        }
       }
       decide(ctx, character);
       return;
@@ -300,6 +307,16 @@ function act(
       const master = masterId ? ctx.world.characters.get(masterId) : undefined;
       if (master && !master.death && action.reason === 'delve' && location.kind === 'town') {
         rallyAgainst(ctx, character, location, master);
+      }
+      // After an outlaw with a big price on their head, they raise a posse (0.3.0).
+      const quarry = action.target ? ctx.world.characters.get(action.target) : undefined;
+      if (
+        quarry &&
+        action.reason === 'hunt' &&
+        location.kind === 'town' &&
+        needsPosse(ctx, quarry)
+      ) {
+        rallyAgainst(ctx, character, location, quarry, Infinity);
       }
       // The party comes along to delve, hunt or claim a bounty; otherwise everyone goes their own way.
       const together =

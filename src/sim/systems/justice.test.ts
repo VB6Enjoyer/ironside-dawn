@@ -52,7 +52,9 @@ describe('restitution', () => {
     outlaw.gold = bill.total + 10;
     outlaw.traits = { ...outlaw.traits, honor: 1 };
     outlaw.locationId = concordale;
-    outlaw.outlaw!.lastCrimeAt = ctx.world.time - 100 * DAY;
+    // Two years on the road, the last half year quiet.
+    outlaw.outlaw = { ...outlaw.outlaw!, since: ctx.world.time - 720 * DAY };
+    outlaw.outlaw.lastCrimeAt = ctx.world.time - 200 * DAY;
     const house = ctx.world.markets.get(concordale)!.house;
     const before = house.gold;
     for (let i = 0; i < 400 && outlaw.outlaw; i++) considerRestitution(ctx, outlaw);

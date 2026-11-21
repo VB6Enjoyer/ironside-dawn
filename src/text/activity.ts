@@ -116,7 +116,14 @@ export function describeActivity(character: Character, names: NameResolver): Seg
         case 'prison':
           return [{ text: 'Died in prison in ' }, where];
         case 'departed':
-          return [{ text: 'Left for distant lands from ' }, where];
+          return [
+            {
+              text: death.cause.fled
+                ? 'Fled for distant lands from '
+                : 'Left for distant lands from ',
+            },
+            where,
+          ];
       }
     }
   }

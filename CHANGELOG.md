@@ -26,7 +26,7 @@ The public notes players see under "What's new" are kept in `src/ui/releases.ts`
 - Towns put murderers to death by their own custom (`src/sim/systems/justice.ts`): hanging by default, beheading by sword in the Japonic lands, the axe in the Norse north, arrows among the elves, the chasm under the dwarven halls, stoning on the steppe. The live feed, life stories and the Gallows say which.
 - The Halls of the world gain **Behind Bars** (prisoners and the condemned, with their sentences) and **The Gallows** (those put to death); the Graveyard notes bodies never found; the character card shows a prisoner's sentence (`src/ui/pages/HallsPage.tsx`, `src/host/views.ts`, `src/ui/components/CharacterCard.tsx`).
 - The live feed tells of heads taken and claimed, traps and takedowns, escapes, sentences, executions, deaths in prison, releases, hidden bodies and old crimes coming to light; life stories tell of being taken alive, tried, jailed, put to death or escaping, of restitution paid, and of bodies never found; the character card shows a head carried or a captive led (`src/text/describe.ts`, `src/text/biography.ts`, `src/ui/components/CharacterCard.tsx`).
-- The crime audit counts crimes against the nameless by kind, crimes by people who are no outlaws, what the towns lost and fences paid, how word spread, bounties paid, heads lost, capture tries, escapes, sentences, executions and deaths in prison, and crimes that went unnamed, hidden or pinned later.
+- The crime audit counts crimes against the nameless by kind, crimes by people who are no outlaws, what the towns lost and fences paid, how word spread, bounties paid, heads lost, capture tries, escapes, sentences, executions and deaths in prison, crimes that went unnamed, hidden or pinned later, and how long outlaw careers last, how they end and what becomes of murderers, against the targets of the Outlaws Update.
 
 ### Changed
 
@@ -37,6 +37,13 @@ The public notes players see under "What's new" are kept in `src/ui/releases.ts`
 - A crime no longer lowers someone's standing in every town at once; towns hear of it as word travels. Standing (`reputation`) now records only good deeds.
 - Known outlaws are shunned only where their crimes are known: an outlaw nobody has heard of can make friends like anyone else. Honest folk won't team up with, or answer the call of, someone their town has heard of, and bounty hunters only chase outlaws their own town has posters up for (`src/sim/systems/social.ts`, `src/sim/systems/decide.ts`).
 - Outlaws favour towns that haven't heard of them yet, and lie low for a few days after each crime (`src/sim/systems/decide.ts`).
+- Crime is balanced so careers end within a few years and no outlaw runs for decades (`src/sim/systems/justice.ts`, `src/sim/systems/outlaws.ts`, `src/sim/systems/decide.ts`):
+  - A bounty of 200 gold or more raises a posse: hunters setting out call the able in town to ride along, and weigh the hunt with them.
+  - Hunters who find their quarry gone may pick up a fresh trail to somewhere near, and a hunted outlaw finds it harder to slip away from a fight (`src/sim/systems/combat-core.ts`).
+  - An outlaw long on the road, whom the towns have shut out (or a murderer, who can buy no pardon), may flee for distant lands with a price on their head; one nobody knows of may simply give it up.
+  - Rich outlaws lurk by the road less: each haul matters less to a full purse.
+  - Going straight takes at least a year on the road and half a year without a crime.
+  - Temptation comes a little more often, and more easily still when no outlaw is at large, so every era has its outlaws.
 - Killing an outlaw no longer pays the bounty on the spot (`src/sim/systems/outlaws.ts`). Bounties stop growing at 300 gold, and 150 more for each murder.
 - Going straight now takes paying restitution, and is no longer open to murderers; it used to cost half one's purse, paid to one's home town.
 - A murder's death now records the killer's weapon and that it was murder, and the live feed says "murdered by" (`src/sim/systems/combat.ts`).

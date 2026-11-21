@@ -211,8 +211,11 @@ export type DeathCause =
   | { readonly kind: 'executed'; readonly method?: ExecutionMethod }
   /** Died behind bars (0.3.0). */
   | { readonly kind: 'prison' }
-  /** Not a death: they left for distant lands, and the world stopped following them. */
-  | { readonly kind: 'departed' };
+  /**
+   * Not a death: they left for distant lands, and the world stopped following
+   * them; `fled` for an outlaw running from the law (0.3.0).
+   */
+  | { readonly kind: 'departed'; readonly fled?: boolean };
 
 export interface DelveProgress {
   readonly locationId: LocationId;

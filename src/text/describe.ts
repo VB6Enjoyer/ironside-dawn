@@ -432,6 +432,9 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
           [c, ' dies at the hands of ', h.c(cause.characterId), ' in ', l, `${legacy}.`],
         ]);
       }
+      if (cause.kind === 'departed' && cause.fled) {
+        return [c, ' flees ', l, ' for distant lands, a price still on their head.'];
+      }
       if (cause.kind === 'departed') {
         return h.pick<Part[]>([
           [c, ' leaves ', l, ' for distant lands.'],

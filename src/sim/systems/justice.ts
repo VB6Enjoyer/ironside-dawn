@@ -37,9 +37,11 @@ const FINE = 0.25;
 /** The least fine a town asks of anyone it knows did wrong there. */
 const MIN_FINE = 10;
 /** Daily chance an outlaw weary of the life, in a town with a court, pays up. */
-const REFORM_CHANCE = 0.05;
+const REFORM_CHANCE = 0.01;
 /** Days without a crime that make the life feel like it isn't paying. */
-const QUIET_DAYS = 90;
+const QUIET_DAYS = 180;
+/** Nobody gives up the life before a year of it. */
+const FIRST_YEAR = 360;
 /** Honor below which nobody pays back what they could keep. */
 const MIN_HONOR = 0.15;
 /** A bounty this large makes anyone think twice. */
@@ -103,8 +105,8 @@ export function considerRestitution(ctx: SimContext, character: Character): bool
     now - record.lastCrimeAt > QUIET_DAYS * DAY ||
     (towns.length > 0 && shunned / towns.length >= 0.5) ||
     bounty >= HEAVY_BOUNTY;
-  // Only someone with a little honor left would pay back what they could keep.
-  if (character.traits.honor < MIN_HONOR) return false;
+  // Only someone with a little honor left would pay back what they could keep, and not at once.
+  if (character.traits.honor < MIN_HONOR || now - record.since < FIRST_YEAR * DAY) return false;
   const chance = REFORM_CHANCE * character.traits.honor * (tired ? 1 : 0.05);
   const bill = restitutionBill(character);
   if (character.gold < bill.total || !ctx.rng.outlaws.chance(chance)) return false;
@@ -129,6 +131,83 @@ export function considerRestitution(ctx: SimContext, character: Character): bool
     [character.id],
     here.id,
   );
+  return true;
+}
+
+// ---------------------------------------------------------------------------
+// The long road's end (step 9): a posse for the worst, flight for the hunted
+
+/** A bounty this big, or a quarry this strong, calls for a posse. */
+const POSSE_BOUNTY = 200;
+
+/** Whether hunters after this outlaw would raise a posse first. */
+export function needsPosse(ctx: SimContext, outlaw: Character): boolean {
+  return (ctx.world.bounties.get(outlaw.id)?.amount ?? 0) >= POSSE_BOUNTY;
+}
+
+/** Road hours within which a fresh trail can be followed. */
+const TRAIL_HOURS = 16;
+
+/**
+ * Hunters reach where their quarry was last seen, and find them gone: if the
+ * quarry is somewhere near, at rest, a hunter may pick up the trail, likelier
+ * the sharper their eye. Returns where it leads, or null.
+ */
+export function trailOf(
+  ctx: SimContext,
+  hunter: Character,
+  quarry: Character,
+  here: Location,
+): LocationId | null {
+  const there = quarry.locationId;
+  if (!there || there === here.id || !isAlive(quarry) || isHeld(quarry) || !quarry.outlaw) {
+    return null;
+  }
+  const path = findPath(ctx.world, here.id, there);
+  if (!path || path.duration > TRAIL_HOURS * 3600) return null;
+  const chance = 0.25 + hunter.skills.awareness / 200;
+  return ctx.rng.outlaws.chance(chance) ? there : null;
+}
+
+/** Years an outlaw runs before the long road starts to tell. */
+const WEARY_YEARS = 2;
+/** Daily chance per year past that, for one every town has shut out, of fleeing the land. */
+const FLEE_CHANCE = 0.001;
+
+/**
+ * An outlaw long on the road, whom the towns have shut out (or a murderer,
+ * who can buy no pardon), may flee for distant lands with a price on their
+ * head, never to be seen here again. One whom nobody knows of may simply
+ * stop. Returns whether they did either.
+ */
+export function considerFleeing(ctx: SimContext, character: Character): boolean {
+  const record = character.outlaw;
+  if (!record || !character.locationId || character.activity.kind === 'fighting') return false;
+  const years = (ctx.world.time - record.since) / (YEAR_DAYS * DAY);
+  if (years < WEARY_YEARS) return false;
+  const towns = Object.keys(character.notoriety) as LocationId[];
+  const weary = years - WEARY_YEARS + 1;
+  // Nobody knows them: they can simply stop, and live on as if nothing had happened.
+  const unknown = towns.every((id) => (character.notoriety[id]?.heat ?? 0) <= 0);
+  if (unknown) {
+    if (!ctx.rng.outlaws.chance(FLEE_CHANCE * weary)) return false;
+    const here = character.locationId;
+    character.outlaw = null;
+    character.pardonedAt = ctx.world.time;
+    character.justice.push({ kind: 'reformed', at: ctx.world.time, townId: here, paid: 0 });
+    if (character.partyId) leaveParty(ctx, character, 'outlaw');
+    ctx.emit(
+      { type: 'outlaw.reform', data: { characterId: character.id, locationId: here, paid: 0 } },
+      [character.id],
+      here,
+    );
+    return true;
+  }
+  const shut = towns.filter((id) => isShunned(character, id)).length / towns.length;
+  const blood = hasBlood(character) ? 2 : 1;
+  const chance = FLEE_CHANCE * weary * shut * blood;
+  if (!ctx.rng.outlaws.chance(chance)) return false;
+  die(ctx, character, { kind: 'departed', fled: true });
   return true;
 }
 

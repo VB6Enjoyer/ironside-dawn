@@ -14,7 +14,7 @@ import { isDizzy, isFitToDelve, needsRecovery } from './condition';
 import { fearOf, hasVisited, healthNeed, wealthNeed } from './mind';
 import { canFence, dayCrimes, farmsToExtort, lyingLow, type DayCrime } from './crime';
 import { isBarred, isKnownIn, isShunned, standingIn } from './notoriety';
-import { bountyTowns, isHeld } from './justice';
+import { bountyTowns, isHeld, needsPosse } from './justice';
 import { roleOf } from './progress';
 import { canTrade, wantsToShop } from './shopping';
 import { lairOdds } from './delve';
@@ -235,8 +235,9 @@ function optionsAt(ctx: SimContext, character: Character, here: Location): Optio
         options.push({
           action: { kind: 'pastime', pastime: 'lurk' },
           terms: [
-            { value: 0.35, motive: null },
-            { value: 0.6 * wealth, motive: DRIVE.wealth },
+            // A full purse takes the edge off: each haul matters less to the rich.
+            { value: 0.2, motive: null },
+            { value: 0.7 * wealth, motive: DRIVE.wealth },
             { value: 0.2 * traits.greed, motive: null },
             // Where they were run to ground or nearly killed, they are wary of lingering.
             { value: -0.5 * fearOf(character, here.id, now), motive: null },
@@ -534,7 +535,11 @@ function huntOptions(ctx: SimContext, character: Character, here: Location): Opt
     const revenge = affinity <= -0.5;
     // Too content to bother, unless it's personal.
     if (eagerness < 0.3 && !revenge) continue;
-    const party = 1 + followersOrMembers(ctx, character);
+    // A big bounty raises a posse: the able in town would ride along.
+    const posse = needsPosse(ctx, outlaw)
+      ? Math.min(CRUSADE_SIZE - 1, willingRecruits(ctx, character, here, outlaw).length)
+      : 0;
+    const party = 1 + followersOrMembers(ctx, character) + posse;
     const outmatched = character.level + 2 * (party - 1) < outlaw.level - 1;
     if (outmatched && !(revenge && traits.bravery >= 0.6)) continue;
 
