@@ -50,9 +50,15 @@ interface WorldReport {
     caught: number;
     escapes: number;
     jailed: number;
+    condemned: number;
+    hanged: number;
+    diedInside: number;
     freed: number;
+    settledDown: number;
     held: number;
   };
+  /** Crimes nobody pinned on anyone: robberies unnamed, murders unsolved, bodies hidden, pinned later. */
+  readonly secrecy: { unnamed: number; unsolved: number; hidden: number; pinned: number };
   /** Share of monthly looks at an honest adventurer that found them broke. */
   readonly brokeShare: number;
   /** Crimes against the nameless that came off, by kind, and those foiled (0.3.0). */
@@ -94,9 +100,14 @@ function runWorld(seed: string, adventurers: number, years: number): WorldReport
     caught: 0,
     escapes: 0,
     jailed: 0,
+    condemned: 0,
+    hanged: 0,
+    diedInside: 0,
     freed: 0,
+    settledDown: 0,
     held: 0,
   };
+  const secrecy = { unnamed: 0, unsolved: 0, hidden: 0, pinned: 0 };
   let start = 0;
   let sim: ReturnType<typeof createSimulation> | null = null;
   const credit = (id: CharacterId) => byOutlaw.set(id, (byOutlaw.get(id) ?? 0) + 1);
@@ -111,6 +122,7 @@ function runWorld(seed: string, adventurers: number, years: number): WorldReport
         });
         break;
       case 'crime.robbery':
+        if (e.data.known === false) secrecy.unnamed++;
         robberies++;
         credit(e.data.characterId);
         break;
@@ -160,8 +172,18 @@ function runWorld(seed: string, adventurers: number, years: number): WorldReport
       case 'capture.escape':
         justice.escapes++;
         break;
-      case 'outlaw.jailed':
-        justice.jailed++;
+      case 'outlaw.sentenced':
+        if (e.data.sentence === 'death') justice.condemned++;
+        else justice.jailed++;
+        break;
+      case 'character.retire':
+        if (e.data.reason === 'prison') justice.settledDown++;
+        break;
+      case 'crime.conceal':
+        secrecy.hidden++;
+        break;
+      case 'crime.pinned':
+        secrecy.pinned++;
         break;
       case 'outlaw.freed':
         justice.freed++;
@@ -172,6 +194,8 @@ function runWorld(seed: string, adventurers: number, years: number): WorldReport
         if (cause.kind === 'character' && sim.world.characters.get(cause.characterId)?.outlaw) {
           murders++;
         }
+        if (cause.kind === 'executed') justice.hanged++;
+        if (cause.kind === 'prison') justice.diedInside++;
         // Killed for a bounty is counted when the head is taken, which follows this event
         // while the bounty still stands; any other end of an outlaw is counted here.
         if (dead?.outlaw && !(cause.kind === 'character' && sim.world.bounties.has(dead.id))) {
@@ -209,6 +233,7 @@ function runWorld(seed: string, adventurers: number, years: number): WorldReport
     byOutlaw: [...byOutlaw.values()].sort((a, b) => b - a),
     ends,
     justice,
+    secrecy: { ...secrecy, unsolved: sim.world.unsolved.length },
     brokeShare: looks ? broke / looks : 0,
     nameless,
     foiled,
@@ -326,7 +351,7 @@ function report(reports: readonly WorldReport[], adventurers: number, years: num
     );
   }
   console.log(
-    '\nworld      bounties paid (heads/alive)  heads lost  capture tries (trap/takedown)  taken  escaped  jailed  freed  held now',
+    '\nworld      bounties paid (heads/alive)  heads lost  capture tries (trap/takedown)  taken  escaped  jailed/condemned  hanged  died inside  freed (settled)  held now',
   );
   for (const r of reports) {
     const j = r.justice;
@@ -338,9 +363,26 @@ function report(reports: readonly WorldReport[], adventurers: number, years: num
         `${j.traps}/${j.takedowns}`.padStart(30),
         String(j.caught).padStart(6),
         String(j.escapes).padStart(8),
-        String(j.jailed).padStart(7),
-        String(j.freed).padStart(6),
+        `${j.jailed}/${j.condemned}`.padStart(16),
+        String(j.hanged).padStart(7),
+        String(j.diedInside).padStart(12),
+        `${j.freed} (${j.settledDown})`.padStart(15),
         String(j.held).padStart(9),
+      ].join(' '),
+    );
+  }
+  console.log(
+    '\nworld      robberies unnamed  murders hidden  pinned later  still unsolved at the end',
+  );
+  for (const r of reports) {
+    const s = r.secrecy;
+    console.log(
+      [
+        r.seed.padEnd(10),
+        String(s.unnamed).padStart(17),
+        String(s.hidden).padStart(15),
+        String(s.pinned).padStart(13),
+        String(s.unsolved).padStart(26),
       ].join(' '),
     );
   }
