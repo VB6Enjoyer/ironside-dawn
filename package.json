@@ -21,7 +21,8 @@
     "check": "npm run typecheck && npm run lint && npm run format:check && npm test",
     "tauri": "tauri",
     "prepare": "husky",
-    "lint:commits": "commitlint --from origin/main --to HEAD --verbose"
+    "lint:commits": "commitlint --from origin/main --to HEAD --verbose",
+    "audit:crime": "tsx tools/crime-audit.ts"
   },
   "dependencies": {
     "@tanstack/react-virtual": "^3.14.23",
