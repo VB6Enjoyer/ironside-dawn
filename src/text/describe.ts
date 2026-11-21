@@ -215,6 +215,94 @@ function attackVerb(h: Helpers, attacker: Combatant): string {
   return verbs ? h.pick(verbs) : 'strikes';
 }
 
+/** A crime against the nameless, told as it went. */
+function describeCrime(e: EventOfType<'crime.commit'>, h: Helpers): Part[] {
+  const { crime, foiled, gold, goods, hurt, fine, value } = e.data;
+  const who = h.c(e.data.characterId);
+  const town = h.place(e.data.townId ?? e.data.locationId);
+  const here = h.l(e.data.locationId);
+  const took = [
+    ...(goods && Object.keys(goods).length > 0 ? [goodsList(goods)] : []),
+    ...(gold > 0 ? [`${gold} gold`] : []),
+  ];
+  const haul = took.length > 0 ? listOf(took) : null;
+  let told: Part[];
+  switch (crime) {
+    case 'waylay':
+      told = foiled
+        ? [
+            who,
+            ' tries to hold up a caravan bound for ',
+            town,
+            ' in ',
+            here,
+            `, but its guards drive them off${hurt ? ', wounded' : ''}.`,
+          ]
+        : [
+            who,
+            ' holds up a caravan bound for ',
+            town,
+            ' in ',
+            here,
+            haul ? `, making off with ${haul}.` : ', but it carries nothing worth taking.',
+          ];
+      break;
+    case 'burglary':
+      told = foiled
+        ? [
+            who,
+            ' is disturbed breaking into a house in ',
+            town,
+            ' by night',
+            hurt ? ' and is hurt getting away.' : ' and flees empty-handed.',
+          ]
+        : [
+            who,
+            ' breaks into a house in ',
+            town,
+            ' by night',
+            haul ? ` and makes off with ${haul}.` : ' but finds nothing worth taking.',
+          ];
+      break;
+    case 'theft':
+      told = foiled
+        ? [who, ' is caught trying to slip something from a stall in ', town, '.']
+        : [who, ' slips ', haul ?? 'a trifle', ' from a stall in ', town, ' unseen.'];
+      break;
+    case 'holdup':
+      told = foiled
+        ? [
+            who,
+            ' tries to rob the trading house of ',
+            town,
+            ' at blade point, but the watch drives them off',
+            hurt ? ', and they get away hurt.' : '.',
+          ]
+        : [
+            who,
+            ' robs the trading house of ',
+            town,
+            ' at blade point',
+            haul ? `, taking ${haul}.` : '.',
+          ];
+      break;
+    case 'extortion':
+      told = foiled
+        ? ['The farmers around ', town, ' refuse to pay ', who, ' and run them off.']
+        : [who, ' makes the farmers around ', town, ' pay', haul ? ` ${haul}.` : '.'];
+      break;
+    case 'vandalism':
+      told = foiled
+        ? [who, ' is chased off trying to spoil the stores of ', town, '.']
+        : [who, ' spoils the stores of ', town, ` out of spite, ruining ${value} gold’s worth.`];
+      break;
+    default:
+      told = [who, ' commits a crime in ', town, '.'];
+  }
+  if (fine !== undefined) told.push(` Caught, they pay a fine of ${fine} gold.`);
+  return told;
+}
+
 const RETIRE_REASONS = {
   age: 'at last, their best years behind them,',
   wealth: 'with a fortune made',
@@ -929,6 +1017,46 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
       e.data.goods && Object.keys(e.data.goods).length > 0
         ? ` of ${e.data.gold} gold and ${goodsList(e.data.goods)}.`
         : ` of ${e.data.gold} gold.`,
+    ],
+  ],
+  'crime.commit': [(e, h) => describeCrime(e, h)],
+  'crime.fence': [
+    (e, h) => [
+      h.c(e.data.characterId),
+      ` sells ${goodsList(e.data.goods)}, stolen, to a fence in `,
+      h.l(e.data.locationId),
+      ` for ${e.data.gold} gold.`,
+    ],
+  ],
+  'outlaw.notorious': [
+    (e, h) => {
+      const who = h.c(e.data.characterId);
+      const town = h.place(e.data.locationId);
+      switch (e.data.standing) {
+        case 'suspected':
+          return [
+            'Word of ',
+            who,
+            '’s misdeeds reaches ',
+            town,
+            ', where folk now eye them warily.',
+          ];
+        case 'unwelcome':
+          return [town, ' shuts its doors to ', who, ': word of their crimes has got about.'];
+        default:
+          return e.data.driven
+            ? ['Word of ', who, '’s bloody deeds reaches ', town, ', and the guards put them out.']
+            : [town, ' bars ', who, ' from its gates: word of their bloody deeds has reached it.'];
+      }
+    },
+  ],
+  'outlaw.barred': [
+    (e, h) => [
+      'The guards of ',
+      h.place(e.data.locationId),
+      ' turn ',
+      h.c(e.data.characterId),
+      ' away at the gate.',
     ],
   ],
   'bounty.post': [

@@ -17,6 +17,7 @@ import {
   ageOf,
   conditionsOf,
   fearOf,
+  standingIn,
   vividMemories,
   vividness,
   statValue,
@@ -403,9 +404,16 @@ function Bonds({
     .sort((a, b) => b[1] - a[1]);
   const record = character.outlaw;
   const bounty = world.bounties.get(character.id);
-  const standing = (Object.entries(character.reputation) as [LocationId, number][]).filter(
-    ([, r]) => Math.abs(r) >= 0.2,
-  );
+  const celebrated = (Object.entries(character.reputation) as [LocationId, number][])
+    .filter(([, r]) => r >= 0.2)
+    .map(([id]) => id);
+  // What word of their crimes has done to them, town by town, worst first.
+  const STANDING_ORDER = { barred: 0, unwelcome: 1, suspected: 2, welcome: 3 } as const;
+  const notorious = (Object.keys(character.notoriety) as LocationId[])
+    .map((id) => [id, standingIn(character, id)] as const)
+    .filter(([, s]) => s !== 'welcome')
+    .sort((a, b) => STANDING_ORDER[a[1]] - STANDING_ORDER[b[1]]);
+  const quietCrimes = !record ? character.crimes.length : 0;
   const leader = party ? world.characters.get(party.leaderId) : undefined;
 
   return (
@@ -469,15 +477,24 @@ function Bonds({
             </dd>
           </>
         )}
-        {standing.length > 0 && (
+        {quietCrimes > 0 && (
           <>
-            <dt>Standing</dt>
-            <dd>
-              {standing
-                .map(
-                  ([id, r]) =>
-                    `${world.locations.get(id)?.name ?? id}: ${r > 0 ? 'welcome' : 'wanted'}`,
-                )
+            <dt>Crimes</dt>
+            <dd className="outlaw">{quietCrimes} on their conscience, though no outlaw</dd>
+          </>
+        )}
+        {celebrated.length > 0 && (
+          <>
+            <dt>Celebrated in</dt>
+            <dd>{celebrated.map((id) => world.locations.get(id)?.name ?? id).join(', ')}</dd>
+          </>
+        )}
+        {notorious.length > 0 && (
+          <>
+            <dt>Word of crimes</dt>
+            <dd className="outlaw">
+              {notorious
+                .map(([id, s]) => `${world.locations.get(id)?.name ?? id}: ${s}`)
                 .join(', ')}
             </dd>
           </>

@@ -5,6 +5,7 @@ import { testCharacter, testContext } from '../test-support';
 import { DAY } from '../core/time';
 import { ambush, considerCrime, onCharacterKilled, temptationReasons } from './outlaws';
 import { learnLanguage } from './social';
+import { nearestTown, standingIn } from './notoriety';
 
 const woods = 'witherwood' as LocationId;
 
@@ -151,7 +152,9 @@ describe('ambushes', () => {
     expect(robbed).toBe(true);
     expect(traveler.gold).toBeLessThan(100);
     expect(ctx.world.bounties.get(outlaw.id)?.amount).toBeGreaterThan(0);
-    expect(outlaw.reputation[traveler.homeId]).toBeLessThan(0);
+    // Word starts in the nearest town, and is still on its way to the others.
+    expect(standingIn(outlaw, nearestTown(ctx, woods)!)).not.toBe('welcome');
+    expect(ctx.world.news.length).toBeGreaterThan(0);
   });
 
   it('take a merchant’s cargo along with the gold', () => {

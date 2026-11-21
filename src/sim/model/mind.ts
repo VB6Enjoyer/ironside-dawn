@@ -104,7 +104,9 @@ export interface Goal {
     | 'rest'
     | 'wait'
     | 'hunt'
-    | 'lurk';
+    | 'lurk'
+    /** Theft, a holdup or extortion (0.3.0). */
+    | 'crime';
   readonly locationId: LocationId | null;
   readonly why: readonly Motive[];
   /** Who they are after, when hunting. */

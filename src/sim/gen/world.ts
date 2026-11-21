@@ -122,6 +122,7 @@ export function createWorldState(
     legends: new Map(),
     parties: new Map(),
     bounties: new Map(),
+    news: [],
     scheduler: createScheduler(),
     takenNames: new Set(),
     nextCharacterNumber: 1,

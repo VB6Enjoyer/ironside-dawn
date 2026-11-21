@@ -28,4 +28,5 @@ export { worldSample } from './systems/history';
 export { moneyBooked, moneyHeld } from './systems/ledger';
 export { goingPrice, houseQuote, priceIndex, understanding } from './systems/market';
 export { renownOf } from './systems/death';
+export { standingIn } from './systems/notoriety';
 export { ageOf } from './systems/lifecycle';

@@ -13,12 +13,21 @@ The public notes players see under "What's new" are kept in `src/ui/releases.ts`
 - `npm run audit:crime`, a headless crime audit over several worlds (`tools/crime-audit.ts`): who turns outlaw and when, crimes by kind and how they spread across outlaws, how careers end, how often adventurers are broke, against the targets of the Outlaws Update.
 - More ways into crime than being broke (`src/sim/systems/outlaws.ts`): rarely, an adventurer who isn't broke is tempted, but only with a good reason, such as cold ambition, a thief's skills, outlaw friends or a vivid grudge, and never the honorable and kind. The log and life stories say why each outlaw turned (`src/text/describe.ts`, `src/text/biography.ts`).
 - Cruel outlaws sometimes fall on their victims without a word instead of demanding their purse.
+- Crimes against the nameless (`src/sim/systems/crime.ts`): outlaws hold up caravans on the roads, steal from shops and rob trading houses at blade point, break into houses by night, make farmers pay and spoil stores for spite. What they take comes out of the town's trading house and trades, and stolen goods are sold to fences in other towns. The live feed tells of each crime, and life stories say what kinds of crime someone committed.
+- Now and then someone who is no outlaw steals, when they have a reason to be tempted and it looks safe and worth it. A thief caught at it pays a fine on the spot, or is outlawed if they can't.
+- Word of a crime travels (`src/sim/systems/notoriety.ts`): it is known first where it happened and reaches other towns along the roads days later; the farthest never hear of petty crimes. What a town has heard sets how it treats someone: _suspected_ (worse prices, kept at arm's length), _unwelcome_ (no inn, no trade) or _barred_ (turned away at the gate, always so for a known murderer). Petty crimes are forgotten over the years.
+- The character card lists the towns where word of someone's crimes has got about, and how each treats them (`src/ui/components/CharacterCard.tsx`).
+- The crime audit counts crimes against the nameless by kind, crimes by people who are no outlaws, what the towns lost and fences paid, and how word spread.
 
 ### Changed
 
 - Adventurers start with 40–67 gold instead of 7–17 (`src/sim/gen/people.ts`), so new worlds no longer open with a burst of outlaws.
 - Being broke turns someone outlaw only after ten days of hardship with nothing left to sell, and sooner after a run of near deaths and flights.
 - An outlaw who goes straight isn't tempted again for three years.
+- Saves move to save version 7 (`src/sim/save.ts`). Older saves still load, and the old standing in every town becomes what each town has heard of someone's crimes.
+- A crime no longer lowers someone's standing in every town at once; towns hear of it as word travels. Standing (`reputation`) now records only good deeds.
+- Known outlaws are shunned only where their crimes are known: an outlaw nobody has heard of can make friends like anyone else. Honest folk won't team up with, or answer the call of, someone their town has heard of, and bounty hunters only chase outlaws their own town has posters up for (`src/sim/systems/social.ts`, `src/sim/systems/decide.ts`).
+- Outlaws favour towns that haven't heard of them yet, and lie low for a few days after each crime (`src/sim/systems/decide.ts`).
 - Worlds now turn out differently from their seed than in 0.2.0, so links from 0.2.0 open with a note that history differs. Worlds begun now are stamped with the coming version, 0.3.0 (`src/host/version.ts`).
 
 ## [0.2.0] - 2026-11-20

@@ -4,6 +4,7 @@ import {
   type Character,
   type CharacterId,
   type DeathCause,
+  type CrimeKind,
   type LocationId,
   type OutlawReason,
   type SimEvent,
@@ -257,6 +258,33 @@ export function biography(
       { text: `${TURNED_FOR[c.outlaw.reason ?? 'want']}. ${record} ` },
     );
   }
+  // What their crimes were, besides robbing and killing named folk.
+  const deeds = crimeDeeds(c);
+  if (deeds) {
+    justice.push({
+      text: c.outlaw
+        ? `They ${deeds}. `
+        : `Though never an outlaw, now and then they ${deeds}${
+            c.crimes.length > 1 ? `, ${countWord(c.crimes.length)} times in all` : ''
+          }. `,
+    });
+  }
+  const barred = (Object.keys(c.notoriety) as LocationId[]).filter(
+    (id) => (c.notoriety[id]?.murders ?? 0) > 0,
+  );
+  if (barred.length > 0) {
+    justice.push(
+      { text: 'Word of their bloody deeds ' },
+      { text: 'barred', mark: 'crime' },
+      {
+        text: ` them from ${barred.length === 1 ? '' : `${countWord(barred.length)} towns, among them `}`,
+      },
+      ...barred
+        .slice(0, 2)
+        .flatMap((id, i): Segment[] => [...(i > 0 ? [{ text: ' and ' }] : []), place(id, names)]),
+      { text: '. ' },
+    );
+  }
   const claims = events.filter((e) => e.type === 'bounty.claim' && e.data.characterId === c.id);
   if (claims.length > 0) {
     const outlaws = claims.flatMap((e) => (e.type === 'bounty.claim' ? [e.data.outlawId] : []));
@@ -318,6 +346,27 @@ export function biography(
     ]);
   }
   return paragraphs.map(trimEnd);
+}
+
+/** Each kind of crime against the nameless, as a life story tells it. */
+const CRIME_DEEDS: Partial<Record<CrimeKind, string>> = {
+  waylay: 'held up caravans',
+  burglary: 'broke into houses',
+  theft: 'stole from shops',
+  holdup: 'robbed trading houses at blade point',
+  extortion: 'made farmers pay',
+  vandalism: 'spoiled stores out of spite',
+};
+
+/** "held up caravans, broke into houses and stole from shops", most often first. */
+function crimeDeeds(c: Character): string | null {
+  const counts = new Map<CrimeKind, number>();
+  for (const crime of c.crimes) {
+    if (crime.foiled || !CRIME_DEEDS[crime.kind]) continue;
+    counts.set(crime.kind, (counts.get(crime.kind) ?? 0) + 1);
+  }
+  const kinds = [...counts].sort((a, b) => b[1] - a[1]).slice(0, 3);
+  return kinds.length > 0 ? listOf(kinds.map(([k]) => CRIME_DEEDS[k]!)) : null;
 }
 
 /** Why someone turned outlaw, as a life story puts it. */

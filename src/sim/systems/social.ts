@@ -23,6 +23,7 @@ import { cancelWake, wakeAt } from './wake';
 import { sharePrices } from './merchants';
 import { taleToTell } from './myths';
 import { charactersAt, idsAt, moveTo } from './whereabouts';
+import { isNotorious } from './notoriety';
 
 /**
  * Bonds between characters (ROADMAP.md Phase 5): opinions, language, tavern
@@ -211,8 +212,14 @@ export function socialize(ctx: SimContext, character: Character, location: Locat
     if (other.id === character.id || !isAlive(other)) continue;
     if (!available(other)) continue;
     const opinion = character.opinions[other.id];
-    // Decent folk keep their distance from known outlaws.
-    const shunned = Boolean(other.outlaw) !== Boolean(character.outlaw) ? 0.1 : 1;
+    // Decent folk keep their distance from those the town talks of (0.3.0); outlaws keep to
+    // their own, but an outlaw nobody here has heard of passes for anyone else.
+    const shunned =
+      !character.outlaw && isNotorious(other, location.id)
+        ? 0.1
+        : character.outlaw && !other.outlaw
+          ? 0.4
+          : 1;
     const weight =
       (other.species === character.species ? 1 : 0.35) *
       (1 + 2 * (opinion?.familiarity ?? 0)) *
@@ -246,13 +253,16 @@ function meet(ctx: SimContext, a: Character, b: Character, location: Location): 
       0.1 * (1 - Math.abs(self.traits.honor - other.traits.honor)) +
       0.1 * (1 - Math.abs(self.traits.compassion - other.traits.compassion)) -
       0.1;
+    // What the town says of them colors the meeting, for the honest.
+    const wary = !self.outlaw && isNotorious(other, location.id);
     const warmth =
       (0.012 + 0.05 * speciesAttitude(self, other) + 0.5 * compatibility) * (0.3 + 0.7 * comm) +
-      rng.gaussian(0, 0.04);
+      rng.gaussian(0, 0.04) -
+      (wary ? 0.06 : 0);
     adjustOpinion(
       self,
       other.id,
-      { affinity: warmth, familiarity: 0.12, trust: warmth > 0 ? 0.03 * comm : 0 },
+      { affinity: warmth, familiarity: 0.12, trust: warmth > 0 && !wary ? 0.03 * comm : 0 },
       now,
     );
   }
@@ -533,6 +543,8 @@ export function partyOf(ctx: SimContext, character: Character): Party | null {
 /** Two friends who trust each other team up, or one joins the other's party. */
 function joinUp(ctx: SimContext, a: Character, b: Character, locationId: LocationId): void {
   if (Boolean(a.outlaw) !== Boolean(b.outlaw)) return;
+  // Nobody honest teams up with someone the town talks of.
+  if (!a.outlaw && (isNotorious(a, locationId) || isNotorious(b, locationId))) return;
   // Only adventurers adventure together.
   if (a.calling !== 'adventurer' || b.calling !== 'adventurer') return;
   const pa = partyOf(ctx, a);
@@ -648,6 +660,8 @@ export function willingRecruits(
   master: Character,
 ): Character[] {
   if (location.kind !== 'town') return [];
+  // Nobody answers the call of someone the town talks of.
+  if (isNotorious(leader, location.id)) return [];
   // The more lives it has claimed, the more answer the call.
   const floor = master.level - (master.slain >= 10 ? 25 : 18);
   return charactersAt(ctx.world, location.id)

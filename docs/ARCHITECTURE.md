@@ -607,6 +607,44 @@ Built in Phase 11 (`src/sim/model/settings.ts`, `src/content/packs.ts`).
   wherever those packs have been added. Packs added from a file are kept in
   the browser. The headless runner takes `--pack <file>`.
 
+### 4.14 Crime, and word of it
+
+Built for 0.3.0 (`src/sim/systems/crime.ts`, `notoriety.ts`, `outlaws.ts`).
+
+- **Crimes against the nameless.** Besides robbing and killing named
+  travelers, outlaws hold up caravans on roads between towns (at the end of a
+  spell of lurking, likelier on busy roads), steal from shops and rob trading
+  houses at blade point by day, break into houses by night, make a nearby
+  town's farms pay, and spoil stores for spite. The take comes out of the
+  town's agents (§4.9): the trading house's gold and stock, the trades'
+  purses. Stolen goods ride in `cargo`, with the towns they came from in
+  `stolenFrom`, and are sold to a fence (40% of the going price) in any other
+  town that doesn't bar the thief. Each crime is recorded (`Character.crimes`,
+  capped) with its kind, place, town, worth and whether anyone knows who did
+  it, for restitution and sentencing later. An outlaw lies low for some days
+  after any crime, and works a town only once a month.
+- **Occasional crime.** Someone who is no outlaw may steal (theft by day,
+  burglary by night) when they have one of the reasons that tempt people into
+  crime, a conscience that gives way, need or greed, and it looks safe: not
+  their home town, a town that doesn't eye them, a good chance of getting
+  away, and months since the last time. Caught, they pay a fine on the spot,
+  or are outlawed if they can't.
+- **Word travels.** A known crime is heard at once by its town (the one it
+  was against, or the nearest within three days). Word then sets out for
+  every town within ten days' road (twenty for a murder), arriving after
+  about one and a half times the road's travel time (`World.news` holds what
+  is still on its way; the daily job delivers it). Each town keeps what it has
+  heard of each person (`Character.notoriety`): a heat that halves each year,
+  counts of crimes and murders, and the worth taken. Nearer towns weigh a
+  crime more than farther ones.
+- **Standing** follows from that: _suspected_ (prices 20% worse, honest folk
+  wary, no one joins them), _unwelcome_ (no inn, no trade but fences,
+  unwelcome to linger, posters up for hunters), _barred_ for anyone known to
+  have murdered (the guards turn them away; a town that bars someone inside
+  puts them out). Outlaws favour towns that haven't heard of them, and hunters
+  only chase outlaws their town has heard of. `reputation` now holds only
+  good standing, from deeds like claiming a bounty.
+
 ---
 
 ## 5. UI ↔ simulation boundary

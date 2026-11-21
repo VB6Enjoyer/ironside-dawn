@@ -1069,38 +1069,54 @@ site), and is checked against the targets below with the crime audit.
      take a safe chance now and then, and otherwise live honestly, needs the
      nameless crimes of step 3, and is built there.
 
-3. **Crimes against the nameless.** Outlaws prey on the world beyond the named
-   characters:
-   - Waylay caravans and travelling traders on the roads.
-   - Burgle houses and rob shops in town, which needs stealth and lockpicking;
-     a failed attempt can bring the guards.
-   - Extort farms and outlying folk, and vandalise.
-   - Stolen goods and gold come out of the town's economy (its trading house
-     and trades), and loot is fenced in other towns.
-   - Each crime records its kind, place and value, for restitution and
-     sentencing later. The log tells of them as crimes (orange, ⚖).
-   - Occasional crime: someone otherwise honest takes a chance they judge safe
-     and worth it, once in a while, without turning outlaw.
-   - _Exit:_ most crimes have no named victim; towns plagued by outlaws feel
-     it in their stocks and prices; no single outlaw commits more than about
-     40% of a century's crimes.
+3. **Crimes against the nameless.** _Done_ (`src/sim/systems/crime.ts`).
+   - Outlaws hold up caravans on roads between towns (at the end of a spell of
+     lurking, likelier on busy roads; a well-guarded caravan fights back), steal
+     from shops and rob trading houses at blade point by day, break into houses
+     by night (stealth and lockpicking against the town watch, which is sharper
+     in big towns and for the suspect), make a nearby town's farms pay, and
+     spoil stores for spite (the cruel and the shunned).
+   - The take comes out of the town's trading house and trades; stolen goods
+     are carried and sold to fences, at 40% of the going price, in any other
+     town that doesn't bar the thief.
+   - Each crime is recorded with its kind, place, town, worth and whether
+     anyone knows who did it. Outlaws lie low for five days after any crime
+     and work a town once a month.
+   - Occasional crime: someone who is no outlaw may steal (theft, burglary)
+     when they have a reason to be tempted, a conscience that gives way, need
+     or greed, and it looks safe: away from home, in a town that doesn't eye
+     them, with a good chance of getting away, months after the last time.
+     Caught, they pay a fine, or are outlawed if they can't.
+   - Measured, four 20-adventurer worlds over a century: 1,500–4,200 crimes
+     against the nameless each, 72–100% of all crimes (caravans most, then
+     burglaries, holdups and thefts); towns lose 2,300–6,900 gold a year to
+     crime, and their gold and prices stay in the range they had on 0.2.0. The
+     top outlaw commits 19–36% of a world's crimes. People who are no outlaws
+     stole 5–32 times a century per world.
+   - Not met in big worlds: at 200 adventurers over 15 years only 20–45% of
+     crimes are nameless, since named travelers crowd the roads where outlaws
+     lurk. Left for step 9's balance.
 
-4. **Reputation that travels.** A crime is known first where it happened;
-   word then spreads along the roads, carried by travelers and merchants, so
-   each town knows a different part of an outlaw's record at different
-   times.
-   - What a town knows sets how it treats someone:
-     - suspicion: dearer to buy from, paid less to sell to;
-     - unwelcome: no inn, no trade, wanted posters up;
-     - barred: guards turn them away, which always applies to a known
-       murderer.
-   - Notoriety also weighs on making friends, being helped and joining
-     parties.
-   - Outlaws prefer towns where their name isn't known yet, and their
-     standing mends slowly with time and good deeds.
-   - This replaces today's instant, everywhere drop in standing.
-   - _Exit:_ the same outlaw is barred in one town and trading in another, and
-     the map of who knows what changes as news travels.
+4. **Reputation that travels.** _Done_ (`src/sim/systems/notoriety.ts`).
+   - A known crime is heard at once by its town (the one it was against, or
+     the nearest within three days). Word then reaches every town within ten
+     days' road (twenty for a murder), after about one and a half times the
+     road's travel time, so each town knows a different part of a record at
+     different times. Nearer towns weigh a crime more.
+   - What a town has heard fades (it halves each year), but a known murder is
+     never forgotten:
+     - suspected: prices 20% worse, the watch keeps an eye on them, honest
+       folk are wary, nobody teams up with them or answers their call;
+     - unwelcome: no inn, no trade but fences, unwelcome to linger, posters up
+       (hunters chase only outlaws their town has heard of);
+     - barred: always so for a known murderer. They don't go there; the
+       guards turn them away if word arrived while they were on the road, and
+       put them out if they are inside when it comes.
+   - Outlaws favour towns that haven't heard of them, and an outlaw nobody has
+     heard of makes friends like anyone else. Standing (`reputation`) keeps
+     only good deeds; the old instant drop everywhere is gone. Saves move to
+     version 7, and old standing becomes what each town has heard.
+   - Not yet: standing mended by good deeds; for now it only fades.
 
 5. **Way out: restitution.** An outlaw with no blood on their hands can go to
    a town's court and pay back what they took, with interest and a fine, to

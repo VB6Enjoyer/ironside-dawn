@@ -16,6 +16,7 @@ import type { CharacterId, EntityId, EventId, LocationId, RegionId } from './ids
 import type { Item } from './item';
 import type { Motive } from './mind';
 import type { OutlawReason } from './social';
+import type { CrimeKind, Standing } from './crime';
 
 /**
  * Structured events: the single source of truth for "what happened"
@@ -254,6 +255,39 @@ export type EventBody =
         readonly goods?: Goods;
       }
     >
+  /**
+   * A crime against the nameless (0.3.0): a caravan held up, a house burgled,
+   * a shop robbed, farms extorted, stores spoiled. locationId is where it
+   * happened; townId the town it was against. `caught`: seen at it, and
+   * named; `foiled`: nothing taken. A fine paid on the spot is in `fine`.
+   */
+  | Body<
+      'crime.commit',
+      CharacterAt & {
+        readonly crime: CrimeKind;
+        readonly townId: LocationId | null;
+        readonly gold: number;
+        readonly goods?: Goods;
+        readonly value: number;
+        readonly known: boolean;
+        readonly foiled: boolean;
+        /** Hurt getting away. */
+        readonly hurt?: boolean;
+        readonly fine?: number;
+      }
+    >
+  /** Stolen goods sold to a fence, far from where they were taken (0.3.0). */
+  | Body<'crime.fence', CharacterAt & { readonly goods: Goods; readonly gold: number }>
+  /**
+   * Word of someone's crimes has made a town think worse of them (0.3.0).
+   * `driven`: they were there, and the guards put them out.
+   */
+  | Body<
+      'outlaw.notorious',
+      CharacterAt & { readonly standing: Standing; readonly driven?: boolean }
+    >
+  /** Guards turn someone away at the gates of a town that has barred them (0.3.0). */
+  | Body<'outlaw.barred', CharacterAt>
   /** locationId is the town posting it. */
   | Body<'bounty.post', CharacterAt & { readonly amount: number }>
   /** characterId is the hunter. */
@@ -487,6 +521,10 @@ export const EVENT_IMPORTANCE: Record<EventType, Importance> = {
   'outlaw.turn': Importance.Notable,
   'outlaw.ambush': Importance.Normal,
   'crime.robbery': Importance.Notable,
+  'crime.commit': Importance.Normal,
+  'crime.fence': Importance.Normal,
+  'outlaw.notorious': Importance.Normal,
+  'outlaw.barred': Importance.Normal,
   'bounty.post': Importance.Normal,
   'bounty.claim': Importance.Notable,
   'outlaw.reform': Importance.Notable,

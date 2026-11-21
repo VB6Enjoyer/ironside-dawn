@@ -60,6 +60,9 @@ export function eventTone(event: SimEvent): Mark | null {
     case 'family.birth':
       return 'love';
     case 'crime.robbery':
+    case 'crime.commit':
+    case 'outlaw.notorious':
+    case 'outlaw.barred':
     case 'outlaw.turn':
     case 'outlaw.ambush':
     case 'outlaw.reform':

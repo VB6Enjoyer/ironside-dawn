@@ -16,6 +16,7 @@ import type {
 import type { CreatureRef } from './encounter';
 import type { CharacterId, EncounterId, ItemId, LocationId, PartyId } from './ids';
 import type { Opinion, Outlaw } from './social';
+import type { Crime, Notoriety } from './crime';
 import type { Equipment, Item } from './item';
 import type { Drives, Expectation, Goal, Memory } from './mind';
 import type { PriceNote } from './market';
@@ -115,8 +116,14 @@ export interface Character {
   hardshipSince?: number;
   /** When they last went straight, if ever (0.3.0). Missing from older saves. */
   pardonedAt?: number;
-  /** How each town sees them, -1 (wanted) to 1 (celebrated). */
+  /** How each town sees them for their good deeds, 0 to 1 (celebrated). */
   reputation: Partial<Record<LocationId, number>>;
+  /** Their crimes, newest last; the oldest are dropped past a cap (0.3.0). */
+  crimes: Crime[];
+  /** What each town has heard of their crimes, by town (0.3.0). */
+  notoriety: Partial<Record<LocationId, Notoriety>>;
+  /** Towns the stolen goods they carry (in `cargo`) came from, where no fence will touch them. */
+  stolenFrom: LocationId[];
 
   /** Healing draughts carried, drunk when a fight goes badly. */
   potions: number;
