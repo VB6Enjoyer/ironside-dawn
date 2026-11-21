@@ -17,7 +17,11 @@ The public notes players see under "What's new" are kept in `src/ui/releases.ts`
 - Now and then someone who is no outlaw steals, when they have a reason to be tempted and it looks safe and worth it. A thief caught at it pays a fine on the spot, or is outlawed if they can't.
 - Word of a crime travels (`src/sim/systems/notoriety.ts`): it is known first where it happened and reaches other towns along the roads days later; the farthest never hear of petty crimes. What a town has heard sets how it treats someone: _suspected_ (worse prices, kept at arm's length), _unwelcome_ (no inn, no trade) or _barred_ (turned away at the gate, always so for a known murderer). Petty crimes are forgotten over the years.
 - The character card lists the towns where word of someone's crimes has got about, and how each treats them (`src/ui/components/CharacterCard.tsx`).
-- The crime audit counts crimes against the nameless by kind, crimes by people who are no outlaws, what the towns lost and fences paid, and how word spread.
+- Restitution (`src/sim/systems/justice.ts`): an outlaw with no blood on their hands who has tired of the life can pay back what they took in every town that knows of it, with interest and a fine, to clear their name and lift the bounty. The towns still eye them warily until time earns their trust back.
+- Bounties are paid in town: whoever kills an outlaw takes the head and must carry it to a town that has heard of them, where the reward is split with their party. A head carried too long is lost, and the bounty with it.
+- Outlaws can be taken alive: a hunter with the craft may lay a trap where the outlaw lurks, or try a takedown once the outlaw is badly hurt in a fight. Either can fail, and a failed takedown can wound or kill the hunter. A live capture pays two and a half times the bounty. The captive is stripped of gold and gear and led to the nearest town that would pay, and may escape on the road, leaving what was taken from them with the captors. Delivered, they are jailed (for now a year or more, longer for a long record and three times as long for blood) and walk out no outlaw.
+- The live feed tells of heads taken and claimed, traps and takedowns, escapes, jailings and releases; life stories tell of being taken alive, jailed or escaping, and of restitution paid; the character card shows a head carried or a captive led (`src/text/describe.ts`, `src/text/biography.ts`, `src/ui/components/CharacterCard.tsx`).
+- The crime audit counts crimes against the nameless by kind, crimes by people who are no outlaws, what the towns lost and fences paid, how word spread, and bounties paid, heads lost, capture tries, escapes and jailings.
 
 ### Changed
 
@@ -28,6 +32,8 @@ The public notes players see under "What's new" are kept in `src/ui/releases.ts`
 - A crime no longer lowers someone's standing in every town at once; towns hear of it as word travels. Standing (`reputation`) now records only good deeds.
 - Known outlaws are shunned only where their crimes are known: an outlaw nobody has heard of can make friends like anyone else. Honest folk won't team up with, or answer the call of, someone their town has heard of, and bounty hunters only chase outlaws their own town has posters up for (`src/sim/systems/social.ts`, `src/sim/systems/decide.ts`).
 - Outlaws favour towns that haven't heard of them yet, and lie low for a few days after each crime (`src/sim/systems/decide.ts`).
+- Killing an outlaw no longer pays the bounty on the spot (`src/sim/systems/outlaws.ts`). Bounties stop growing at 300 gold, and 150 more for each murder.
+- Going straight now takes paying restitution, and is no longer open to murderers; it used to cost half one's purse, paid to one's home town.
 - Worlds now turn out differently from their seed than in 0.2.0, so links from 0.2.0 open with a note that history differs. Worlds begun now are stamped with the coming version, 0.3.0 (`src/host/version.ts`).
 
 ## [0.2.0] - 2026-11-20

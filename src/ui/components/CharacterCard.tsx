@@ -477,6 +477,18 @@ function Bonds({
             </dd>
           </>
         )}
+        {character.heads.length > 0 && (
+          <>
+            <dt>Carries</dt>
+            <dd>the head of {list(character.heads.map((h) => h.outlawId))}, for the bounty</dd>
+          </>
+        )}
+        {character.escorting && world.characters.has(character.escorting) && (
+          <>
+            <dt>Captive</dt>
+            <dd>{link(character.escorting)}, to be handed over</dd>
+          </>
+        )}
         {quietCrimes > 0 && (
           <>
             <dt>Crimes</dt>

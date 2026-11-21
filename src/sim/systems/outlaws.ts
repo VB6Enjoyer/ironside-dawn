@@ -5,11 +5,10 @@ import { createCharacter } from '../gen/people';
 import type { Character, CharacterId, Location, OutlawReason } from '../model';
 import { startBrawl } from './combat';
 import { isAlive } from './condition';
-import { burn } from './ledger';
-import { payHouse } from './market';
 import { remember, vividness, wealthNeed } from './mind';
 import { hasSellable } from './decide';
 import { nearestTown, recordCrime } from './notoriety';
+import { considerRestitution, isHeld, layTrap, takeHead } from './justice';
 import { wakeAt } from './wake';
 import {
   adjustOpinion,
@@ -52,20 +51,15 @@ const YEAR = 360 * 86_400;
 const ROBBERY_TAKE = 0.6;
 /** Outlaws try their luck against parties up to this much stronger than theirs. */
 const NERVE = 0.7;
-const REFORM_CHANCE = 0.05;
 /** Compassion below which an outlaw may attack without a demand, more often the crueler. */
 const CRUELTY = 0.25;
-const REFORM_QUIET_DAYS = 60;
 const DAY = 86_400;
 const MINUTE = 60;
 
 /** Once a day, per character: some turn to crime; some outlaws go straight. */
 export function considerCrime(ctx: SimContext, character: Character): void {
   if (!isAlive(character)) return;
-  const rng = ctx.rng.outlaws;
   const now = ctx.world.time;
-  const { honor } = character.traits;
-  const locationId = character.locationId ?? character.homeId;
 
   if (!character.outlaw) {
     // Only adventurers take to the road this way; a broke merchant borrows and tries again.
@@ -75,30 +69,9 @@ export function considerCrime(ctx: SimContext, character: Character): void {
     return;
   }
 
-  // Prosperous, quiet and not without honor: some put it behind them.
-  const quiet = now - character.outlaw.lastCrimeAt > REFORM_QUIET_DAYS * DAY;
-  if (quiet && character.gold > 120 && honor > 0.35 && rng.chance(REFORM_CHANCE)) {
-    // Restitution: half their purse, paid to their home town, buys a pardon and the bounty is lifted.
-    const home = ctx.world.markets.get(character.homeId);
-    const restitution = Math.ceil(character.gold / 2);
-    if (home) payHouse(home, character, restitution);
-    else {
-      character.gold -= restitution;
-      burn(ctx.world, 'upkeep', restitution);
-    }
-    character.outlaw = null;
-    character.pardonedAt = now;
-    // Their home town, paid, forgives the petty crimes it knew of; elsewhere word still stands.
-    const known = character.notoriety[character.homeId];
-    if (known) known.heat = 0;
-    ctx.world.bounties.delete(character.id);
-    if (character.partyId) leaveParty(ctx, character, 'outlaw');
-    ctx.emit(
-      { type: 'outlaw.reform', data: { characterId: character.id, locationId } },
-      [character.id],
-      locationId,
-    );
-  }
+  // Held, they can do nothing; free, some tire of the life and pay what they owe.
+  if (isHeld(character)) return;
+  considerRestitution(ctx, character);
 }
 
 /** Someone takes to the road as an outlaw, leaving any honest party. */
@@ -313,35 +286,12 @@ export function ambush(ctx: SimContext, traveler: Character, location: Location)
   return true;
 }
 
-/** One character killed another: murder, or justice with a bounty paid. */
+/** One character killed another: murder, or justice, with a head taken for the bounty. */
 export function onCharacterKilled(ctx: SimContext, victim: Character, killer: Character): void {
   const locationId = victim.death?.locationId ?? killer.locationId ?? killer.homeId;
   if (victim.outlaw && !killer.outlaw) {
-    const bounty = ctx.world.bounties.get(victim.id);
-    if (!bounty) return;
-    ctx.world.bounties.delete(victim.id);
-    ctx.world.tally.bountiesClaimed++;
-    // The posting town's trading house pays, as much as it has.
-    const town = ctx.world.markets.get(bounty.townId);
-    const paid = town ? Math.min(bounty.amount, Math.floor(town.house.gold)) : 0;
-    if (town) town.house.gold -= paid;
-    killer.gold += paid;
-    killer.goldEarned += paid;
-    killer.reputation[bounty.townId] = Math.min(1, (killer.reputation[bounty.townId] ?? 0) + 0.3);
-    ctx.emit(
-      {
-        type: 'bounty.claim',
-        data: {
-          characterId: killer.id,
-          locationId: bounty.townId,
-          outlawId: victim.id,
-          amount: bounty.amount,
-        },
-      },
-      // The outlaw is named in the data; the dead take no further part.
-      [killer.id],
-      bounty.townId,
-    );
+    // The bounty stands until the head is brought to a town that knows it (0.3.0).
+    if (ctx.world.bounties.has(victim.id)) takeHead(ctx, killer, victim, locationId);
     return;
   }
   // Whatever else, a dead outlaw's bounty lapses.
@@ -409,10 +359,12 @@ export function confrontQuarry(
   quarry: Character,
   location: Location,
 ): boolean {
-  if (!isAlive(quarry) || quarry.locationId !== location.id) return false;
+  if (!isAlive(quarry) || quarry.locationId !== location.id || isHeld(quarry)) return false;
   const busy = quarry.activity.kind === 'fighting' || quarry.activity.kind === 'traveling';
   if (busy) return false;
   const hunters = [hunter, ...followersOf(ctx, hunter)];
+  // One with the craft, who wants them alive, lays a trap instead of attacking.
+  if (layTrap(ctx, hunters, quarry, location)) return true;
   const gang = partyOf(ctx, quarry);
   const outlaws = [
     quarry,

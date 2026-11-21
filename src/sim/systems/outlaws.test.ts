@@ -190,7 +190,7 @@ describe('ambushes', () => {
 });
 
 describe('bounties', () => {
-  it('are paid to whoever kills the outlaw', () => {
+  it('are not paid on the spot: the killer takes the head instead', () => {
     const { ctx, outlaw, traveler } = outlawAndTraveler('claim');
     ctx.world.bounties.set(outlaw.id, {
       outlawId: outlaw.id,
@@ -205,8 +205,9 @@ describe('bounties', () => {
       cause: { kind: 'character', characterId: traveler.id },
     };
     onCharacterKilled(ctx, outlaw, traveler);
-    expect(traveler.gold).toBe(before + 80);
-    expect(ctx.world.bounties.has(outlaw.id)).toBe(false);
+    expect(traveler.gold).toBe(before);
+    expect(traveler.heads.map((h) => h.outlawId)).toEqual([outlaw.id]);
+    expect(ctx.world.bounties.has(outlaw.id)).toBe(true);
   });
 
   it('grow with each murder', () => {

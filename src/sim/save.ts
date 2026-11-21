@@ -120,6 +120,7 @@ function toCrimesThatTravel(save: SaveData): Record<string, unknown> {
     c.notoriety = notoriety;
     c.crimes = [];
     c.stolenFrom = [];
+    c.heads = [];
   }
   return { ...save, world: { ...world, news: [] } };
 }

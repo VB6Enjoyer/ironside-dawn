@@ -16,7 +16,7 @@ import type {
 import type { CreatureRef } from './encounter';
 import type { CharacterId, EncounterId, ItemId, LocationId, PartyId } from './ids';
 import type { Opinion, Outlaw } from './social';
-import type { Crime, Notoriety } from './crime';
+import type { Captivity, Crime, Head, Notoriety } from './crime';
 import type { Equipment, Item } from './item';
 import type { Drives, Expectation, Goal, Memory } from './mind';
 import type { PriceNote } from './market';
@@ -124,6 +124,12 @@ export interface Character {
   notoriety: Partial<Record<LocationId, Notoriety>>;
   /** Towns the stolen goods they carry (in `cargo`) came from, where no fence will touch them. */
   stolenFrom: LocationId[];
+  /** Outlaws' heads carried to claim the bounties on them (0.3.0). */
+  heads: Head[];
+  /** Taken alive and under escort (0.3.0). */
+  captive?: Captivity;
+  /** The captive they are escorting to justice (0.3.0). */
+  escorting?: CharacterId;
 
   /** Healing draughts carried, drunk when a fight goes badly. */
   potions: number;
@@ -233,8 +239,13 @@ export type Activity =
     }
   | ({ readonly kind: 'delving' } & DelveProgress)
   | { readonly kind: 'fighting'; readonly encounterId: EncounterId }
-  /** Traveling or delving with a party, led by `leaderId`, who decides for all. */
+  /**
+   * Traveling or delving with a party, led by `leaderId`, who decides for all;
+   * or, for a captive, led under escort.
+   */
   | { readonly kind: 'accompanying'; readonly leaderId: CharacterId }
+  /** Held in a town's jail until `until` (0.3.0). */
+  | { readonly kind: 'jailed'; readonly since: number; readonly until: number }
   | { readonly kind: 'dead' };
 
 export interface TravelLeg {

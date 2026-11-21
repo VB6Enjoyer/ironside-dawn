@@ -60,8 +60,16 @@ export function describeActivity(character: Character, names: NameResolver): Seg
       return [{ text: 'Delving in ' }, here, { text: `, chamber ${activity.room}` }];
     case 'fighting':
       return [{ text: 'Fighting for their life in ' }, here];
+    case 'jailed':
+      return [{ text: 'In jail in ' }, here];
     case 'accompanying': {
       const name = names.character(activity.leaderId)?.name ?? 'their party';
+      if (character.captive) {
+        return [
+          { text: 'A captive, led under guard by ' },
+          { text: name, ref: { kind: 'character', id: activity.leaderId } },
+        ];
+      }
       return character.locationId
         ? [
             { text: `With ` },

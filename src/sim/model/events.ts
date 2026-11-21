@@ -82,7 +82,8 @@ export type EventBody =
         readonly destinationId: LocationId;
         /** Typical duration of the whole journey, in seconds. */
         readonly expectedDuration: number;
-        readonly reason: 'wander' | 'delve' | 'heal' | 'home' | 'hunt' | 'trade';
+        readonly reason:
+          'wander' | 'delve' | 'heal' | 'home' | 'hunt' | 'trade' | 'escort' | 'bounty';
         readonly why: readonly Motive[];
         /** Party members traveling along. */
         readonly companions: readonly CharacterId[];
@@ -218,12 +219,12 @@ export type EventBody =
       'party.leave',
       CharacterAt & {
         readonly leaderId: CharacterId;
-        readonly reason: 'quarrel' | 'outlaw' | 'retire';
+        readonly reason: 'quarrel' | 'outlaw' | 'retire' | 'captured';
       }
     >
   | Body<
       'party.disband',
-      CharacterAt & { readonly reason: 'death' | 'quarrel' | 'outlaw' | 'retire' }
+      CharacterAt & { readonly reason: 'death' | 'quarrel' | 'outlaw' | 'retire' | 'captured' }
     >
   | Body<
       'party.share',
@@ -290,9 +291,47 @@ export type EventBody =
   | Body<'outlaw.barred', CharacterAt>
   /** locationId is the town posting it. */
   | Body<'bounty.post', CharacterAt & { readonly amount: number }>
-  /** characterId is the hunter. */
-  | Body<'bounty.claim', CharacterAt & { readonly outlawId: CharacterId; readonly amount: number }>
-  | Body<'outlaw.reform', CharacterAt>
+  /**
+   * characterId is the hunter, paid in the town at locationId. Since 0.3.0 a
+   * claim is made with the outlaw's head, or the outlaw alive (`alive`), and
+   * the reward is split with the party (`shares`, the hunter's included).
+   */
+  | Body<
+      'bounty.claim',
+      CharacterAt & {
+        readonly outlawId: CharacterId;
+        readonly amount: number;
+        readonly alive?: boolean;
+        readonly shares?: readonly { readonly characterId: CharacterId; readonly gold: number }[];
+      }
+    >
+  /** A hunter takes the head of an outlaw they killed, to claim the bounty (0.3.0). */
+  | Body<'bounty.head', CharacterAt & { readonly outlawId: CharacterId }>
+  /** A carried head is lost, its bounty with it (0.3.0). */
+  | Body<'bounty.lost', CharacterAt & { readonly outlawId: CharacterId }>
+  /**
+   * A try at taking an outlaw alive (0.3.0): a trap laid where they lurk, or
+   * a takedown once they are badly hurt. characterId is the hunter. A failed
+   * trap lets the outlaw slip away; a failed takedown may hurt or kill the
+   * hunter (`hurt`, `killed`).
+   */
+  | Body<
+      'capture.attempt',
+      CharacterAt & {
+        readonly outlawId: CharacterId;
+        readonly how: 'trap' | 'takedown';
+        readonly success: boolean;
+        readonly hurt?: boolean;
+        readonly killed?: boolean;
+      }
+    >
+  /** A captive gets away from their escort, leaving their gold and gear behind (0.3.0). */
+  | Body<'capture.escape', CharacterAt & { readonly captorId: CharacterId }>
+  /** Delivered alive: jailed until `until` (0.3.0); `freed` when they come out. */
+  | Body<'outlaw.jailed', CharacterAt & { readonly until: number }>
+  | Body<'outlaw.freed', CharacterAt>
+  /** Gave up the outlaw life; since 0.3.0, by paying restitution (`paid`, with interest and fines). */
+  | Body<'outlaw.reform', CharacterAt & { readonly paid?: number }>
   // Trade
   | Body<'trade.sell', CharacterAt & { readonly items: readonly LootItem[]; readonly gold: number }>
   /** An adventurer buys from the trading house: healing draughts, a weapon, armor. */
@@ -525,6 +564,12 @@ export const EVENT_IMPORTANCE: Record<EventType, Importance> = {
   'crime.fence': Importance.Normal,
   'outlaw.notorious': Importance.Normal,
   'outlaw.barred': Importance.Normal,
+  'bounty.head': Importance.Notable,
+  'bounty.lost': Importance.Normal,
+  'capture.attempt': Importance.Notable,
+  'capture.escape': Importance.Notable,
+  'outlaw.jailed': Importance.Notable,
+  'outlaw.freed': Importance.Normal,
   'bounty.post': Importance.Normal,
   'bounty.claim': Importance.Notable,
   'outlaw.reform': Importance.Notable,

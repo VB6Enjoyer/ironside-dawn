@@ -186,6 +186,9 @@ const BOUNTY: Record<CrimeKind, number> = {
   vandalism: 5,
 };
 const BOUNTY_SHARE = 0.25;
+/** The most a town will put on anyone's head, and what each murder adds to that. */
+const BOUNTY_CAP = 300;
+const BOUNTY_CAP_PER_MURDER = 150;
 
 /**
  * A crime is done: it goes on the record; if anyone knows who did it, an
@@ -216,7 +219,11 @@ export function recordCrime(ctx: SimContext, character: Character, crime: Crime)
         townId: townId!,
         postedAt: crime.at,
       };
-      bounty.amount += BOUNTY[crime.kind] + Math.round(crime.value * BOUNTY_SHARE);
+      const cap = BOUNTY_CAP + BOUNTY_CAP_PER_MURDER * record.murders;
+      bounty.amount = Math.min(
+        Math.max(cap, bounty.amount),
+        bounty.amount + BOUNTY[crime.kind] + Math.round(crime.value * BOUNTY_SHARE),
+      );
       ctx.world.bounties.set(character.id, bounty);
       ctx.emit(
         {
@@ -241,3 +248,15 @@ export function nearestTown(ctx: SimContext, locationId: LocationId): LocationId
   return null;
 }
 const NEAR_TOWN_HOURS = 72;
+
+/**
+ * Someone has paid what they owed a town: it holds nothing more against them
+ * in gold, but still eyes them warily until time and good conduct win its
+ * trust back.
+ */
+export function settle(character: Character, townId: LocationId): void {
+  const known = character.notoriety[townId];
+  if (!known) return;
+  known.value = 0;
+  known.heat = Math.min(Math.max(known.heat, SUSPECTED), (SUSPECTED + UNWELCOME) / 2);
+}

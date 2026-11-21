@@ -31,6 +31,7 @@ export function eventCategory(type: EventType): EventCategory {
     case 'outlaw':
     case 'crime':
     case 'bounty':
+    case 'capture':
       return 'crime';
     case 'magic':
     case 'item':
@@ -63,6 +64,10 @@ export function eventTone(event: SimEvent): Mark | null {
     case 'crime.commit':
     case 'outlaw.notorious':
     case 'outlaw.barred':
+    case 'bounty.head':
+    case 'capture.attempt':
+    case 'capture.escape':
+    case 'outlaw.jailed':
     case 'outlaw.turn':
     case 'outlaw.ambush':
     case 'outlaw.reform':

@@ -14,6 +14,7 @@ import { isDizzy, isFitToDelve, needsRecovery } from './condition';
 import { fearOf, hasVisited, healthNeed, wealthNeed } from './mind';
 import { canFence, dayCrimes, farmsToExtort, lyingLow, type DayCrime } from './crime';
 import { isBarred, isKnownIn, isShunned, standingIn } from './notoriety';
+import { bountyTowns, isHeld } from './justice';
 import { roleOf } from './progress';
 import { canTrade, wantsToShop } from './shopping';
 import { lairOdds } from './delve';
@@ -292,6 +293,7 @@ const plans = new WeakMap<
     readonly loot: boolean;
     readonly partyId: string | null;
     readonly outlaw: boolean;
+    readonly heads: number;
     readonly options: Option[];
   }
 >();
@@ -307,6 +309,7 @@ function roadOptions(
   const now = ctx.world.time;
   const partyId = character.partyId ?? null;
   const outlaw = Boolean(character.outlaw);
+  const heads = character.heads.length;
   const plan = plans.get(character);
   if (
     plan &&
@@ -315,12 +318,32 @@ function roadOptions(
     plan.recovering === recovering &&
     plan.loot === loot &&
     plan.partyId === partyId &&
-    plan.outlaw === outlaw
+    plan.outlaw === outlaw &&
+    plan.heads === heads
   ) {
     return plan.options;
   }
   const options: Option[] = [];
   const { traits, drives } = character;
+  // A head to hand in: the towns that would pay for it call.
+  const paying = heads > 0 ? bountyTowns(ctx, character) : null;
+  if (paying) {
+    for (const townId of paying) {
+      if (townId === here.id) continue;
+      const hours = (findPath(ctx.world, here.id, townId)?.duration ?? Infinity) / HOUR;
+      if (!Number.isFinite(hours)) continue;
+      const nearness = 1 / (1 + hours / DISTANCE_HALVING_HOURS);
+      options.push({
+        action: { kind: 'travel', to: townId, reason: 'bounty' },
+        terms: [
+          {
+            value: 0.9 * nearness + 0.2,
+            motive: { kind: 'bounty', outlawId: character.heads[0]!.outlawId },
+          },
+        ],
+      });
+    }
+  }
   // Journeys elsewhere: anywhere within the nearest few places, and home.
   for (const { id, duration } of journeysFrom(ctx, character, here)) {
     const there = ctx.world.locations.get(id)!;
@@ -400,7 +423,16 @@ function roadOptions(
   if (here.kind === 'town' && !character.outlaw && !recovering) {
     options.push(...huntOptions(ctx, character, here));
   }
-  plans.set(character, { at: now, here: here.id, recovering, loot, partyId, outlaw, options });
+  plans.set(character, {
+    at: now,
+    here: here.id,
+    recovering,
+    loot,
+    partyId,
+    outlaw,
+    heads,
+    options,
+  });
   return options;
 }
 
@@ -494,7 +526,7 @@ function huntOptions(ctx: SimContext, character: Character, here: Location): Opt
   const eagerness = Math.min(1, drives.purpose / RESTLESS);
   for (const bounty of ctx.world.bounties.values()) {
     const outlaw = ctx.world.characters.get(bounty.outlawId);
-    if (!outlaw?.outlaw || outlaw.death || outlaw.id === character.id) continue;
+    if (!outlaw?.outlaw || outlaw.death || outlaw.id === character.id || isHeld(outlaw)) continue;
     // Only outlaws this town has heard of: there are posters up for them.
     if (!isKnownIn(outlaw, here.id)) continue;
     const affinity = character.opinions[outlaw.id]?.affinity ?? 0;

@@ -296,8 +296,42 @@ export function biography(
       { text: '. ' },
     );
   }
-  const reformed = events.some((e) => e.type === 'outlaw.reform' && e.data.characterId === c.id);
-  if (reformed) justice.push({ text: 'They paid for their crimes and went straight.' });
+  // Taken alive, jailed, escaped (0.3.0).
+  for (const e of events) {
+    if (e.type === 'capture.attempt' && e.data.outlawId === c.id && e.data.success) {
+      justice.push(
+        { text: `In ${whenIn(e.t)} ` },
+        person(e.data.characterId, names),
+        { text: ' ' },
+        { text: 'took them alive', mark: 'crime' },
+        { text: '. ' },
+      );
+    } else if (e.type === 'capture.escape' && e.data.characterId === c.id) {
+      justice.push({ text: 'They got away from ' }, person(e.data.captorId, names), {
+        text: ', with nothing but the clothes on their back. ',
+      });
+    } else if (e.type === 'outlaw.jailed' && e.data.characterId === c.id) {
+      const years = Math.max(1, Math.round((e.data.until - e.t) / (360 * 86_400)));
+      justice.push(
+        { text: `They were ` },
+        { text: 'jailed', mark: 'crime' },
+        { text: ` in ` },
+        place(e.data.locationId, names),
+        { text: ` for ${countWord(years)} ${years === 1 ? 'year' : 'years'}. ` },
+      );
+    } else if (e.type === 'outlaw.freed' && e.data.characterId === c.id) {
+      justice.push({ text: `They came out in ${whenIn(e.t)}, no outlaw any more. ` });
+    }
+  }
+  const reform = events.find((e) => e.type === 'outlaw.reform' && e.data.characterId === c.id);
+  if (reform?.type === 'outlaw.reform') {
+    justice.push({
+      text:
+        reform.data.paid !== undefined && reform.data.paid > 0
+          ? `They paid back what they took, ${reform.data.paid} gold with interest and fines, and went straight.`
+          : 'They paid for their crimes and went straight.',
+    });
+  }
   if (justice.length > 0) paragraphs.push(justice);
 
   // Family, and settling down.

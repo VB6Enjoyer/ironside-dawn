@@ -687,7 +687,7 @@ export function willingRecruits(
 export function leaveParty(
   ctx: SimContext,
   character: Character,
-  reason: 'quarrel' | 'outlaw' | 'death' | 'retire',
+  reason: 'quarrel' | 'outlaw' | 'death' | 'retire' | 'captured',
 ): void {
   const party = partyOf(ctx, character);
   character.partyId = null;
@@ -750,6 +750,8 @@ export function gatherParty(ctx: SimContext, leader: Character, location: Locati
   for (const id of party.members) {
     const member = ctx.world.characters.get(id)!;
     if (member.id === leader.id || company.includes(member) || !isAlive(member)) continue;
+    // Someone leading a captive answers to nobody until they are delivered.
+    if (member.escorting) continue;
     if (member.locationId !== location.id || !available(member)) continue;
     if (!isFitToDelve(member, now) || needsRecovery(member)) continue;
     if ((member.opinions[leader.id]?.affinity ?? 0) < LOYALTY_FLOOR) continue;

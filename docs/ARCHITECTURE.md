@@ -644,6 +644,30 @@ Built for 0.3.0 (`src/sim/systems/crime.ts`, `notoriety.ts`, `outlaws.ts`).
   puts them out). Outlaws favour towns that haven't heard of them, and hunters
   only chase outlaws their town has heard of. `reputation` now holds only
   good standing, from deeds like claiming a bounty.
+- **Ways out** (`justice.ts`). _Restitution_: an outlaw with no murder on
+  their record or known anywhere, with some honor, who has tired of the life
+  (no crime for three months, doors shut in half the towns that know them, or
+  a heavy bounty), may pay, in any town with a court, what each town knows
+  they took, with a quarter in interest and a quarter (at least 10) in fines;
+  the record is cleared and the bounty lifted, but each town's heat is only
+  brought down to _suspected_. _Heads_: killing an outlaw pays nothing on the
+  spot; an adventurer or merchant takes the head (`Character.heads`) and
+  claims the bounty in any town that has heard of the outlaw, split evenly with
+  their party there, the posting town's trading house paying what it can and
+  the claiming town the rest. A head kept 90 days, or its carrier's death,
+  loses it and the bounty. _Taken alive_: a hunter with the craft (stealth and
+  awareness) may lay a trap on reaching the quarry instead of attacking, or,
+  in a hunt, try a takedown when a blow leaves the outlaw at a quarter of their
+  health or less (`Encounter.out` gains `captured`). Captives are stripped of
+  most of their gold (held by the captors, `Captivity.gold`) and their gear (to
+  the captors' packs, legends aside), and travel as `accompanying` their
+  captor (`Character.escorting`), who heads for the nearest town that would
+  pay. Each leg of road they may escape (level and agility against the
+  escort's size and level). Delivered, the bounty pays two and a half times
+  over, the seized gold goes to the town, and the captive is `jailed` until a
+  term ends (a year plus a month per crime, three times for blood, ten years
+  at most), when they walk out no outlaw. Trials, prison life and executions
+  are 0.3.0's step 8.
 
 ---
 

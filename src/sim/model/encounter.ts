@@ -56,8 +56,10 @@ export interface Encounter {
   readonly sides: readonly [EncounterSide, EncounterSide];
   round: number;
   readonly startedAt: number;
-  /** Characters who have left the fight. */
-  out: Partial<Record<CharacterId, 'dead' | 'fled'>>;
+  /** Characters who have left the fight: dead, fled, or taken alive by hunters (0.3.0). */
+  out: Partial<Record<CharacterId, 'dead' | 'fled' | 'captured'>>;
+  /** Hunters who have already tried to take someone alive in this fight (0.3.0). */
+  tried?: CharacterId[];
   /** Spells in effect for each character in this fight. */
   quickened: Partial<Record<CharacterId, { readonly attack: number; readonly defense: number }>>;
   wards: Partial<Record<CharacterId, number>>;

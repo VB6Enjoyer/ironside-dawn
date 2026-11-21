@@ -490,6 +490,10 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
               `, ${describeDuration(e.data.expectedDuration)} away.`,
             ],
           ]);
+        case 'escort':
+          return [c, ' leads a captive out of ', from, ', bound for ', to, '.'];
+        case 'bounty':
+          return [c, ' sets out from ', from, ' for ', to, ', to claim a bounty.'];
         case 'wander':
           return h.pick<Part[]>([
             [c, ' sets out from ', from, ' toward ', to, '.'],
@@ -956,7 +960,9 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
           ]
         : e.data.reason === 'retire'
           ? [h.c(e.data.characterId), ' leaves ', h.c(e.data.leaderId), "'s party to settle down."]
-          : [h.c(e.data.characterId), ' leaves ', h.c(e.data.leaderId), "'s party in disgust."],
+          : e.data.reason === 'captured'
+            ? [h.c(e.data.characterId), ' is taken, lost to ', h.c(e.data.leaderId), "'s gang."]
+            : [h.c(e.data.characterId), ' leaves ', h.c(e.data.leaderId), "'s party in disgust."],
   ],
   'party.disband': [
     (e, h) => {
@@ -969,6 +975,8 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
           return [h.c(e.data.characterId), "'s party breaks up."];
         case 'retire':
           return [h.c(e.data.characterId), "'s companions go their separate ways."];
+        case 'captured':
+          return [h.c(e.data.characterId), "'s gang scatters."];
       }
     },
   ],
@@ -1068,15 +1076,106 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
     ],
   ],
   'bounty.claim': [
+    (e, h) => {
+      const shared = (e.data.shares?.length ?? 0) > 1 ? ', shared with their party' : '';
+      if (e.data.alive) {
+        return [
+          h.c(e.data.characterId),
+          ' hands ',
+          h.c(e.data.outlawId),
+          ' over to the watch of ',
+          h.place(e.data.locationId),
+          ` alive, for ${e.data.amount} gold${shared}.`,
+        ];
+      }
+      if (!e.data.shares) {
+        return [
+          h.c(e.data.characterId),
+          ` claims the ${e.data.amount}-gold bounty on `,
+          h.c(e.data.outlawId),
+          '.',
+        ];
+      }
+      return [
+        h.c(e.data.characterId),
+        ' brings the head of ',
+        h.c(e.data.outlawId),
+        ' to ',
+        h.place(e.data.locationId),
+        ` and claims the ${e.data.amount}-gold bounty${shared}.`,
+      ];
+    },
+  ],
+  'bounty.head': [
     (e, h) => [
       h.c(e.data.characterId),
-      ` claims the ${e.data.amount}-gold bounty on `,
+      ' takes the head of ',
       h.c(e.data.outlawId),
-      '.',
+      ', to claim the bounty on it.',
+    ],
+  ],
+  'bounty.lost': [
+    (e, h) => ['The head of ', h.c(e.data.outlawId), ' is lost, and the bounty with it.'],
+  ],
+  'capture.attempt': [
+    (e, h) => {
+      const hunter = h.c(e.data.characterId);
+      const outlaw = h.c(e.data.outlawId);
+      const here = h.l(e.data.locationId);
+      if (e.data.how === 'trap') {
+        return e.data.success
+          ? [hunter, ' springs a trap on ', outlaw, ' in ', here, ' and takes them alive.']
+          : [outlaw, ' spots the trap ', hunter, ' laid in ', here, ' and slips away.'];
+      }
+      if (e.data.success) {
+        return [hunter, ' wrestles the wounded ', outlaw, ' to the ground and binds them.'];
+      }
+      if (e.data.killed) return [hunter, ' closes to take ', outlaw, ' alive, and is cut down.'];
+      return [
+        hunter,
+        ' tries to take ',
+        outlaw,
+        ' alive, but is beaten off',
+        e.data.hurt ? ', wounded.' : '.',
+      ];
+    },
+  ],
+  'capture.escape': [
+    (e, h) => [
+      h.c(e.data.characterId),
+      ' gets away from ',
+      h.c(e.data.captorId),
+      ' in ',
+      h.l(e.data.locationId),
+      ', with nothing but the clothes on their back.',
+    ],
+  ],
+  'outlaw.jailed': [
+    (e, h) => [
+      h.c(e.data.characterId),
+      ' is thrown into the jail of ',
+      h.place(e.data.locationId),
+      `, for ${describeDuration(e.data.until - e.t)}.`,
+    ],
+  ],
+  'outlaw.freed': [
+    (e, h) => [
+      h.c(e.data.characterId),
+      ' walks free from the jail of ',
+      h.place(e.data.locationId),
+      ', their time served.',
     ],
   ],
   'outlaw.reform': [
-    (e, h) => [h.c(e.data.characterId), ' pays restitution and gives up the outlaw life.'],
+    (e, h) =>
+      e.data.paid !== undefined && e.data.paid > 0
+        ? [
+            h.c(e.data.characterId),
+            ` pays back what they took, ${e.data.paid} gold with interest and fines, and gives up the outlaw life.`,
+          ]
+        : e.data.paid === 0
+          ? [h.c(e.data.characterId), ' gives up the outlaw life.']
+          : [h.c(e.data.characterId), ' pays restitution and gives up the outlaw life.'],
   ],
   'trade.sell': [
     (e, h) => [

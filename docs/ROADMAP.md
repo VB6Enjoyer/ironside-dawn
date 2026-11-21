@@ -1118,30 +1118,52 @@ site), and is checked against the targets below with the crime audit.
      version 7, and old standing becomes what each town has heard.
    - Not yet: standing mended by good deeds; for now it only fades.
 
-5. **Way out: restitution.** An outlaw with no blood on their hands can go to
-   a town's court and pay back what they took, with interest and a fine, to
-   clear their name and lift the bounty. Their standing still has to be won
-   back. Outlaws weigh it once crime stops paying.
-   - _Exit:_ thieves who tire of the life go straight, and their life stories
-     say so.
+5. **Way out: restitution.** _Done_ (`src/sim/systems/justice.ts`).
+   - An outlaw with no blood on their hands (none on their record, none known
+     anywhere) and a little honor (0.15 or more) who has tired of the life (no
+     crime in three months, doors shut in half the towns that know them, or a
+     bounty of 150 or more) may pay at any town's court: in every town that
+     knows of their crimes, what they took plus a quarter in interest and a
+     quarter in fines (at least 10). The bounty is lifted and the record
+     cleared; the towns still hold them _suspected_ until time earns their
+     trust back. Murderers can't buy their way out.
+   - Measured (four 20-adventurer worlds, a century): 0–7 per world go straight
+     this way.
 
-6. **Way out: a price on their head.** Killing an outlaw no longer pays on the
-   spot. The killer takes the head and must bring it to a town that knows the
-   bounty. A party splits the reward, and a head can be lost along the way.
-   - _Exit:_ bounties are collected in towns, by those who made the journey.
+6. **Way out: a price on their head.** _Done._
+   - Killing an outlaw pays nothing on the spot. An adventurer or merchant who
+     kills one takes the head and carries it to a town that has heard of the
+     outlaw; there the reward is split evenly with their party. The posting
+     town pays what it can, the claiming town the rest. A head is lost with its
+     carrier, or after 90 days, and the bounty with it.
+   - Bounties stop growing at 300 gold, plus 150 for each murder: with crimes
+     against the nameless, prolific outlaws had run them into the tens of
+     thousands.
 
-7. **Way out: taken alive.** Skilled hunters can capture an outlaw:
-   - **A trap**, set where they share a road, a wild place or a dungeon,
-     weighing awareness and stealth on both sides. It can fail, and the
-     outlaw escape.
-   - **A takedown** in a fight once the outlaw is badly hurt. It can fail,
-     wounding or killing the hunter.
-   - A live capture pays far more than a head. The captive is escorted to the
-     nearest town that knows the bounty, and on each stretch of road may try
-     to escape: better at higher level and agility, worse against a larger,
-     stronger escort. One who escapes has lost most of their gold and gear.
-   - _Exit:_ captures, failed traps, deadly takedowns and escapes all happen,
-     and read well in the log.
+7. **Way out: taken alive.** _Done._
+   - A trap: a hunter with the craft (stealth and awareness, 35 or more)
+     sometimes lays one on reaching the quarry instead of attacking, against
+     the outlaw's awareness. Caught, the outlaw is taken; sprung wrong, the
+     outlaw slips away.
+   - A takedown: in a hunt, a blow that leaves the outlaw at a quarter of their
+     health or less may be pulled to grapple them instead, the hunter's level
+     and might against the outlaw's level and agility. Failing, the hunter is
+     wounded, sometimes killed.
+   - Hunters who are honorable or greedy try more often; one bent on revenge
+     rarely does.
+   - Captives lose most of their gold and their gear to the captors and are led
+     to the nearest town that would pay. On each leg of road they may escape,
+     better at a higher level and agility, worse against a bigger, stronger
+     escort; one who does leaves what was taken.
+   - Delivered, the bounty pays two and a half times over, split with the
+     party. Until step 8, the captive is jailed for a year plus a month per
+     crime (three times as long for blood, ten years at most) and walks out no
+     outlaw; old age can take them inside.
+   - Measured (same worlds): 1–5 outlaws taken alive per world per century, a
+     few escaping on the way; 0–1 heads claimed. Hunts rarely end in a kill, as
+     before, so captures outnumber heads; balancing that is step 9's. At 200
+     adventurers over 15 years: 14–22 taken alive and 6–10 heads claimed per
+     world, 4 going straight.
 
 8. **Justice.** An outlaw brought in alive is tried:
    - Theft, assault and the like earn years in prison, scaled by the record.

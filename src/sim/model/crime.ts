@@ -69,3 +69,19 @@ export interface News {
   /** Towns yet to hear it and when they will, the latest first: the next to hear is last. */
   readonly pending: [LocationId, number][];
 }
+
+/** An outlaw's head, carried to a town that knows the bounty on it (0.3.0). */
+export interface Head {
+  readonly outlawId: CharacterId;
+  readonly takenAt: number;
+}
+
+/**
+ * An outlaw taken alive (0.3.0), escorted by `captorId` to a town that knows
+ * the bounty. What was taken off them is held by the captors.
+ */
+export interface Captivity {
+  readonly captorId: CharacterId;
+  readonly since: number;
+  readonly gold: number;
+}

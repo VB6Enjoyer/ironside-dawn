@@ -103,9 +103,9 @@ function grow(ctx: SimContext, c: Character): void {
     c.stamina = Math.min(c.stamina, c.maxStamina);
   }
 
-  // Death of old age comes to those at rest somewhere, not mid-fight or on the road.
+  // Death of old age comes to those at rest somewhere, or in jail, not mid-fight or on the road.
   const x = age / lifespan;
-  if (x < OLD_AT || !c.locationId || !atRest(c)) return;
+  if (x < OLD_AT || !c.locationId || !(atRest(c) || c.activity.kind === 'jailed')) return;
   const yearly = Math.min(0.9, 0.03 * Math.exp(7 * (x - OLD_AT)));
   if (ctx.rng.people.chance(yearly / 360)) {
     die(ctx, c, { kind: 'age', age: Math.floor(age) });

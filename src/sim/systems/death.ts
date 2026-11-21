@@ -2,6 +2,7 @@ import type { SimContext } from '../context';
 import type { Character, DeathCause, Item, LocationId } from '../model';
 import { carriedGear, takeGear } from './items';
 import { burn } from './ledger';
+import { justiceOnDeath } from './justice';
 import { lordDied } from './lords';
 import { creatureKilled } from './myths';
 import { mournDeath } from './social';
@@ -18,6 +19,8 @@ export function die(ctx: SimContext, character: Character, cause: DeathCause): v
   if (locationId === null)
     throw new Error(`${character.id} died on the road, which can't happen yet`);
 
+  // Heads carried are lost, a captive led goes free.
+  justiceOnDeath(ctx, character);
   const heirs = heirsOf(ctx, character);
   const place = world.locations.get(locationId);
   // Those who die at home leave their things to their heirs. Elsewhere, legendary

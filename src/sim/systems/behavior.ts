@@ -20,6 +20,7 @@ import { markVisited, satisfy, updateDrives } from './mind';
 import { practice } from './progress';
 import { confrontQuarry } from './outlaws';
 import { commitCrime, nightWork, waylayCaravan } from './crime';
+import { claimHeads, escort, release } from './justice';
 import { isBarred, isShunned } from './notoriety';
 import { carouse, lodging, visitMarket } from './shopping';
 import { followersOf, gatherParty, rallyAgainst, releaseFollowers, socialize } from './social';
@@ -71,6 +72,10 @@ export function wakeCharacter(ctx: SimContext, character: Character): void {
     case 'fighting':
     case 'accompanying':
       return;
+    case 'jailed':
+      if (ctx.world.time < activity.until) return;
+      release(ctx, character);
+      break;
     case 'traveling': {
       if (finishLeg(ctx, character) !== 'arrived') return;
       const here = locationOf(ctx, character);
@@ -122,6 +127,22 @@ function decide(ctx: SimContext, character: Character): void {
 
   if (isNight(now)) {
     rest(ctx, character, location);
+    return;
+  }
+
+  // Bounties are paid in town: heads handed in, a captive led to the nearest town that pays.
+  if (location.kind === 'town') claimHeads(ctx, character, location);
+  if (
+    character.escorting &&
+    escort(ctx, character, location, (to) =>
+      startJourney(ctx, character, to, 'escort', [], gatherParty(ctx, character, location)),
+    )
+  ) {
+    character.goal = {
+      kind: 'travel',
+      locationId: character.activity.kind === 'traveling' ? character.activity.destinationId : null,
+      why: [],
+    };
     return;
   }
 
@@ -278,8 +299,9 @@ function act(
       if (master && !master.death && action.reason === 'delve' && location.kind === 'town') {
         rallyAgainst(ctx, character, location, master);
       }
-      // The party comes along to delve or hunt; otherwise everyone goes their own way.
-      const together = action.reason === 'delve' || action.reason === 'hunt';
+      // The party comes along to delve, hunt or claim a bounty; otherwise everyone goes their own way.
+      const together =
+        action.reason === 'delve' || action.reason === 'hunt' || action.reason === 'bounty';
       if (!together) releaseFollowers(ctx, character);
       const companions = together ? gatherParty(ctx, character, location) : [];
       return startJourney(ctx, character, action.to, action.reason, why, companions);
