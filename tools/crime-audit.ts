@@ -29,7 +29,30 @@ interface WorldReport {
   /** Robberies and ambushes by each outlaw who led any, most first. */
   readonly byOutlaw: readonly number[];
   /** How outlaws' careers ended: went straight, killed for the bounty, otherwise dead, still at large. */
-  readonly ends: { reformed: number; bountied: number; died: number; atLarge: number };
+  /**
+   * How outlaws' careers ended: went straight, killed for the bounty, taken alive,
+   * otherwise dead, still at large (held ones aside).
+   */
+  readonly ends: {
+    reformed: number;
+    bountied: number;
+    captured: number;
+    died: number;
+    atLarge: number;
+  };
+  /** Bounties claimed (heads and live captives) and heads lost; capture tries and outcomes. */
+  readonly justice: {
+    heads: number;
+    alive: number;
+    lost: number;
+    traps: number;
+    takedowns: number;
+    caught: number;
+    escapes: number;
+    jailed: number;
+    freed: number;
+    held: number;
+  };
   /** Share of monthly looks at an honest adventurer that found them broke. */
   readonly brokeShare: number;
   /** Crimes against the nameless that came off, by kind, and those foiled (0.3.0). */
@@ -61,7 +84,19 @@ function runWorld(seed: string, adventurers: number, years: number): WorldReport
   let stolen = 0;
   let fenced = 0;
   let turnedAway = 0;
-  const ends = { reformed: 0, bountied: 0, died: 0, atLarge: 0 };
+  const ends = { reformed: 0, bountied: 0, captured: 0, died: 0, atLarge: 0 };
+  const justice = {
+    heads: 0,
+    alive: 0,
+    lost: 0,
+    traps: 0,
+    takedowns: 0,
+    caught: 0,
+    escapes: 0,
+    jailed: 0,
+    freed: 0,
+    held: 0,
+  };
   let start = 0;
   let sim: ReturnType<typeof createSimulation> | null = null;
   const credit = (id: CharacterId) => byOutlaw.set(id, (byOutlaw.get(id) ?? 0) + 1);
@@ -104,8 +139,32 @@ function runWorld(seed: string, adventurers: number, years: number): WorldReport
       case 'outlaw.reform':
         ends.reformed++;
         break;
-      case 'bounty.claim':
+      case 'bounty.head':
         ends.bountied++;
+        break;
+      case 'bounty.claim':
+        if (e.data.alive) justice.alive++;
+        else justice.heads++;
+        break;
+      case 'bounty.lost':
+        justice.lost++;
+        break;
+      case 'capture.attempt':
+        if (e.data.how === 'trap') justice.traps++;
+        else justice.takedowns++;
+        if (e.data.success) {
+          justice.caught++;
+          ends.captured++;
+        }
+        break;
+      case 'capture.escape':
+        justice.escapes++;
+        break;
+      case 'outlaw.jailed':
+        justice.jailed++;
+        break;
+      case 'outlaw.freed':
+        justice.freed++;
         break;
       case 'character.death': {
         const dead = sim.world.characters.get(e.data.characterId);
@@ -113,8 +172,8 @@ function runWorld(seed: string, adventurers: number, years: number): WorldReport
         if (cause.kind === 'character' && sim.world.characters.get(cause.characterId)?.outlaw) {
           murders++;
         }
-        // Killed for a bounty is counted by its claim, which follows this event while the
-        // bounty still stands; any other end of an outlaw is counted here.
+        // Killed for a bounty is counted when the head is taken, which follows this event
+        // while the bounty still stands; any other end of an outlaw is counted here.
         if (dead?.outlaw && !(cause.kind === 'character' && sim.world.bounties.has(dead.id))) {
           ends.died++;
         }
@@ -134,7 +193,11 @@ function runWorld(seed: string, adventurers: number, years: number): WorldReport
       if (c.gold < 40) broke++;
     }
   }
-  for (const c of sim.world.characters.values()) if (!c.death && c.outlaw) ends.atLarge++;
+  for (const c of sim.world.characters.values()) {
+    if (c.death || !c.outlaw) continue;
+    if (c.captive || c.activity.kind === 'jailed') justice.held++;
+    else ends.atLarge++;
+  }
   return {
     seed,
     years,
@@ -145,6 +208,7 @@ function runWorld(seed: string, adventurers: number, years: number): WorldReport
     murders,
     byOutlaw: [...byOutlaw.values()].sort((a, b) => b - a),
     ends,
+    justice,
     brokeShare: looks ? broke / looks : 0,
     nameless,
     foiled,
@@ -212,7 +276,7 @@ function report(reports: readonly WorldReport[], adventurers: number, years: num
     `Crime audit: ${reports.length} worlds of ${adventurers} adventurers, ${years} years\n`,
   );
   console.log(
-    'world      outlaws (people)  first  decades  robberies  ambushes  murders  top1  top2  ends (straight/bounty/died/at large)  broke',
+    'world      outlaws (people)  first  decades  robberies  ambushes  murders  top1  top2  ends (straight/head/alive/died/at large)  broke',
   );
   for (const r of reports) {
     const top1 = share(r.byOutlaw, 1);
@@ -228,7 +292,9 @@ function report(reports: readonly WorldReport[], adventurers: number, years: num
         String(r.murders).padStart(8),
         (top1 === null ? '—' : pct(top1)).padStart(5),
         (top2 === null ? '—' : pct(top2)).padStart(5),
-        `${r.ends.reformed}/${r.ends.bountied}/${r.ends.died}/${r.ends.atLarge}`.padStart(37),
+        `${r.ends.reformed}/${r.ends.bountied}/${r.ends.captured}/${r.ends.died}/${r.ends.atLarge}`.padStart(
+          39,
+        ),
         `${(r.brokeShare * 100).toFixed(2)}%`.padStart(6),
       ].join(' '),
     );
@@ -256,6 +322,25 @@ function report(reports: readonly WorldReport[], adventurers: number, years: num
           33,
         ),
         String(r.turnedAway).padStart(12),
+      ].join(' '),
+    );
+  }
+  console.log(
+    '\nworld      bounties paid (heads/alive)  heads lost  capture tries (trap/takedown)  taken  escaped  jailed  freed  held now',
+  );
+  for (const r of reports) {
+    const j = r.justice;
+    console.log(
+      [
+        r.seed.padEnd(10),
+        `${j.heads}/${j.alive}`.padStart(27),
+        String(j.lost).padStart(11),
+        `${j.traps}/${j.takedowns}`.padStart(30),
+        String(j.caught).padStart(6),
+        String(j.escapes).padStart(8),
+        String(j.jailed).padStart(7),
+        String(j.freed).padStart(6),
+        String(j.held).padStart(9),
       ].join(' '),
     );
   }
