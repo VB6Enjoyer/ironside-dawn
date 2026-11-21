@@ -5,6 +5,7 @@ import {
   type CharacterId,
   type DeathCause,
   type LocationId,
+  type OutlawReason,
   type SimEvent,
 } from '../sim';
 import { seasonName } from './calendar';
@@ -253,7 +254,7 @@ export function biography(
     justice.push(
       { text: `In ${whenIn(since)} they ` },
       { text: 'turned outlaw', mark: 'crime' },
-      { text: `. ${record} ` },
+      { text: `${TURNED_FOR[c.outlaw.reason ?? 'want']}. ${record} ` },
     );
   }
   const claims = events.filter((e) => e.type === 'bounty.claim' && e.data.characterId === c.id);
@@ -318,6 +319,15 @@ export function biography(
   }
   return paragraphs.map(trimEnd);
 }
+
+/** Why someone turned outlaw, as a life story puts it. */
+const TURNED_FOR: Record<OutlawReason, string> = {
+  want: ', broke and desperate',
+  ambition: ', wanting more than honest work would pay',
+  skill: ', putting a thief’s skills to a thief’s use',
+  company: ', following outlaw friends',
+  grudge: ', over an old wrong',
+};
 
 function trimEnd(paragraph: Segment[]): Segment[] {
   const last = paragraph.at(-1);

@@ -2,12 +2,13 @@ import type { GoodId, Goods } from '../../content';
 import { HOUR } from '../core/time';
 import type { SimContext } from '../context';
 import { createCharacter } from '../gen/people';
-import type { Character, Location, LocationId } from '../model';
+import type { Character, CharacterId, Location, LocationId, OutlawReason } from '../model';
 import { startBrawl } from './combat';
 import { isAlive } from './condition';
 import { burn } from './ledger';
 import { payHouse } from './market';
-import { remember, wealthNeed } from './mind';
+import { remember, vividness, wealthNeed } from './mind';
+import { hasSellable } from './decide';
 import { wakeAt } from './wake';
 import {
   adjustOpinion,
@@ -25,10 +26,27 @@ import { charactersAt } from './whereabouts';
  * earn bounties that draw hunters. Some go straight again.
  */
 
-/** Daily chance of turning outlaw, for the most susceptible and desperate. */
+/** Daily chance of turning outlaw from want, for the most susceptible and desperate. */
 const TURN_CHANCE = 0.04;
 /** Below this much gold an adventurer counts as broke. */
 const BROKE = 40;
+/**
+ * Days broke, with nothing left to sell, before want can turn anyone: a new
+ * arrival who has just bought their gear, or a bad week, doesn't.
+ */
+const HARDSHIP_DAYS = 10;
+/** Days of hardship after that over which desperation builds to the full. */
+const DESPERATION_DAYS = 30;
+/**
+ * Daily chance of giving in to temptation, for someone with no conscience, for
+ * each good reason they have. Without one, nobody is tempted at all.
+ */
+const TEMPTATION_CHANCE = 0.001;
+/** Reasons it takes before temptation can turn someone. */
+const REASONS_NEEDED = 1;
+/** Years after a pardon in which temptation finds no hold. */
+const PARDON_YEARS = 3;
+const YEAR = 360 * 86_400;
 const ROBBERY_BOUNTY = 25;
 const MURDER_BOUNTY = 60;
 /** Share of a surrendering victim's purse an outlaw takes. */
@@ -36,6 +54,8 @@ const ROBBERY_TAKE = 0.6;
 /** Outlaws try their luck against parties up to this much stronger than theirs. */
 const NERVE = 0.7;
 const REFORM_CHANCE = 0.05;
+/** Compassion below which an outlaw may attack without a demand, more often the crueler. */
+const CRUELTY = 0.25;
 const REFORM_QUIET_DAYS = 60;
 const DAY = 86_400;
 const MINUTE = 60;
@@ -45,25 +65,26 @@ export function considerCrime(ctx: SimContext, character: Character): void {
   if (!isAlive(character)) return;
   const rng = ctx.rng.outlaws;
   const now = ctx.world.time;
-  const { honor, greed, compassion } = character.traits;
+  const { honor } = character.traits;
   const locationId = character.locationId ?? character.homeId;
 
   if (!character.outlaw) {
-    if (character.gold >= BROKE || character.activity.kind === 'fighting') return;
     // Only adventurers take to the road this way; a broke merchant borrows and tries again.
-    if (character.calling !== 'adventurer') return;
-    const susceptibility = (1 - honor) * (0.5 + greed) * (1.2 - compassion);
-    if (!rng.chance(TURN_CHANCE * susceptibility ** 2 * wealthNeed(character))) return;
+    if (character.calling !== 'adventurer' || character.activity.kind === 'fighting') return;
+    const reason = wantOf(ctx, character, now) ?? temptationOf(ctx, character, now);
+    if (!reason) return;
     character.outlaw = {
       since: now,
+      reason,
       crimes: 0,
       murders: 0,
       lastCrimeAt: now,
       lastSeenAt: locationId,
     };
+    delete character.hardshipSince;
     if (character.partyId) leaveParty(ctx, character, 'outlaw');
     ctx.emit(
-      { type: 'outlaw.turn', data: { characterId: character.id, locationId } },
+      { type: 'outlaw.turn', data: { characterId: character.id, locationId, reason } },
       [character.id],
       locationId,
     );
@@ -82,6 +103,7 @@ export function considerCrime(ctx: SimContext, character: Character): void {
       burn(ctx.world, 'upkeep', restitution);
     }
     character.outlaw = null;
+    character.pardonedAt = now;
     ctx.world.bounties.delete(character.id);
     if (character.partyId) leaveParty(ctx, character, 'outlaw');
     ctx.emit(
@@ -90,6 +112,88 @@ export function considerCrime(ctx: SimContext, character: Character): void {
       locationId,
     );
   }
+}
+
+/** How the conscience holds: 0 for the honorable and kind, up to about 1.6 for neither. */
+function weakConscience(character: Character): number {
+  const { honor, compassion } = character.traits;
+  return (1 - honor) * (1.2 - compassion);
+}
+
+/**
+ * Want: broke for a while with nothing left to sell, growing more desperate
+ * the longer it lasts, and sooner after a bad run (narrow escapes, flight).
+ */
+function wantOf(ctx: SimContext, character: Character, now: number): OutlawReason | null {
+  if (character.gold >= BROKE || hasSellable(character)) {
+    delete character.hardshipSince;
+    return null;
+  }
+  character.hardshipSince ??= now;
+  const days = (now - character.hardshipSince) / DAY;
+  if (days < HARDSHIP_DAYS) return null;
+  const badRun = character.memories
+    .filter((m) => m.kind === 'near-death' || m.kind === 'fled')
+    .reduce((sum, m) => sum + vividness(m, now), 0);
+  const desperation = Math.min(1, (days - HARDSHIP_DAYS) / DESPERATION_DAYS + 0.3 * badRun);
+  const susceptibility = weakConscience(character) * (0.5 + character.traits.greed);
+  const chance = TURN_CHANCE * susceptibility ** 2 * wealthNeed(character) * desperation;
+  return ctx.rng.outlaws.chance(chance) ? 'want' : null;
+}
+
+/**
+ * Temptation: someone who isn't broke turns to crime only with good reason: a
+ * ruthless ambition, a thief's skills and little honor, an outlaw for a
+ * friend, or a fresh grudge in a hard heart. Even then it is rare, likelier
+ * with more than one reason, and rarer the stronger their conscience.
+ */
+function temptationOf(ctx: SimContext, character: Character, now: number): OutlawReason | null {
+  // Someone who has just paid for their crimes isn't tempted again so soon.
+  if (character.pardonedAt !== undefined && now - character.pardonedAt < PARDON_YEARS * YEAR) {
+    return null;
+  }
+  const reasons = temptationReasons(ctx, character, now);
+  if (reasons.length < REASONS_NEEDED) return null;
+  const chance = TEMPTATION_CHANCE * (weakConscience(character) / 1.6) ** 2 * reasons.length;
+  return ctx.rng.outlaws.chance(chance) ? reasons[0]! : null;
+}
+
+/** Skill at which stealth or lockpicking makes crime look easy. */
+const THIEFS_HANDS = 60;
+/** A grudge vivid enough to act on. */
+const FRESH_GRUDGE = 0.3;
+
+/** What could draw someone into crime who doesn't need to, most telling first. */
+export function temptationReasons(
+  ctx: SimContext,
+  character: Character,
+  now: number,
+): OutlawReason[] {
+  const { honor, greed, compassion } = character.traits;
+  const reasons: OutlawReason[] = [];
+  if (compassion < 0.3 && greed > 0.65) reasons.push('ambition');
+  // A thief at heart: quiet feet or quick fingers are their best skills, and good ones.
+  const { stealth, lockpicking, blades, axes, blunt, polearms, bows } = character.skills;
+  const hands = Math.max(stealth, lockpicking);
+  const arms = Math.max(blades, axes, blunt, polearms, bows);
+  if (hands >= THIEFS_HANDS && hands > arms && honor < 0.4) reasons.push('skill');
+  if (honor < 0.5 && outlawFriend(ctx, character)) reasons.push('company');
+  const grudge = character.memories.some(
+    (m) => m.kind === 'wronged' && vividness(m, now) >= FRESH_GRUDGE,
+  );
+  if (grudge && compassion < 0.4) reasons.push('grudge');
+  return reasons;
+}
+
+/** Whether a friend of theirs is a living outlaw. */
+function outlawFriend(ctx: SimContext, character: Character): boolean {
+  for (const id in character.opinions) {
+    const opinion = character.opinions[id as CharacterId];
+    if (opinion?.bond !== 'friend') continue;
+    const friend = ctx.world.characters.get(id as CharacterId);
+    if (friend?.outlaw && isAlive(friend)) return true;
+  }
+  return false;
 }
 
 /**
@@ -116,11 +220,20 @@ export function ambush(ctx: SimContext, traveler: Character, location: Location)
   if (hostility(leader, traveler) < 0) return false;
 
   const understood = communication(leader, traveler) >= 0.3;
+  // The cruel don't always bother to ask.
+  const cruel = rng.chance(Math.max(0, CRUELTY - leader.traits.compassion) * 2);
   const yields =
+    !cruel &&
     understood &&
     (traveler.traits.bravery < 0.45 || strength(victims) < strength(lurkers) * 0.8) &&
     rng.chance(0.8);
-  const parley = !understood ? 'misunderstood' : yields ? 'surrendered' : 'refused';
+  const parley = cruel
+    ? 'attacked'
+    : !understood
+      ? 'misunderstood'
+      : yields
+        ? 'surrendered'
+        : 'refused';
   ctx.emit(
     {
       type: 'outlaw.ambush',

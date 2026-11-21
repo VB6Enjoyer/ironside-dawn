@@ -1022,25 +1022,52 @@ site), and is checked against the targets below with the crime audit.
 
 ### Steps
 
-1. **Measure first.** A headless crime audit (`npm run sim -- --report crime`
-   or a `tools/` script) over several seeds and world sizes: outlaws made per
-   decade and when, crimes by kind, how crimes spread across outlaws, how
-   careers end, how often adventurers are broke, and the state of standing in
-   each town. It records the 0.2.0 baseline above and checks every later step.
+1. **Measure first.** _Done:_ `npm run audit:crime` (`tools/crime-audit.ts`)
+   runs several worlds side by side (default four 20-adventurer worlds for a
+   century; `--seeds`, `--adventurers`, `--years`, `--json`) and reports
+   turnings and the people behind them, the year of the first, the share of
+   decades with one, robberies, ambushes and murders, the top two outlaws'
+   share of crimes, how careers end (reformed, bountied, died, at large) and
+   how often honest adventurers are broke, checked against the targets. The
+   0.2.0 baseline:
 
-2. **More ways in, and fair starting purses.**
-   - Adventurers start above the broke line, so worlds don't open with a burst
-     of outlaws.
-   - Temptation, not only want: greed and a weak conscience can turn someone
-     who isn't broke, given an opportunity (a rich caravan, an unguarded
-     house).
-   - Grudges: the robbed and the wronged may turn on whoever wronged them.
-   - A bad run: repeated empty or near-fatal delves make the desperate
-     desperate sooner.
-   - The cruel (low compassion) turn more readily, and to violence.
-   - _Exit:_ in small worlds, a steady trickle of outlaws over the decades
-     rather than one burst; no single outlaw commits more than about 40% of a
-     century's crimes.
+   | world   | outlaws | decades with one | robberies | ambushes | top outlaw's share |
+   | ------- | ------: | ---------------: | --------: | -------: | -----------------: |
+   | alpha   |       4 |              40% |        50 |       67 |                94% |
+   | bravo   |       5 |              40% |       128 |      192 |               100% |
+   | charlie |       3 |              20% |         0 |        0 |                  — |
+   | delta   |      13 |              30% |       685 |      937 |                53% |
+
+   All 25 turned from want. At 200 adventurers over 15 years, 38 and 43
+   outlaws, with the top outlaw at 17–29% of crimes.
+
+2. **More ways in, and fair starting purses.** _Done._
+   - Adventurers start with 40–67 gold (was 7–17), above the broke line, so
+     worlds don't open with a burst of outlaws.
+   - Want needs ten days of hardship (no gold and nothing to sell) before it
+     can turn anyone, and grows more pressing with the days and with a bad
+     run (vivid memories of near deaths and flights).
+   - Temptation, rarely, for someone who isn't broke, and only with a good
+     reason: ambition (cold and greedy), a thief's skill (stealth or
+     lockpicking 60+, better than any weapon, and little honor), outlaw
+     friends, or a vivid grudge. Each reason adds a little to a small chance
+     scaled by a weak conscience; the honorable and kind are never tempted,
+     and a pardoned outlaw isn't for three years.
+   - The cruel (compassion under 0.25) sometimes fall on their victims
+     without a word.
+   - Each outlaw keeps why they turned; the log and life stories say it.
+   - Measured, four 20-adventurer worlds over a century: 9–31 turnings each,
+     the first in years 0–7, a turning in 50–100% of decades and no
+     opening burst (was 3–13, in 20–40% of decades). Reasons: a thief's skill
+     46, outlaw friends 8, ambition 5, grudges 5, want 2. At 200 adventurers
+     over 15 years: 28 and 54 turnings, most from want.
+   - The top outlaw still commits 23–57% of a world's crimes. That is down to
+     the crimes, not who turns: the only crime is lying in wait for named
+     travelers, which the strongest outlaw wins most. The spread target moves
+     to step 3.
+   - Willing to steal once is not becoming an outlaw: a character who would
+     take a safe chance now and then, and otherwise live honestly, needs the
+     nameless crimes of step 3, and is built there.
 
 3. **Crimes against the nameless.** Outlaws prey on the world beyond the named
    characters:
@@ -1052,8 +1079,11 @@ site), and is checked against the targets below with the crime audit.
      and trades), and loot is fenced in other towns.
    - Each crime records its kind, place and value, for restitution and
      sentencing later. The log tells of them as crimes (orange, ⚖).
+   - Occasional crime: someone otherwise honest takes a chance they judge safe
+     and worth it, once in a while, without turning outlaw.
    - _Exit:_ most crimes have no named victim; towns plagued by outlaws feel
-     it in their stocks and prices.
+     it in their stocks and prices; no single outlaw commits more than about
+     40% of a century's crimes.
 
 4. **Reputation that travels.** A crime is known first where it happened;
    word then spreads along the roads, carried by travelers and merchants, so
@@ -1111,9 +1141,9 @@ site), and is checked against the targets below with the crime audit.
      towns close, bounties grow and draw better hunters.
    - Targets across world sizes: crime in every era; most careers ending
      within a few years; murderers rarely dying of old age.
-   - Then release 0.3.0: players' notes, changelog, `SAME_HISTORY_SINCE` moved
-     to 0.3.0, a save file from 0.2.0 kept as a fixture, the architecture
-     notes, and a tag.
+   - Then release 0.3.0: players' notes, changelog, a save file from 0.2.0
+     kept as a fixture, the architecture notes, and a tag.
+     (`SAME_HISTORY_SINCE` moved to 0.3.0 with step 2.)
 
 **Alongside (separately, as 0.2.1 if wanted):** magic is used thousands of
 times a century but hidden at most speeds, and no creature casts. Make casts

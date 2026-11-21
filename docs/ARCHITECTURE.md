@@ -682,7 +682,10 @@ from it or any later version up to the one running replays the same world, and
 one from elsewhere is opened with a note that it turns out differently. A test
 (`src/sim/history.test.ts`) holds a month of one seed's history by hash, with
 the release it has held since, and fails if history changes without that
-marker being moved. Save files
+marker being moved. Between releases a change to history moves the marker
+to the coming version ahead of its release; `HISTORY_VERSION`, the later of
+the marker and the running version, is what new worlds and their links are
+stamped with, so they aren't mistaken for the last release's. Save files
 exported by each release that changed the shape of saves are kept in
 `src/sim/fixtures/`, and every one is loaded, run on and saved again in the
 tests. Files are gzipped JSON

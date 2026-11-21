@@ -1,5 +1,5 @@
 import { PEOPLES, type PeopleId } from '../content';
-import { APP_VERSION, currentName, isVersion, type SavedGame } from '../host';
+import { currentName, HISTORY_VERSION, isVersion, type SavedGame } from '../host';
 import type { WorldSettings } from '../sim';
 
 /**
@@ -82,7 +82,7 @@ function writePacks(params: URLSearchParams, packs: readonly string[]): void {
 }
 
 function writeVersion(params: URLSearchParams, spec: WorldSpec): void {
-  params.set('v', spec.madeWith ?? APP_VERSION);
+  params.set('v', spec.madeWith ?? HISTORY_VERSION);
 }
 
 /** What a saved game's link would say: its world as it was begun. */

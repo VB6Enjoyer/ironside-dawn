@@ -578,7 +578,7 @@ export function sellable(character: Character): LootItem[] {
  */
 const sellableCache = new WeakMap<LootItem[], { length: number; any: boolean }>();
 
-function hasSellable(character: Character): boolean {
+export function hasSellable(character: Character): boolean {
   const pack = character.pack;
   const cached = sellableCache.get(pack);
   if (cached && cached.length === pack.length) return cached.any;

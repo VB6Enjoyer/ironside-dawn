@@ -5,6 +5,7 @@ import {
   compareVersions,
   createWorkerHost,
   FIRST_RELEASE,
+  HISTORY_VERSION,
   replaysHere,
   SAME_HISTORY_SINCE,
   type InitOptions,
@@ -114,7 +115,7 @@ function installHere(packs: readonly ContentPack[]): string | null {
  */
 function otherHistory(madeWith: string = FIRST_RELEASE): string | null {
   if (replaysHere(madeWith)) return null;
-  return compareVersions(madeWith, APP_VERSION) > 0
+  return compareVersions(madeWith, HISTORY_VERSION) > 0
     ? `This link comes from a newer version (${madeWith}) than this one (${APP_VERSION}), so its world turns out differently here.`
     : `This link was made with version ${madeWith}. Worlds have played out differently since ${SAME_HISTORY_SINCE}, so its world turns out differently here.`;
 }
@@ -126,7 +127,7 @@ function freshSession(spec: WorldSpec, from?: WorldSpec): Session {
   const trouble = installHere(packs);
   return {
     key: nextSessionKey++,
-    spec: { ...spec, packs: packs.map((p) => p.id), madeWith: APP_VERSION },
+    spec: { ...spec, packs: packs.map((p) => p.id), madeWith: HISTORY_VERSION },
     init: {
       seed: spec.seed,
       characterCount: spec.characterCount,

@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import type { Character, LocationId } from '../model';
 import { testCharacter, testContext } from '../test-support';
-import { ambush, considerCrime, onCharacterKilled } from './outlaws';
+import { DAY } from '../core/time';
+import { ambush, considerCrime, onCharacterKilled, temptationReasons } from './outlaws';
 import { learnLanguage } from './social';
 
 const woods = 'witherwood' as LocationId;
@@ -24,28 +25,108 @@ function outlawAndTraveler(seed: string) {
 const speak = (c: Character, tongue: 'common' | 'sylvan') => (c.languages = { [tongue]: 100 });
 
 describe('turning outlaw', () => {
-  const turned = (traits: Partial<Character['traits']>, gold: number) => {
-    const ctx = testContext(`turn-${JSON.stringify(traits)}-${gold}`);
+  /** How many of 200 such characters turn outlaw within so many days. */
+  const turned = (
+    traits: Partial<Character['traits']>,
+    gold: number,
+    days: number,
+    shape: (c: Character, now: number) => void = () => {},
+  ) => {
+    const ctx = testContext(`turn-${JSON.stringify(traits)}-${gold}-${days}`);
     let count = 0;
     for (let i = 0; i < 200; i++) {
       const c = testCharacter(ctx);
       c.traits = { ...c.traits, ...traits };
       c.gold = gold;
-      for (let day = 0; day < 60 && !c.outlaw; day++) considerCrime(ctx, c);
+      shape(c, ctx.world.time);
+      for (let day = 0; day < days && !c.outlaw; day++) {
+        considerCrime(ctx, c);
+        ctx.world.time += DAY;
+      }
       if (c.outlaw) count++;
     }
     return count;
   };
+  const crooked = { honor: 0.05, greed: 0.95, compassion: 0.05 };
+  const decent = { honor: 0.95, greed: 0.1, compassion: 0.9 };
+  /** No ambition (greed too low), no thief's skills, no outlaw friends, no grudges. */
+  const unprovoked = { honor: 0.05, greed: 0.5, compassion: 0.05 };
 
-  it('comes to the broke, greedy and dishonorable, not the honorable or the comfortable', () => {
-    const crooked = { honor: 0.05, greed: 0.95, compassion: 0.05 };
-    expect(turned(crooked, 0)).toBeGreaterThan(20);
-    expect(turned({ honor: 0.95, greed: 0.1, compassion: 0.9 }, 0)).toBeLessThan(3);
-    expect(turned(crooked, 500)).toBe(0);
+  it('comes from want to the broke and dishonorable, not the honorable', () => {
+    expect(turned(crooked, 0, 120)).toBeGreaterThan(20);
+    expect(turned(decent, 0, 120)).toBeLessThan(3);
+  });
+
+  it('takes nobody in their first days broke, as a new arrival who bought their gear', () => {
+    expect(turned(unprovoked, 0, 9)).toBe(0);
+  });
+
+  it('comes to the comfortable only for a reason', () => {
+    expect(turned(unprovoked, 500, 360)).toBe(0);
+    expect(turned(decent, 500, 360)).toBe(0);
+  });
+
+  it('comes rarely to a thief at heart, and says why', () => {
+    const thief = (c: Character) => {
+      c.skills = {
+        ...c.skills,
+        stealth: 80,
+        blades: 10,
+        axes: 10,
+        blunt: 10,
+        polearms: 10,
+        bows: 10,
+      };
+    };
+    const n = turned(unprovoked, 500, 360, thief);
+    // Some, over a year, but far from all: one reason, rarely acted on.
+    expect(n).toBeGreaterThan(3);
+    expect(n).toBeLessThan(100);
+    const ctx = testContext('reason');
+    const c = testCharacter(ctx);
+    c.traits = { ...c.traits, ...unprovoked };
+    c.gold = 500;
+    thief(c);
+    for (let day = 0; day < 5000 && !c.outlaw; day++) {
+      considerCrime(ctx, c);
+      ctx.world.time += DAY;
+    }
+    expect(c.outlaw?.reason).toBe('skill');
+    expect(temptationReasons(ctx, c, ctx.world.time)).toContain('skill');
+  });
+
+  it('finds no hold on someone lately pardoned', () => {
+    const n = turned(unprovoked, 500, 360, (c, now) => {
+      c.skills = {
+        ...c.skills,
+        stealth: 80,
+        blades: 10,
+        axes: 10,
+        blunt: 10,
+        polearms: 10,
+        bows: 10,
+      };
+      c.pardonedAt = now;
+    });
+    expect(n).toBe(0);
   });
 });
 
 describe('ambushes', () => {
+  it('see the cruel strike without a word, now and then', () => {
+    let attacked = false;
+    for (let i = 0; i < 20 && !attacked; i++) {
+      const { ctx, outlaw, traveler, place } = outlawAndTraveler(`cruel-${i}`);
+      speak(outlaw, 'common');
+      speak(traveler, 'common');
+      outlaw.traits = { ...outlaw.traits, compassion: 0 };
+      ambush(ctx, traveler, place);
+      const event = ctx.events.find((e) => e.type === 'outlaw.ambush');
+      attacked = event?.type === 'outlaw.ambush' && event.data.parley === 'attacked';
+    }
+    expect(attacked).toBe(true);
+  });
+
   it('end in a fight when the two sides cannot understand each other', () => {
     const { ctx, outlaw, traveler, place } = outlawAndTraveler('misunderstood');
     speak(outlaw, 'common');

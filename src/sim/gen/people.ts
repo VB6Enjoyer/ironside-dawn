@@ -33,7 +33,8 @@ import { arrive } from '../systems/whereabouts';
 const STAT_DICE = '2d6+3';
 const STAT_MIN = 3;
 const STAT_MAX = 18;
-const STARTING_GOLD = '2d6+5';
+/** Enough for gear and a few nights, so nobody starts out broke (0.3.0). */
+const STARTING_GOLD = '3d10+37';
 /** Chance of the gift for a child with a gifted parent. */
 const GIFT_IN_FAMILY = 0.35;
 /** How far a child's traits may stray from their parents' average. */

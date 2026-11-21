@@ -11,6 +11,15 @@ The public notes players see under "What's new" are kept in `src/ui/releases.ts`
 ### Added
 
 - `npm run audit:crime`, a headless crime audit over several worlds (`tools/crime-audit.ts`): who turns outlaw and when, crimes by kind and how they spread across outlaws, how careers end, how often adventurers are broke, against the targets of the Outlaws Update.
+- More ways into crime than being broke (`src/sim/systems/outlaws.ts`): rarely, an adventurer who isn't broke is tempted, but only with a good reason, such as cold ambition, a thief's skills, outlaw friends or a vivid grudge, and never the honorable and kind. The log and life stories say why each outlaw turned (`src/text/describe.ts`, `src/text/biography.ts`).
+- Cruel outlaws sometimes fall on their victims without a word instead of demanding their purse.
+
+### Changed
+
+- Adventurers start with 40–67 gold instead of 7–17 (`src/sim/gen/people.ts`), so new worlds no longer open with a burst of outlaws.
+- Being broke turns someone outlaw only after ten days of hardship with nothing left to sell, and sooner after a run of near deaths and flights.
+- An outlaw who goes straight isn't tempted again for three years.
+- Worlds now turn out differently from their seed than in 0.2.0, so links from 0.2.0 open with a note that history differs. Worlds begun now are stamped with the coming version, 0.3.0 (`src/host/version.ts`).
 
 ## [0.2.0] - 2026-11-20
 

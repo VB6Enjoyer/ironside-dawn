@@ -108,6 +108,13 @@ export interface Character {
   languages: Partial<Record<LanguageId, number>>;
   partyId: PartyId | null;
   outlaw: Outlaw | null;
+  /**
+   * Since when an adventurer has been broke with nothing left to sell, while
+   * they are (0.3.0): want turns no one overnight. Missing from older saves.
+   */
+  hardshipSince?: number;
+  /** When they last went straight, if ever (0.3.0). Missing from older saves. */
+  pardonedAt?: number;
   /** How each town sees them, -1 (wanted) to 1 (celebrated). */
   reputation: Partial<Record<LocationId, number>>;
 

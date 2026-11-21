@@ -27,8 +27,17 @@ export interface Party {
 }
 
 /** A character who has turned to crime. */
+/**
+ * What drove someone to crime: want (broke and desperate), or temptation for
+ * a reason (0.3.0): a ruthless ambition, a thief's skills, an outlaw friend,
+ * a grudge.
+ */
+export type OutlawReason = 'want' | 'ambition' | 'skill' | 'company' | 'grudge';
+
 export interface Outlaw {
   readonly since: number;
+  /** Why they turned; missing for those who turned before 0.3.0 (all from want). */
+  readonly reason?: OutlawReason;
   crimes: number;
   murders: number;
   lastCrimeAt: number;

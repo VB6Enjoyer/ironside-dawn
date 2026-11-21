@@ -15,6 +15,7 @@ import type { CreatureRef } from './encounter';
 import type { CharacterId, EntityId, EventId, LocationId, RegionId } from './ids';
 import type { Item } from './item';
 import type { Motive } from './mind';
+import type { OutlawReason } from './social';
 
 /**
  * Structured events: the single source of truth for "what happened"
@@ -232,14 +233,16 @@ export type EventBody =
       }
     >
   // Outlaws (characterId is the outlaw)
-  | Body<'outlaw.turn', CharacterAt>
+  /** `reason` is missing from events before 0.3.0, when only want turned anyone. */
+  | Body<'outlaw.turn', CharacterAt & { readonly reason?: OutlawReason }>
   | Body<
       'outlaw.ambush',
       CharacterAt & {
         readonly outlawIds: readonly CharacterId[];
         readonly victimIds: readonly CharacterId[];
         /** Whether the victims could talk their way through, and chose to. */
-        readonly parley: 'surrendered' | 'refused' | 'misunderstood';
+        /** `attacked`: the outlaws struck without a demand (0.3.0). */
+        readonly parley: 'surrendered' | 'refused' | 'misunderstood' | 'attacked';
       }
     >
   | Body<

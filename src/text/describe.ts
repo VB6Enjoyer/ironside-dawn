@@ -17,6 +17,7 @@ import type {
   EventType,
   LocationId,
   Occupation,
+  OutlawReason,
   SimEvent,
 } from '../sim';
 import { describeDuration, seasonName } from './calendar';
@@ -69,6 +70,27 @@ export type Segment =
     };
 
 type Part = string | Segment;
+
+/** How someone turning outlaw reads, by what drove them to it: two phrasings each. */
+const TURNED: Record<OutlawReason, readonly [string, string]> = {
+  want: [', broke and bitter, turns to banditry.', ' takes to the roads as an outlaw.'],
+  ambition: [
+    ' decides that honest work is for lesser folk, and turns outlaw.',
+    ', hungry for more than adventuring pays, takes to banditry.',
+  ],
+  skill: [
+    ', with quick fingers and few scruples, turns to crime.',
+    ' puts a thief’s skills to a thief’s use, and turns outlaw.',
+  ],
+  company: [
+    ' falls in with outlaw friends, and takes to the roads.',
+    ' joins their outlaw friends on the wrong side of the law.',
+  ],
+  grudge: [
+    ', nursing an old wrong, turns outlaw.',
+    ', bitter at what was done to them, takes to banditry.',
+  ],
+};
 
 interface Helpers {
   /** A character's name. */
@@ -872,8 +894,8 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
           ],
   ],
   'outlaw.turn': [
-    (e, h) => [h.c(e.data.characterId), ', broke and bitter, turns to banditry.'],
-    (e, h) => [h.c(e.data.characterId), ' takes to the roads as an outlaw.'],
+    (e, h) => [h.c(e.data.characterId), TURNED[e.data.reason ?? 'want'][0]],
+    (e, h) => [h.c(e.data.characterId), TURNED[e.data.reason ?? 'want'][1]],
   ],
   'outlaw.ambush': [
     (e, h) => {
@@ -894,6 +916,8 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
           return [...lead, ', but they refuse to pay.'];
         case 'misunderstood':
           return [...lead, ', but neither side understands the other.'];
+        case 'attacked':
+          return [...lead, ' and fall on them without a word.'];
       }
     },
   ],
