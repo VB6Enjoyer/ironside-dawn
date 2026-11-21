@@ -133,12 +133,26 @@ function pick(
   return scored[scored.length - 1]!;
 }
 
+function sameMotive(a: Motive, b: Motive): boolean {
+  return a === b || (a.kind === b.kind && JSON.stringify(a) === JSON.stringify(b));
+}
+
 /** The two weightiest named motives behind a choice, weightiest first. */
 function reasons(terms: readonly Term[]): Motive[] {
   let first: Term | null = null;
   let second: Term | null = null;
   for (const t of terms) {
     if (t.motive === null || t.value < NAMED_REASON) continue;
+    // The same reason twice (loot to sell, from two pulls) is named once, the stronger.
+    if (first && sameMotive(first.motive!, t.motive)) {
+      if (t.value > first.value) first = t;
+      continue;
+    }
+    if (second && sameMotive(second.motive!, t.motive)) {
+      if (t.value > second.value) second = t;
+      if (second.value > first!.value) [first, second] = [second, first];
+      continue;
+    }
     if (!first || t.value > first.value) {
       second = first;
       first = t;

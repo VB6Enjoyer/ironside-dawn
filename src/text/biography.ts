@@ -5,6 +5,7 @@ import {
   type CharacterId,
   type DeathCause,
   type CrimeKind,
+  type Judgment,
   type LocationId,
   type OutlawReason,
   type SimEvent,
@@ -258,16 +259,25 @@ export function biography(
   if (turns.length === 0 && c.outlaw) {
     turns.push({ kind: 'turned', at: c.outlaw.since, reason: c.outlaw.reason ?? 'want' });
   }
-  turns.forEach((turn, i) => {
-    justice.push(
-      { text: `In ${whenIn(turn.at)} they ` },
-      { text: i === 0 ? 'turned outlaw' : 'turned outlaw again', mark: 'crime' },
-      { text: `${TURNED_FOR[turn.reason]}. ` },
-    );
-  });
+  // Outlaws from before 0.3.0 have no record of turning: told first, as it came first.
+  if (!c.justice.some((j) => j.kind === 'turned')) {
+    for (const turn of turns) {
+      justice.push(
+        { text: `In ${whenIn(turn.at)} they ` },
+        { text: 'turned outlaw', mark: 'crime' },
+        { text: `${TURNED_FOR[turn.reason]}. ` },
+      );
+    }
+  }
+  // Their dealings with justice, in the order they came (0.3.0).
+  const head = c.justice.find((j) => j.kind === 'head');
+  let turned = 0;
+  // What came of the latest turn is told right after it.
+  const lastTurn = c.justice.map((j) => j.kind).lastIndexOf('turned');
+  const sinceTurning: Segment[] = [];
   if (c.outlaw) {
     const { crimes, murders } = c.outlaw;
-    justice.push({
+    sinceTurning.push({
       text:
         crimes === 0
           ? 'Nothing has come of it yet. '
@@ -278,6 +288,11 @@ export function biography(
             } followed. `,
     });
   }
+  if (lastTurn < 0) justice.push(...sinceTurning);
+  c.justice.forEach((j, i) => {
+    justice.push(...judgment(c, j, head, turned, names, now, () => turned++));
+    if (i === lastTurn) justice.push(...sinceTurning);
+  });
   // What their crimes were, besides robbing and killing named folk.
   const deeds = crimeDeeds(c);
   if (deeds) {
@@ -338,124 +353,6 @@ export function biography(
       ...people(outlaws.slice(0, 3), names),
       { text: '. ' },
     );
-  }
-  // Their own dealings with justice, in order (0.3.0).
-  const head = c.justice.find((j) => j.kind === 'head');
-  for (const j of c.justice) {
-    switch (j.kind) {
-      case 'reformed':
-        if (j.paid <= 0) {
-          justice.push(
-            { text: `In ${whenIn(j.at)}, in ` },
-            place(j.townId, names),
-            { text: ', they ' },
-            { text: 'gave up the outlaw life', mark: 'crime' },
-            { text: ', with nothing anyone could pin on them. ' },
-          );
-          break;
-        }
-        justice.push(
-          { text: `In ${whenIn(j.at)} they went before the court of ` },
-          place(j.townId, names),
-          { text: ' and ' },
-          { text: 'paid back what they took', mark: 'crime' },
-          {
-            text: `, ${j.paid} gold with interest and fines, and gave up the outlaw life; it would be a while before the towns trusted them again. `,
-          },
-        );
-        break;
-      case 'captured':
-        justice.push(
-          { text: `In ${whenIn(j.at)} ` },
-          person(j.byId, names),
-          { text: ' ' },
-          { text: 'took them alive', mark: 'crime' },
-          { text: ' in ' },
-          place(j.locationId, names),
-          { text: j.how === 'trap' ? ', with a trap. ' : ', after beating them in a fight. ' },
-        );
-        break;
-      case 'escaped':
-        justice.push(
-          { text: 'They got away from ' },
-          person(j.fromId, names),
-          { text: ' in ' },
-          place(j.locationId, names),
-          { text: ', with nothing but the clothes on their back. ' },
-        );
-        break;
-      case 'delivered':
-        justice.push(
-          person(j.byId, names),
-          { text: ' handed them over to the watch of ' },
-          place(j.townId, names),
-          { text: `, and was paid ${j.amount} gold for it. ` },
-        );
-        break;
-      case 'sentenced': {
-        const charges = chargesPhrase(j.charges);
-        justice.push({ text: 'Tried in ' }, place(j.townId, names), {
-          text: charges ? ` for ${charges}, they were ` : ', they were ',
-        });
-        if (j.sentence === 'death') {
-          justice.push(
-            { text: `sentenced ${SENTENCED_TO[j.method ?? 'hanging']}`, mark: 'death' },
-            { text: '. ' },
-          );
-          break;
-        }
-        const years = Math.max(1, Math.round((j.until - j.at) / YEAR));
-        justice.push(
-          { text: 'sentenced', mark: 'crime' },
-          { text: ` to ${countWord(years)} ${years === 1 ? 'year' : 'years'} in prison` },
-        );
-        // Still inside: how long is left.
-        const inside =
-          c.activity.kind === 'jailed' && c.activity.since === j.at && now !== undefined;
-        if (inside) {
-          const left = Math.max(0, (j.until - now) / YEAR);
-          justice.push({
-            text:
-              left < 1
-                ? ', and will be out within the year. '
-                : `, and have ${countWord(Math.round(left))} ${Math.round(left) === 1 ? 'year' : 'years'} left to serve. `,
-          });
-        } else {
-          justice.push({ text: '. ' });
-        }
-        break;
-      }
-      case 'freed':
-        justice.push({ text: `They came out of the jail of ` }, place(j.townId, names), {
-          text: ` in ${whenIn(j.at)}, no outlaw any more. `,
-        });
-        break;
-      case 'head':
-        justice.push(person(j.byId, names), { text: ' took their head for the bounty' });
-        if (!c.justice.some((k) => k.kind === 'claimed' || k.kind === 'lost')) {
-          justice.push({ text: '; it has yet to be claimed. ' });
-        }
-        break;
-      case 'claimed':
-        justice.push(
-          ...(head?.kind === 'head' && head.byId === j.byId
-            ? [{ text: ', and' }]
-            : [{ text: head ? ', and ' : '' }, person(j.byId, names)]),
-          { text: ` claimed the ${j.amount}-gold bounty on it in ` },
-          place(j.townId, names),
-          { text: ` in ${whenIn(j.at)}. ` },
-        );
-        break;
-      case 'lost':
-        justice.push({
-          text: head
-            ? ', but the head was lost before anyone could claim the bounty. '
-            : 'Their head was lost before anyone could claim the bounty. ',
-        });
-        break;
-      case 'turned':
-        break;
-    }
   }
   // Restitution from before 0.3.0 kept no record but the event.
   const reform = events.find((e) => e.type === 'outlaw.reform' && e.data.characterId === c.id);
@@ -518,6 +415,152 @@ export function biography(
 }
 
 const YEAR = 360 * 86_400;
+
+/** One step in someone's dealings with justice, told for their life story. */
+function judgment(
+  c: Character,
+  j: Judgment,
+  head: Judgment | undefined,
+  turned: number,
+  names: NameResolver,
+  now: number | undefined,
+  onTurn: () => void,
+): Segment[] {
+  const out: Segment[] = [];
+  switch (j.kind) {
+    case 'reformed':
+      if (j.paid <= 0) {
+        out.push(
+          { text: `In ${whenIn(j.at)}, in ` },
+          place(j.townId, names),
+          { text: ', they ' },
+          { text: 'gave up the outlaw life', mark: 'crime' },
+          { text: ', with nothing anyone could pin on them. ' },
+        );
+        break;
+      }
+      out.push(
+        { text: `In ${whenIn(j.at)} they went before the court of ` },
+        place(j.townId, names),
+        { text: ' and ' },
+        { text: 'paid back what they took', mark: 'crime' },
+        {
+          text: `, ${j.paid} gold with interest and fines, and gave up the outlaw life; it would be a while before the towns trusted them again. `,
+        },
+      );
+      break;
+    case 'captured':
+      out.push(
+        { text: `In ${whenIn(j.at)} ` },
+        person(j.byId, names),
+        { text: ' ' },
+        { text: 'took them alive', mark: 'crime' },
+        { text: ' in ' },
+        place(j.locationId, names),
+        { text: j.how === 'trap' ? ', with a trap. ' : ', after beating them in a fight. ' },
+      );
+      break;
+    case 'escaped':
+      out.push(
+        { text: 'They got away from ' },
+        person(j.fromId, names),
+        { text: ' in ' },
+        place(j.locationId, names),
+        { text: ', with nothing but the clothes on their back. ' },
+      );
+      break;
+    case 'delivered':
+      out.push(
+        person(j.byId, names),
+        { text: ' handed them over to the watch of ' },
+        place(j.townId, names),
+        { text: `, and was paid ${j.amount} gold for it. ` },
+      );
+      break;
+    case 'sentenced': {
+      const charges = chargesPhrase(j.charges);
+      // Tried before: word of something worse brought them back to court.
+      const again = c.justice.slice(0, c.justice.indexOf(j)).some((k) => k.kind === 'sentenced');
+      out.push(
+        { text: again ? 'When word of worse got out, they were tried again in ' : 'Tried in ' },
+        place(j.townId, names),
+        {
+          text: again
+            ? charges
+              ? ` for ${charges}, and `
+              : ', and '
+            : charges
+              ? ` for ${charges}, they were `
+              : ', they were ',
+        },
+      );
+      if (j.sentence === 'death') {
+        out.push(
+          { text: `sentenced ${SENTENCED_TO[j.method ?? 'hanging']}`, mark: 'death' },
+          { text: '. ' },
+        );
+        break;
+      }
+      const years = Math.max(1, Math.round((j.until - j.at) / YEAR));
+      out.push(
+        { text: 'sentenced', mark: 'crime' },
+        { text: ` to ${countWord(years)} ${years === 1 ? 'year' : 'years'} in prison` },
+      );
+      // Still inside: how long is left.
+      const inside = c.activity.kind === 'jailed' && c.activity.since === j.at && now !== undefined;
+      if (inside) {
+        const left = Math.max(0, (j.until - now) / YEAR);
+        out.push({
+          text:
+            left < 1
+              ? ', and will be out within the year. '
+              : `, and have ${countWord(Math.round(left))} ${Math.round(left) === 1 ? 'year' : 'years'} left to serve. `,
+        });
+      } else {
+        out.push({ text: '. ' });
+      }
+      break;
+    }
+    case 'freed':
+      out.push({ text: `They came out of the jail of ` }, place(j.townId, names), {
+        text: ` in ${whenIn(j.at)}, no outlaw any more. `,
+      });
+      break;
+    case 'head':
+      out.push(person(j.byId, names), { text: ' took their head for the bounty' });
+      if (!c.justice.some((k) => k.kind === 'claimed' || k.kind === 'lost')) {
+        out.push({ text: '; it has yet to be claimed. ' });
+      }
+      break;
+    case 'claimed':
+      out.push(
+        ...(head?.kind === 'head' && head.byId === j.byId
+          ? [{ text: ', and' }]
+          : [{ text: head ? ', and ' : '' }, person(j.byId, names)]),
+        { text: ` claimed the ${j.amount}-gold bounty on it in ` },
+        place(j.townId, names),
+        { text: ` in ${whenIn(j.at)}. ` },
+      );
+      break;
+    case 'lost':
+      out.push({
+        text: head
+          ? ', but the head was lost before anyone could claim the bounty. '
+          : 'Their head was lost before anyone could claim the bounty. ',
+      });
+      break;
+    case 'turned':
+      out.push(
+        { text: `In ${whenIn(j.at)} they ` },
+        { text: turned === 0 ? 'turned outlaw' : 'turned outlaw again', mark: 'crime' },
+        { text: `${TURNED_FOR[j.reason]}. ` },
+      );
+      onTurn();
+      break;
+  }
+
+  return out;
+}
 
 /** What became of a murder victim's body, and of the secret. */
 function bodyOf(c: Character, names: NameResolver): Segment[] {

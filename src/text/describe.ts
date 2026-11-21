@@ -304,6 +304,12 @@ function describeCrime(e: EventOfType<'crime.commit'>, h: Helpers): Part[] {
   return told;
 }
 
+/** A prison term in whole years: "a year", "seven years". */
+function prisonTerm(seconds: number): string {
+  const years = Math.max(1, Math.round(seconds / (360 * 86_400)));
+  return years === 1 ? 'a year' : `${countWord(years)} years`;
+}
+
 const RETIRE_REASONS = {
   age: 'at last, their best years behind them,',
   wealth: 'with a fortune made',
@@ -1187,7 +1193,7 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
             e.data.charges && chargesPhrase(e.data.charges)
               ? ` for ${chargesPhrase(e.data.charges)}`
               : '',
-            ` and sentenced to ${describeDuration(e.data.until - e.t)} in prison.`,
+            ` and sentenced to ${prisonTerm(e.data.until - e.t)} in prison.`,
           ],
   ],
   'crime.conceal': [
