@@ -28,9 +28,11 @@ town's market, or watch a dungeon's population change over time.
 
 ## Status
 
-The current version is **0.2.0, the Interface Update**: a main menu, a full-width
-layout (or compact), a light mode, colour for what matters, hover previews and
-"Show on map". What changed in each version is in [`CHANGELOG.md`](CHANGELOG.md),
+The current version is **0.3.0, the Outlaws Update**: crime as a living part of
+every world. Outlaws rob caravans, shops and houses as well as travelers; word
+of their crimes travels town to town; and their careers end in restitution, a
+head carried in for the bounty, or capture, trial, prison or execution, all told
+in their life stories. What changed in each version is in [`CHANGELOG.md`](CHANGELOG.md),
 and players see it under "What's new" in the app.
 
 Phase 11 (Scale & Ship), the last of the plan, is built; the final name is

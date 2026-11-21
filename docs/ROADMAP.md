@@ -997,6 +997,8 @@ missed.** Notes from building it (design in `ARCHITECTURE.md` §4.13):
 
 ## 0.3.0 — The Outlaws Update
 
+**Status: released as 0.3.0 (2026-11-21).** Every step below is done; the notes under each say what was built and what it measured.
+
 **Goal:** Crime is a living part of every world, large or small, and a
 hard life: each crime makes the next one harder to get away with, news of it
 travels town to town, and an outlaw's career ends in a pardon, a bounty
@@ -1202,13 +1204,41 @@ site), and is checked against the targets below with the crime audit.
    - _Exit:_ outlaws' careers end in every way above. In proportion is still
      to tune: hunts rarely kill, so heads stay scarce in small worlds.
 
-9. **Balance and release.**
-   - Tune so that each crime is worth less than the last: notoriety compounds,
-     towns close, bounties grow and draw better hunters.
-   - Targets across world sizes: crime in every era; most careers ending
-     within a few years; murderers rarely dying of old age.
-   - Then release 0.3.0: players' notes, changelog, a save file from 0.2.0
-     kept as a fixture, the architecture notes, and a tag.
+9. **Balance and release.** _Done._
+   - A prisoner a murder is later pinned on is tried again, for their life.
+   - Measured first: careers were mostly short, but a few outlaws outlevelled
+     every hunter and ran for 50–90 years with 400–900 crimes, so crime piled
+     up on them, and some decades of a small world saw no crime at all.
+   - Each crime worth less than the last: rich outlaws lurk less (a haul
+     matters less to a full purse); towns close as word spreads (step 4); and
+     bounties of 200 or more raise a posse, so the worst draw bands of hunters
+     rather than lone ones. Hunters who find their quarry gone may follow a
+     fresh trail to somewhere near (likelier with awareness), and a hunted
+     outlaw finds it harder to slip away.
+   - The long road tells: after two years, an outlaw shut out by the towns
+     (twice as likely for a murderer, who can buy no pardon) may flee for
+     distant lands, a price still on their head; one nobody knows of may
+     simply stop. Restitution takes a year on the road and half a year quiet.
+   - Temptation is a little commoner (0.3% a day per good reason, scaled by
+     conscience), three times as easy with no outlaw at large and half again
+     with one, so every era has outlaws without flooding busy worlds.
+   - Measured, eight 20-adventurer worlds over a century: every target holds.
+     Crime in every decade; median careers 2.5–4.3 years, 55–97% ending within
+     five, at most 132 crimes in one career; no murderer died of old age (0 of
+     14); the top outlaw commits 6–12% of a world's crimes; 61–100% of crimes
+     have no named victim. Careers end in every way: going straight 3–37 per
+     world, heads 0–6, taken alive 2–18 (then tried, a few executed, some
+     dying in prison, the rest freed), fled or killed the rest. Town gold and
+     prices stay in their 0.2.0 range.
+   - At 200 adventurers over 15 years, every target holds but one: in one of
+     two worlds only 32% of crimes are nameless, as named travelers crowd the
+     roads. Heads come in more often there (9–14 a world, with 23–31 taken
+     alive).
+   - Still uneven: in small worlds hunters rarely win outright against the
+     outlaws they find, so heads stay rarer than captures. A large world runs
+     about 10% slower than on 0.2.0.
+   - Released as 0.3.0: players' notes, changelog, a save from 0.2.0 kept as a
+     fixture (its standing carried over as what the towns have heard).
      (`SAME_HISTORY_SINCE` moved to 0.3.0 with step 2.)
 
 **Alongside (separately, as 0.2.1 if wanted):** magic is used thousands of

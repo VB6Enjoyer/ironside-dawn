@@ -675,7 +675,8 @@ Built for 0.3.0 (`src/sim/systems/crime.ts`, `notoriety.ts`, `outlaws.ts`).
   inside (3% a year, death cause `prison`) or of old age. Freed, they are no
   outlaw, each town's heat is settled down to _suspected_, and they adventure
   again or retire (`character.retire`, reason `prison`), likelier the longer
-  they served, the older and the more timid.
+  they served, the older and the more timid. A prisoner a murder is pinned on
+  while inside is sentenced again, to death.
 - **Crimes unheard of.** Crimes against named people are pinned on the culprit
   only by chance (`identifyChance`): a base by place (town 0.8, wilds 0.55,
   dungeon 0.35), more for each witness (victims who live, the victim's
@@ -694,6 +695,16 @@ Built for 0.3.0 (`src/sim/systems/crime.ts`, `notoriety.ts`, `outlaws.ts`).
   log. A killing's `DeathCause` records the weapon and whether it was murder;
   `Death.pinnedAt` when an unseen murder came to light. Restitution pays each
   known crime's take once, to the town it was against.
+- **Balance** (0.3.0 step 9). Temptation scales with how many outlaws are at
+  large (three times with none, half again with one, worked out once a day).
+  Bounties of 200 or more raise a posse (`rallyAgainst` with no limit on the
+  leader's level, and hunts weigh the posse). Hunters who find their quarry
+  gone may follow a trail (`trailOf`, within 16 road hours, 25% plus awareness
+  over 200). A hunted side's flee difficulty rises by 9 (`CORNERED_PENALTY`).
+  After two years an outlaw the towns shut out may flee (`considerFleeing`,
+  death cause `departed` with `fled`), twice as likely with blood on their
+  hands; one nobody knows of may stop. Restitution needs a year on the road and
+  180 days quiet, at 1% a day times honor.
 
 ---
 

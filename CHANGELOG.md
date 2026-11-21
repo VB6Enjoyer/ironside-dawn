@@ -8,6 +8,8 @@ The public notes players see under "What's new" are kept in `src/ui/releases.ts`
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-21
+
 ### Added
 
 - `npm run audit:crime`, a headless crime audit over several worlds (`tools/crime-audit.ts`): who turns outlaw and when, crimes by kind and how they spread across outlaws, how careers end, how often adventurers are broke, against the targets of the Outlaws Update.
@@ -20,7 +22,7 @@ The public notes players see under "What's new" are kept in `src/ui/releases.ts`
 - Restitution (`src/sim/systems/justice.ts`): an outlaw with no blood on their hands who has tired of the life can pay back what they took in every town that knows of it, with interest and a fine, to clear their name and lift the bounty. The towns still eye them warily until time earns their trust back.
 - Bounties are paid in town: whoever kills an outlaw takes the head and must carry it to a town that has heard of them, where the reward is split with their party. A head carried too long is lost, and the bounty with it.
 - Outlaws can be taken alive: a hunter with the craft may lay a trap where the outlaw lurks, or try a takedown once the outlaw is badly hurt in a fight. Either can fail, and a failed takedown can wound or kill the hunter. A live capture pays two and a half times the bounty. The captive is stripped of gold and gear and led to the nearest town that would pay, and may escape on the road, leaving what was taken from them with the captors. Delivered, they stand trial.
-- Trials (`src/sim/systems/justice.ts`): an outlaw brought in alive is tried on what any town knows of them. A known murderer is sentenced to death, and put to death a few days later before a crowd. Anyone else goes to prison for a year or more, longer for more crimes and more taken (fifteen years at most). Prisoners can die behind bars; freed, they are no longer outlaws, the towns still eye them for a while, and they go back to adventuring or settle down in town.
+- Trials (`src/sim/systems/justice.ts`): an outlaw brought in alive is tried on what any town knows of them. A known murderer is sentenced to death, and put to death a few days later before a crowd. Anyone else goes to prison for a year or more, longer for more crimes and more taken (fifteen years at most). A prisoner a murder is later pinned on is tried again, for their life. Prisoners can die behind bars; freed, they are no longer outlaws, the towns still eye them for a while, and they go back to adventuring or settle down in town.
 - Crimes can go unheard of (`src/sim/systems/notoriety.ts`, `src/sim/systems/outlaws.ts`). Whether anyone can name the culprit of a robbery or murder depends on how many saw it, how well they knew the culprit, and where it happened (a town, the wilds, a dungeon); stealthy outlaws slip by more often, though most crimes are still pinned on someone. A murder with no witnesses is pinned on its killer only months or years later, if ever, and the killer may hide the body, so that as far as anyone knows the victim simply vanished. The live feed shows every crime as it happens, and says when nobody could tell who did it.
 - Life stories tell the whole of someone's dealings with justice, kept on the character so they never fade from the record (`src/text/biography.ts`, `src/sim/model/crime.ts`): when they turned outlaw (each time), whom they murdered and whose bodies they hid, going straight at a town's court and what it cost, who took them alive and where, escapes, who handed them over and for how much, where they were tried, on what charges, and the sentence (with the years left for someone still inside), release, and who took their head and who claimed the bounty on it (or that it was lost). A murder victim's story says who murdered them and with what, and whether the body was found or hidden (folk taking them for vanished, or gone to distant lands), and when word got out of who did it. The character card and Behind Bars show the charges.
 - Towns put murderers to death by their own custom (`src/sim/systems/justice.ts`): hanging by default, beheading by sword in the Japonic lands, the axe in the Norse north, arrows among the elves, the chasm under the dwarven halls, stoning on the steppe. The live feed, life stories and the Gallows say which.
@@ -101,7 +103,8 @@ The public notes players see under "What's new" are kept in `src/ui/releases.ts`
 
 - The first release: procedural worlds with their people, markets, generations, cultures and myths; the observatory to watch them; world settings, content packs, saves and links; and the desktop app. How it was built is told phase by phase in `docs/ROADMAP.md`.
 
-[Unreleased]: https://github.com/VB6Enjoyer/ironside-dawn/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/VB6Enjoyer/ironside-dawn/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/VB6Enjoyer/ironside-dawn/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/VB6Enjoyer/ironside-dawn/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/VB6Enjoyer/ironside-dawn/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/VB6Enjoyer/ironside-dawn/releases/tag/v0.1.0
