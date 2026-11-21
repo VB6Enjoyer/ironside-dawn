@@ -87,6 +87,7 @@ export function turnOutlaw(ctx: SimContext, character: Character, reason: Outlaw
     lastSeenAt: locationId,
   };
   delete character.hardshipSince;
+  character.justice.push({ kind: 'turned', at: now, reason });
   if (character.partyId) leaveParty(ctx, character, 'outlaw');
   ctx.emit(
     { type: 'outlaw.turn', data: { characterId: character.id, locationId, reason } },

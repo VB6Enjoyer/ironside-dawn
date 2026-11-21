@@ -33,6 +33,7 @@ export {
   traitWord,
 } from './mind';
 export { biography, causeOfDeath, deathLine, whenIn } from './biography';
+export { chargesPhrase } from './justice';
 export { EVENT_CATEGORIES, EVENT_TONES, eventCategory, eventTone } from './categories';
 export type { EventCategory } from './categories';
 export { goodsAmount, goodsList, SHOCK_NAMES } from './goods';

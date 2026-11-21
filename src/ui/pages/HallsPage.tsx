@@ -1,6 +1,12 @@
 import type { SimHost } from '../../host';
 import { DAY } from '../../sim';
-import { deathLine, formatTimestamp, SPECIES_NAMES, type NameResolver } from '../../text';
+import {
+  chargesPhrase,
+  deathLine,
+  formatTimestamp,
+  SPECIES_NAMES,
+  type NameResolver,
+} from '../../text';
 import { formatCount, lifeYears } from '../format';
 import { Prose, type ProseLinks } from '../components/Prose';
 import { useQuery } from '../useHost';
@@ -228,7 +234,9 @@ export function HallsPage({
 
       <section className="hall">
         <h2>Behind Bars</h2>
-        <p className="muted">Outlaws brought in alive: serving their years, or waiting to hang.</p>
+        <p className="muted">
+          Outlaws brought in alive: serving their years, or awaiting their execution.
+        </p>
         {halls.prisoners.length === 0 ? (
           <p className="muted">The jails stand empty.</p>
         ) : (
@@ -238,6 +246,7 @@ export function HallsPage({
                 <th>Name</th>
                 <th>Held in</th>
                 <th>Sentence</th>
+                <th>For</th>
                 <th>Until</th>
               </tr>
             </thead>
@@ -253,9 +262,10 @@ export function HallsPage({
                   <td>{place(p.townId)}</td>
                   <td className={p.sentence === 'death' ? 'mark mark-death' : 'mark mark-crime'}>
                     {p.sentence === 'death'
-                      ? 'to hang'
+                      ? 'death'
                       : `${Math.max(1, Math.round((p.until - p.since) / (360 * DAY)))} years`}
                   </td>
+                  <td className="muted">{chargesPhrase(p.charges) || '—'}</td>
                   <td>{formatTimestamp(p.until)}</td>
                 </tr>
               ))}
@@ -266,9 +276,11 @@ export function HallsPage({
 
       <section className="hall">
         <h2>The Gallows</h2>
-        <p className="muted">Murderers hanged for their crimes, the latest first.</p>
+        <p className="muted">
+          Murderers put to death for their crimes, by each town's custom, the latest first.
+        </p>
         {halls.hanged.length === 0 ? (
-          <p className="muted">Nobody has hanged yet.</p>
+          <p className="muted">Nobody has been put to death yet.</p>
         ) : (
           <ol className="graveyard">
             {halls.hanged.map((f) => (

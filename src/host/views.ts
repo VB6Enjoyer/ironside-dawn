@@ -8,6 +8,7 @@ import {
   renownOf,
   toCalendar,
   type Character,
+  type Charges,
   type RegionId,
   type CharacterId,
   type EventQuery,
@@ -358,6 +359,7 @@ export function hallsView(sim: Simulation): HallsView {
               since: c.activity.since,
               until: c.activity.until,
               sentence: c.activity.sentence,
+              charges: lastCharges(c),
             },
           ]
         : [],
@@ -407,6 +409,15 @@ export function hallsView(sim: Simulation): HallsView {
     prisoners,
     hanged,
   };
+}
+
+/** What the latest court convicted someone of. */
+function lastCharges(c: Character): Charges {
+  for (let i = c.justice.length - 1; i >= 0; i--) {
+    const j = c.justice[i]!;
+    if (j.kind === 'sentenced') return j.charges;
+  }
+  return {};
 }
 
 function fallenEntry(c: Character): FallenEntry {

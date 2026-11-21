@@ -16,7 +16,7 @@ import type {
 import type { CreatureRef } from './encounter';
 import type { CharacterId, EncounterId, ItemId, LocationId, PartyId } from './ids';
 import type { Opinion, Outlaw } from './social';
-import type { Captivity, Crime, Head, Notoriety } from './crime';
+import type { Captivity, Crime, ExecutionMethod, Head, Judgment, Notoriety } from './crime';
 import type { Equipment, Item } from './item';
 import type { Drives, Expectation, Goal, Memory } from './mind';
 import type { PriceNote } from './market';
@@ -126,6 +126,8 @@ export interface Character {
   stolenFrom: LocationId[];
   /** Outlaws' heads carried to claim the bounties on them (0.3.0). */
   heads: Head[];
+  /** Their dealings with justice, oldest first, for their life story (0.3.0). */
+  justice: Judgment[];
   /** Taken alive and under escort (0.3.0). */
   captive?: Captivity;
   /** The captive they are escorting to justice (0.3.0). */
@@ -188,16 +190,25 @@ export interface Death {
   readonly cause: DeathCause;
   /** Their killer hid the body: as far as anyone knows, they vanished (0.3.0). */
   readonly hidden?: boolean;
+  /** When word got out of who killed them, for a murder nobody saw (0.3.0). */
+  readonly pinnedAt?: number;
 }
 
 export type DeathCause =
   | { readonly kind: 'creature'; readonly creature: CreatureRef }
-  | { readonly kind: 'character'; readonly characterId: CharacterId }
+  | {
+      readonly kind: 'character';
+      readonly characterId: CharacterId;
+      /** The killer's weapon, by base (0.3.0). */
+      readonly weapon?: string;
+      /** Killed by an outlaw: murder (0.3.0). */
+      readonly murder?: boolean;
+    }
   | { readonly kind: 'trap'; readonly trap: TrapId }
   | { readonly kind: 'magic'; readonly spell: SpellId }
   | { readonly kind: 'age'; readonly age: number }
-  /** Hanged for murder (0.3.0). */
-  | { readonly kind: 'executed' }
+  /** Put to death for murder, by the town's way of it (0.3.0). */
+  | { readonly kind: 'executed'; readonly method?: ExecutionMethod }
   /** Died behind bars (0.3.0). */
   | { readonly kind: 'prison' }
   /** Not a death: they left for distant lands, and the world stopped following them. */

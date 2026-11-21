@@ -13,6 +13,7 @@ import type {
   WeatherId,
 } from '../content';
 import type {
+  Charges,
   Bounty,
   WorldSettings,
   Calling,
@@ -293,12 +294,14 @@ export interface FallenEntry extends CharacterSummary {
   readonly hidden?: boolean;
 }
 
-/** Someone behind bars (0.3.0): serving years, or waiting to hang. */
+/** Someone behind bars (0.3.0): serving years, or awaiting execution. */
 export interface PrisonerEntry extends CharacterSummary {
   readonly townId: LocationId;
   readonly since: number;
   readonly until: number;
   readonly sentence: 'prison' | 'death';
+  /** What they were convicted of: known crimes by kind. */
+  readonly charges: Charges;
 }
 
 export interface WantedEntry extends CharacterSummary {
@@ -320,7 +323,7 @@ export interface HallsView {
   readonly dread: readonly DreadEntry[];
   /** Behind bars now, the condemned first, then the soonest out (0.3.0). */
   readonly prisoners: readonly PrisonerEntry[];
-  /** Hanged for murder, the latest first (0.3.0). */
+  /** Put to death for murder, the latest first (0.3.0). */
   readonly hanged: readonly FallenEntry[];
 }
 

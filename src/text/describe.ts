@@ -23,6 +23,7 @@ import type {
 import { describeDuration, seasonName } from './calendar';
 import { anItem, itemName, legendTitle, SKILL_PHRASES, spellName } from './items';
 import { goodsList } from './goods';
+import { chargesPhrase, EXECUTED, withWeapon } from './justice';
 import { describeWhy } from './mind';
 import { peopleName, roleTitle, type NameResolver } from './names';
 import {
@@ -422,8 +423,12 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
         return [c, ` is consumed by a backfiring ${spellName(cause.spell)} in `, l, `${legacy}.`];
       }
       if (cause.kind === 'character') {
+        const weapon = withWeapon(cause.weapon);
+        if (cause.murder) {
+          return [c, ' is murdered by ', h.c(cause.characterId), `${weapon} in `, l, `${legacy}.`];
+        }
         return h.pick<Part[]>([
-          [c, ' is cut down by ', h.c(cause.characterId), ' in ', l, `${legacy}.`],
+          [c, ' is cut down by ', h.c(cause.characterId), `${weapon} in `, l, `${legacy}.`],
           [c, ' dies at the hands of ', h.c(cause.characterId), ' in ', l, `${legacy}.`],
         ]);
       }
@@ -434,7 +439,12 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
         ]);
       }
       if (cause.kind === 'executed') {
-        return [c, ' is hanged for murder before a crowd in ', h.place(e.data.locationId), '.'];
+        return [
+          c,
+          ` is ${EXECUTED[cause.method ?? 'hanging']} for murder before a crowd in `,
+          h.place(e.data.locationId),
+          '.',
+        ];
       }
       if (cause.kind === 'prison') {
         return [c, ' dies in the jail of ', h.place(e.data.locationId), ', their time unserved.'];
@@ -1165,12 +1175,15 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
             h.c(e.data.characterId),
             ' is tried in ',
             h.place(e.data.locationId),
-            ` and sentenced to hang for murder, ${describeDuration(e.data.until - e.t)} hence.`,
+            ` and sentenced to death for murder, to be ${EXECUTED[e.data.method ?? 'hanging']} ${describeDuration(e.data.until - e.t)} hence.`,
           ]
         : [
             h.c(e.data.characterId),
             ' is tried in ',
             h.place(e.data.locationId),
+            e.data.charges && chargesPhrase(e.data.charges)
+              ? ` for ${chargesPhrase(e.data.charges)}`
+              : '',
             ` and sentenced to ${describeDuration(e.data.until - e.t)} in prison.`,
           ],
   ],

@@ -35,6 +35,7 @@ import {
   describeWhy,
   personalitySummary,
   anItem,
+  chargesPhrase,
   describeActivity,
   describeDeed,
   describeEvent,
@@ -414,6 +415,8 @@ function Bonds({
     .filter(([, s]) => s !== 'welcome')
     .sort((a, b) => STANDING_ORDER[a[1]] - STANDING_ORDER[b[1]]);
   const quietCrimes = !record ? character.crimes.length : 0;
+  const sentenced = [...character.justice].reverse().find((j) => j.kind === 'sentenced');
+  const charges = sentenced?.kind === 'sentenced' ? chargesPhrase(sentenced.charges) : '';
   const leader = party ? world.characters.get(party.leaderId) : undefined;
 
   return (
@@ -482,8 +485,9 @@ function Bonds({
             <dt>Sentence</dt>
             <dd className="outlaw">
               {character.activity.sentence === 'death'
-                ? `to hang, on ${formatTimestamp(character.activity.until)}`
+                ? `death, on ${formatTimestamp(character.activity.until)}`
                 : `prison, until ${formatTimestamp(character.activity.until)}`}
+              {charges && `, for ${charges}`}
             </dd>
           </>
         )}

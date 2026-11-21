@@ -1,9 +1,10 @@
 import type { PastimeId } from '../content';
 import type { Character, Deed, LocationId, Occupation } from '../sim';
+import { EXECUTED } from './justice';
 import type { NameResolver } from './names';
 import type { Segment } from './describe';
 import { SKILL_PHRASES, spellName } from './items';
-import { aCreature, article } from './words';
+import { aCreature, article, capitalize } from './words';
 
 const PASTIME_PLACES: Record<PastimeId, string> = {
   tavern: 'At a tavern in ',
@@ -96,7 +97,7 @@ export function describeActivity(character: Character, names: NameResolver): Seg
         case 'character': {
           const name = names.character(death.cause.characterId)?.name ?? 'someone';
           return [
-            { text: 'Killed by ' },
+            { text: death.cause.murder ? 'Murdered by ' : 'Killed by ' },
             { text: name, ref: { kind: 'character', id: death.cause.characterId } },
             { text: ' in ' },
             where,
@@ -108,7 +109,10 @@ export function describeActivity(character: Character, names: NameResolver): Seg
         case 'age':
           return [{ text: `Died of old age, ${death.cause.age} years old, in ` }, where];
         case 'executed':
-          return [{ text: 'Hanged for murder in ' }, where];
+          return [
+            { text: `${capitalize(EXECUTED[death.cause.method ?? 'hanging'])} for murder in ` },
+            where,
+          ];
         case 'prison':
           return [{ text: 'Died in prison in ' }, where];
         case 'departed':

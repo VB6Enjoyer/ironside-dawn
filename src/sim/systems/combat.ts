@@ -534,7 +534,12 @@ function killCharacter(
   const slayers = (side?.characters ?? [])
     .filter((id) => encounter.out[id] !== 'dead')
     .map((id) => ctx.world.characters.get(id)!);
-  die(ctx, victim, { kind: 'character', characterId: killer.id });
+  die(ctx, victim, {
+    kind: 'character',
+    characterId: killer.id,
+    weapon: killer.equipment.weapon.base,
+    ...(killer.outlaw ? { murder: true } : {}),
+  });
   // Who lived to see it: the victim's companions still on their feet, and anyone else about.
   const theirs = encounter.sides.find((s) => s.characters.includes(victim.id))?.characters ?? [];
   const seen = theirs
@@ -749,7 +754,7 @@ function end(ctx: SimContext, encounter: Encounter, winner: Side | null): void {
   if (captured.length > 0 && winner === 0) {
     const place = world.locations.get(encounter.locationId)!;
     const captors = standingOn(0).map((id) => world.characters.get(id)!);
-    for (const id of captured) capture(ctx, world.characters.get(id)!, captors, place);
+    for (const id of captured) capture(ctx, world.characters.get(id)!, captors, place, 'takedown');
   }
   // Everywhere else, survivors pick up their lives where they are. A hunt,
   // won or not, scratches the same itch as a delve.

@@ -205,6 +205,7 @@ export function createCharacter(ctx: SimContext, home: Location, arrival: Arriva
     notoriety: {},
     stolenFrom: [],
     heads: [],
+    justice: [],
     locationId: home.id,
     activity: settled ? { kind: 'living' } : { kind: 'idle' },
     wakeToken: 0,

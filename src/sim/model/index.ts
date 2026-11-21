@@ -35,9 +35,12 @@ export type { DriveId, Drives, Expectation, Goal, Memory, MemoryEvent, Motive } 
 export type { Bounty, Opinion, Outlaw, OutlawReason, Party } from './social';
 export type {
   Captivity,
+  Charges,
   Crime,
+  ExecutionMethod,
   CrimeKind,
   Head,
+  Judgment,
   News,
   Notoriety,
   Standing,

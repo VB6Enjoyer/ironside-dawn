@@ -12,6 +12,7 @@ import {
 import { seasonName } from './calendar';
 import type { Segment } from './describe';
 import { spellName } from './items';
+import { chargesPhrase, EXECUTED, SENTENCED_TO, withWeapon } from './justice';
 import { personalitySummary } from './mind';
 import { SPECIES_NAMES, type NameResolver } from './names';
 import { aCreature, article, capitalize, countWord, listOf, TRAP_NAMES } from './words';
@@ -65,7 +66,11 @@ export function causeOfDeath(cause: DeathCause, names: NameResolver): Segment[] 
     case 'creature':
       return [{ text: `slain by ${aCreature(cause.creature)}` }];
     case 'character':
-      return [{ text: 'killed by ' }, person(cause.characterId, names)];
+      return [
+        { text: cause.murder ? 'murdered by ' : 'killed by ' },
+        person(cause.characterId, names),
+        { text: withWeapon(cause.weapon) },
+      ];
     case 'trap':
       return [{ text: `killed by ${article(TRAP_NAMES[cause.trap])} ${TRAP_NAMES[cause.trap]}` }];
     case 'magic':
@@ -73,7 +78,7 @@ export function causeOfDeath(cause: DeathCause, names: NameResolver): Segment[] 
     case 'age':
       return [{ text: `of old age, ${cause.age} years old` }];
     case 'executed':
-      return [{ text: 'hanged for murder' }];
+      return [{ text: `${EXECUTED[cause.method ?? 'hanging']} for murder` }];
     case 'prison':
       return [{ text: 'in prison' }];
     case 'departed':
@@ -97,6 +102,8 @@ export function biography(
   names: NameResolver,
   /** The great dead, to say so of a parent. */
   heroes: ReadonlySet<CharacterId> = new Set(),
+  /** The world's time now, to tell how much of a sentence is left. */
+  now?: number,
 ): Segment[][] {
   const alive = c.death === null;
   const was = alive ? 'is' : 'was';
@@ -246,31 +253,41 @@ export function biography(
 
   // Crime and justice.
   const justice: Segment[] = [];
-  if (c.outlaw) {
-    const { since, crimes, murders } = c.outlaw;
-    const record =
-      crimes === 0
-        ? 'Nothing has come of it yet.'
-        : `${capitalize(countWord(crimes))} ${crimes === 1 ? 'crime' : 'crimes'}${
-            murders > 0
-              ? `, ${countWord(murders)} of them ${murders === 1 ? 'a murder' : 'murders'},`
-              : ''
-          } followed.`;
+  const turns = c.justice.filter((j) => j.kind === 'turned');
+  // Outlaws from before 0.3.0 have no record of turning; their outlaw record says when.
+  if (turns.length === 0 && c.outlaw) {
+    turns.push({ kind: 'turned', at: c.outlaw.since, reason: c.outlaw.reason ?? 'want' });
+  }
+  turns.forEach((turn, i) => {
     justice.push(
-      { text: `In ${whenIn(since)} they ` },
-      { text: 'turned outlaw', mark: 'crime' },
-      { text: `${TURNED_FOR[c.outlaw.reason ?? 'want']}. ${record} ` },
+      { text: `In ${whenIn(turn.at)} they ` },
+      { text: i === 0 ? 'turned outlaw' : 'turned outlaw again', mark: 'crime' },
+      { text: `${TURNED_FOR[turn.reason]}. ` },
     );
+  });
+  if (c.outlaw) {
+    const { crimes, murders } = c.outlaw;
+    justice.push({
+      text:
+        crimes === 0
+          ? 'Nothing has come of it yet. '
+          : `${capitalize(countWord(crimes))} ${crimes === 1 ? 'crime' : 'crimes'}${
+              murders > 0
+                ? `, ${countWord(murders)} of them ${murders === 1 ? 'a murder' : 'murders'},`
+                : ''
+            } followed. `,
+    });
   }
   // What their crimes were, besides robbing and killing named folk.
   const deeds = crimeDeeds(c);
   if (deeds) {
     justice.push({
-      text: c.outlaw
-        ? `They ${deeds}. `
-        : `Though never an outlaw, now and then they ${deeds}${
-            c.crimes.length > 1 ? `, ${countWord(c.crimes.length)} times in all` : ''
-          }. `,
+      text:
+        c.outlaw || turns.length > 0
+          ? `They ${deeds}. `
+          : `Though never an outlaw, now and then they ${deeds}${
+              c.crimes.length > 1 ? `, ${countWord(c.crimes.length)} times in all` : ''
+            }. `,
     });
   }
   const barred = (Object.keys(c.notoriety) as LocationId[]).filter(
@@ -289,6 +306,28 @@ export function biography(
       { text: '. ' },
     );
   }
+  // Those they murdered, and the bodies they hid.
+  const hid = events.flatMap((e) =>
+    e.type === 'crime.conceal' && e.data.characterId === c.id ? [e.data.victimId] : [],
+  );
+  const murdered = [
+    ...new Set([
+      ...c.crimes.flatMap((k) => (k.kind === 'murder' && k.victimId ? [k.victimId] : [])),
+      ...hid,
+    ]),
+  ];
+  if (murdered.length > 0) {
+    justice.push({ text: 'They ' }, { text: 'murdered', mark: 'death' }, { text: ' ' });
+    justice.push(...people(murdered.slice(0, 4), names));
+    justice.push({ text: murdered.length > 4 ? ', among others' : '' });
+    if (hid.length > 0) {
+      justice.push(
+        { text: hid.length === 1 ? ', and hid the body of ' : ', and hid the bodies of ' },
+        ...people(hid.slice(0, 3), names),
+      );
+    }
+    justice.push({ text: '. ' });
+  }
   const claims = events.filter((e) => e.type === 'bounty.claim' && e.data.characterId === c.id);
   if (claims.length > 0) {
     const outlaws = claims.flatMap((e) => (e.type === 'bounty.claim' ? [e.data.outlawId] : []));
@@ -300,51 +339,128 @@ export function biography(
       { text: '. ' },
     );
   }
-  // Taken alive, jailed, escaped (0.3.0).
-  for (const e of events) {
-    if (e.type === 'capture.attempt' && e.data.outlawId === c.id && e.data.success) {
-      justice.push(
-        { text: `In ${whenIn(e.t)} ` },
-        person(e.data.characterId, names),
-        { text: ' ' },
-        { text: 'took them alive', mark: 'crime' },
-        { text: '. ' },
-      );
-    } else if (e.type === 'capture.escape' && e.data.characterId === c.id) {
-      justice.push({ text: 'They got away from ' }, person(e.data.captorId, names), {
-        text: ', with nothing but the clothes on their back. ',
-      });
-    } else if (e.type === 'outlaw.sentenced' && e.data.characterId === c.id) {
-      if (e.data.sentence === 'death') {
+  // Their own dealings with justice, in order (0.3.0).
+  const head = c.justice.find((j) => j.kind === 'head');
+  for (const j of c.justice) {
+    switch (j.kind) {
+      case 'reformed':
+        if (j.paid <= 0) {
+          justice.push(
+            { text: `In ${whenIn(j.at)}, in ` },
+            place(j.townId, names),
+            { text: ', they ' },
+            { text: 'gave up the outlaw life', mark: 'crime' },
+            { text: ', with nothing anyone could pin on them. ' },
+          );
+          break;
+        }
         justice.push(
-          { text: 'Tried in ' },
-          place(e.data.locationId, names),
-          { text: ', they were ' },
-          { text: 'sentenced to hang', mark: 'death' },
-          { text: ' for murder. ' },
+          { text: `In ${whenIn(j.at)} they went before the court of ` },
+          place(j.townId, names),
+          { text: ' and ' },
+          { text: 'paid back what they took', mark: 'crime' },
+          {
+            text: `, ${j.paid} gold with interest and fines, and gave up the outlaw life; it would be a while before the towns trusted them again. `,
+          },
         );
-      } else {
-        const years = Math.max(1, Math.round((e.data.until - e.t) / (360 * 86_400)));
+        break;
+      case 'captured':
         justice.push(
-          { text: 'Tried in ' },
-          place(e.data.locationId, names),
-          { text: ', they were ' },
+          { text: `In ${whenIn(j.at)} ` },
+          person(j.byId, names),
+          { text: ' ' },
+          { text: 'took them alive', mark: 'crime' },
+          { text: ' in ' },
+          place(j.locationId, names),
+          { text: j.how === 'trap' ? ', with a trap. ' : ', after beating them in a fight. ' },
+        );
+        break;
+      case 'escaped':
+        justice.push(
+          { text: 'They got away from ' },
+          person(j.fromId, names),
+          { text: ' in ' },
+          place(j.locationId, names),
+          { text: ', with nothing but the clothes on their back. ' },
+        );
+        break;
+      case 'delivered':
+        justice.push(
+          person(j.byId, names),
+          { text: ' handed them over to the watch of ' },
+          place(j.townId, names),
+          { text: `, and was paid ${j.amount} gold for it. ` },
+        );
+        break;
+      case 'sentenced': {
+        const charges = chargesPhrase(j.charges);
+        justice.push({ text: 'Tried in ' }, place(j.townId, names), {
+          text: charges ? ` for ${charges}, they were ` : ', they were ',
+        });
+        if (j.sentence === 'death') {
+          justice.push(
+            { text: `sentenced ${SENTENCED_TO[j.method ?? 'hanging']}`, mark: 'death' },
+            { text: '. ' },
+          );
+          break;
+        }
+        const years = Math.max(1, Math.round((j.until - j.at) / YEAR));
+        justice.push(
           { text: 'sentenced', mark: 'crime' },
-          { text: ` to ${countWord(years)} ${years === 1 ? 'year' : 'years'} in prison. ` },
+          { text: ` to ${countWord(years)} ${years === 1 ? 'year' : 'years'} in prison` },
         );
+        // Still inside: how long is left.
+        const inside =
+          c.activity.kind === 'jailed' && c.activity.since === j.at && now !== undefined;
+        if (inside) {
+          const left = Math.max(0, (j.until - now) / YEAR);
+          justice.push({
+            text:
+              left < 1
+                ? ', and will be out within the year. '
+                : `, and have ${countWord(Math.round(left))} ${Math.round(left) === 1 ? 'year' : 'years'} left to serve. `,
+          });
+        } else {
+          justice.push({ text: '. ' });
+        }
+        break;
       }
-    } else if (e.type === 'outlaw.freed' && e.data.characterId === c.id) {
-      justice.push({ text: `They came out in ${whenIn(e.t)}, no outlaw any more. ` });
+      case 'freed':
+        justice.push({ text: `They came out of the jail of ` }, place(j.townId, names), {
+          text: ` in ${whenIn(j.at)}, no outlaw any more. `,
+        });
+        break;
+      case 'head':
+        justice.push(person(j.byId, names), { text: ' took their head for the bounty' });
+        if (!c.justice.some((k) => k.kind === 'claimed' || k.kind === 'lost')) {
+          justice.push({ text: '; it has yet to be claimed. ' });
+        }
+        break;
+      case 'claimed':
+        justice.push(
+          ...(head?.kind === 'head' && head.byId === j.byId
+            ? [{ text: ', and' }]
+            : [{ text: head ? ', and ' : '' }, person(j.byId, names)]),
+          { text: ` claimed the ${j.amount}-gold bounty on it in ` },
+          place(j.townId, names),
+          { text: ` in ${whenIn(j.at)}. ` },
+        );
+        break;
+      case 'lost':
+        justice.push({
+          text: head
+            ? ', but the head was lost before anyone could claim the bounty. '
+            : 'Their head was lost before anyone could claim the bounty. ',
+        });
+        break;
+      case 'turned':
+        break;
     }
   }
+  // Restitution from before 0.3.0 kept no record but the event.
   const reform = events.find((e) => e.type === 'outlaw.reform' && e.data.characterId === c.id);
-  if (reform?.type === 'outlaw.reform') {
-    justice.push({
-      text:
-        reform.data.paid !== undefined && reform.data.paid > 0
-          ? `They paid back what they took, ${reform.data.paid} gold with interest and fines, and went straight.`
-          : 'They paid for their crimes and went straight.',
-    });
+  if (reform && !c.justice.some((j) => j.kind === 'reformed')) {
+    justice.push({ text: 'They paid for their crimes and went straight.' });
   }
   if (justice.length > 0) paragraphs.push(justice);
 
@@ -390,12 +506,34 @@ export function biography(
       ...causeOfDeath(c.death.cause, names),
       { text: ' in ' },
       place(c.death.locationId, names),
-      {
-        text: `, at level ${c.level}.${c.death.hidden ? ' Their body was never found; most thought they had simply vanished.' : ''}`,
-      },
+      { text: `, at level ${c.level}. ` },
+      ...bodyOf(c, names),
     ]);
   }
   return paragraphs.map(trimEnd);
+}
+
+const YEAR = 360 * 86_400;
+
+/** What became of a murder victim's body, and of the secret. */
+function bodyOf(c: Character, names: NameResolver): Segment[] {
+  const death = c.death;
+  if (!death || death.cause.kind !== 'character' || !death.cause.murder) return [];
+  const told: Segment[] = death.hidden
+    ? [
+        {
+          text: 'Their killer hid the body, and it was never found; folk thought they had simply vanished, or left for distant lands.',
+        },
+      ]
+    : [{ text: 'Their body was found where they fell.' }];
+  if (death.pinnedAt !== undefined) {
+    told.push(
+      { text: ` In ${whenIn(death.pinnedAt)} word got out at last that ` },
+      person(death.cause.characterId, names),
+      { text: ' had killed them.' },
+    );
+  }
+  return told;
 }
 
 /** Each kind of crime against the nameless, as a life story tells it. */

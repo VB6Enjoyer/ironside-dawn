@@ -647,8 +647,8 @@ Built for 0.3.0 (`src/sim/systems/crime.ts`, `notoriety.ts`, `outlaws.ts`).
 - **Ways out** (`justice.ts`). _Restitution_: an outlaw with no murder on
   their record or known anywhere, with some honor, who has tired of the life
   (no crime for three months, doors shut in half the towns that know them, or
-  a heavy bounty), may pay, in any town with a court, what each town knows
-  they took, with a quarter in interest and a quarter (at least 10) in fines;
+  a heavy bounty), may pay, in any town with a court, what they took from
+  each town, with a quarter in interest and a quarter (at least 10) in fines;
   the record is cleared and the bounty lifted, but each town's heat is only
   brought down to _suspected_. _Heads_: killing an outlaw pays nothing on the
   spot; an adventurer or merchant takes the head (`Character.heads`) and
@@ -667,9 +667,11 @@ Built for 0.3.0 (`src/sim/systems/crime.ts`, `notoriety.ts`, `outlaws.ts`).
   over, the seized gold goes to the town, and the captive stands trial.
 - **Justice.** The court tries a prisoner on what is known of them: the most
   any town has heard (`knownRecord`), never crimes nobody pinned on them. A
-  known murderer is `jailed` with sentence `death` and hanged three to ten days
-  later (death cause `executed`). Anyone else serves a year, a quarter year per
-  known crime and a year per 250 gold taken, twenty at most; prisoners can die
+  known murderer is `jailed` with sentence `death` and put to death three to
+  ten days later (death cause `executed`, with the town culture's `method`:
+  hanging by default, beheading, the axe, arrows, the chasm or stoning).
+  Anyone else serves a year, a quarter year per known crime (attempts
+  included) and a year per 500 gold taken, fifteen at most; prisoners can die
   inside (3% a year, death cause `prison`) or of old age. Freed, they are no
   outlaw, each town's heat is settled down to _suspected_, and they adventure
   again or retire (`character.retire`, reason `prison`), likelier the longer
@@ -685,6 +687,13 @@ Built for 0.3.0 (`src/sim/systems/crime.ts`, `notoriety.ts`, `outlaws.ts`).
   the body (`Death.hidden`, a `crime.conceal` event): then it comes out after
   about four years, and 60% never do. Avengers rise only for murders known at
   the time. The player always sees what happened; the towns don't.
+- **The record.** Each character keeps their dealings with justice in
+  `Character.justice` (`Judgment`: turned, reformed, captured, escaped,
+  delivered, sentenced with charges and method, freed, head taken, bounty
+  claimed or lost), so life stories don't depend on events still being in the
+  log. A killing's `DeathCause` records the weapon and whether it was murder;
+  `Death.pinnedAt` when an unseen murder came to light. Restitution pays each
+  known crime's take once, to the town it was against.
 
 ---
 

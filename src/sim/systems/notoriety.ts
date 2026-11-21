@@ -373,6 +373,14 @@ function pinCrimes(ctx: SimContext): void {
       [culprit.id],
       townId,
     );
+    // The record now says it is known; a murdered victim's death, who did it and when it came out.
+    const i = culprit.crimes.findIndex(
+      (c) =>
+        c.at === item.crime.at && c.kind === item.crime.kind && c.victimId === item.crime.victimId,
+    );
+    if (i >= 0) culprit.crimes[i] = { ...culprit.crimes[i]!, known: true };
+    const victim = item.crime.victimId ? world.characters.get(item.crime.victimId) : undefined;
+    if (victim?.death) victim.death = { ...victim.death, pinnedAt: now };
     recordCrime(ctx, culprit, { ...item.crime, known: true, at: now }, false);
     return false;
   });

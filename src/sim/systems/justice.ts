@@ -1,7 +1,15 @@
 import type { WeaponId } from '../../content';
 import { DAY, MINUTE } from '../core/time';
 import type { SimContext } from '../context';
-import type { Bounty, Character, CharacterId, Location, LocationId } from '../model';
+import type {
+  Bounty,
+  Character,
+  CharacterId,
+  Charges,
+  ExecutionMethod,
+  Location,
+  LocationId,
+} from '../model';
 import { isAlive, modifier } from './condition';
 import { carriedGear, starterWeapon } from './items';
 import { die } from './death';
@@ -38,21 +46,29 @@ const MIN_HONOR = 0.15;
 const HEAVY_BOUNTY = 150;
 
 /**
- * What it would cost to clear someone's name: in every town that knows of
- * their crimes, what they took, with interest and a fine.
+ * What it would cost to clear someone's name: each known crime's take paid
+ * back once, to the town it was against, with interest, and a fine in every
+ * town that knows of their crimes.
  */
 export function restitutionBill(character: Character): {
   readonly total: number;
   readonly byTown: readonly (readonly [LocationId, number])[];
 } {
+  const owed = new Map<LocationId, number>();
+  const since = character.pardonedAt ?? -Infinity;
+  for (const crime of character.crimes) {
+    if (!crime.known || crime.foiled || crime.at <= since || crime.townId === null) continue;
+    owed.set(crime.townId, (owed.get(crime.townId) ?? 0) + crime.value);
+  }
+  for (const id of Object.keys(character.notoriety) as LocationId[]) {
+    if ((character.notoriety[id]?.heat ?? 0) > 0 && !owed.has(id)) owed.set(id, 0);
+  }
   const byTown: [LocationId, number][] = [];
   let total = 0;
-  for (const id of Object.keys(character.notoriety) as LocationId[]) {
-    const known = character.notoriety[id]!;
-    if (known.value <= 0 && known.heat <= 0) continue;
-    const owed = Math.ceil(known.value * (1 + INTEREST) + Math.max(MIN_FINE, known.value * FINE));
-    byTown.push([id, owed]);
-    total += owed;
+  for (const [id, value] of owed) {
+    const bill = Math.ceil(value * (1 + INTEREST) + Math.max(MIN_FINE, value * FINE));
+    byTown.push([id, bill]);
+    total += bill;
   }
   return { total, byTown };
 }
@@ -102,6 +118,7 @@ export function considerRestitution(ctx: SimContext, character: Character): bool
   }
   character.outlaw = null;
   character.pardonedAt = now;
+  character.justice.push({ kind: 'reformed', at: now, townId: here.id, paid: bill.total });
   ctx.world.bounties.delete(character.id);
   if (character.partyId) leaveParty(ctx, character, 'outlaw');
   ctx.emit(
@@ -175,9 +192,10 @@ export function takeHead(
   if (!ctx.world.bounties.has(outlaw.id)) return;
   if (killer.calling !== 'adventurer' && killer.calling !== 'merchant') return;
   killer.heads.push({ outlawId: outlaw.id, takenAt: ctx.world.time });
+  outlaw.justice.push({ kind: 'head', at: ctx.world.time, locationId, byId: killer.id });
   ctx.emit(
     { type: 'bounty.head', data: { characterId: killer.id, locationId, outlawId: outlaw.id } },
-    [killer.id],
+    [killer.id, outlaw.id],
     locationId,
   );
 }
@@ -204,6 +222,13 @@ export function claimHeads(ctx: SimContext, character: Character, town: Location
     const shares = payBounty(ctx, bounty, bounty.amount, character, town);
     world.bounties.delete(head.outlawId);
     world.tally.bountiesClaimed++;
+    outlaw?.justice.push({
+      kind: 'claimed',
+      at: world.time,
+      townId: town.id,
+      byId: character.id,
+      amount: bounty.amount,
+    });
     ctx.emit(
       {
         type: 'bounty.claim',
@@ -215,7 +240,7 @@ export function claimHeads(ctx: SimContext, character: Character, town: Location
           shares,
         },
       },
-      shares.map((s) => s.characterId),
+      [...shares.map((s) => s.characterId), head.outlawId],
       town.id,
     );
     return false;
@@ -240,9 +265,10 @@ export function justiceDay(ctx: SimContext): void {
 function loseHead(ctx: SimContext, carrier: Character, outlawId: CharacterId): void {
   if (!ctx.world.bounties.delete(outlawId)) return;
   const locationId = carrier.locationId ?? carrier.death?.locationId ?? carrier.homeId;
+  ctx.world.characters.get(outlawId)?.justice.push({ kind: 'lost', at: ctx.world.time });
   ctx.emit(
     { type: 'bounty.lost', data: { characterId: carrier.id, locationId, outlawId } },
-    [carrier.id],
+    [carrier.id, outlawId],
     locationId,
   );
 }
@@ -316,7 +342,7 @@ export function layTrap(
     location.id,
   );
   if (success) {
-    capture(ctx, quarry, hunters, location);
+    capture(ctx, quarry, hunters, location, 'trap');
   } else {
     // Warned, they are gone before the hunters can close in.
     quarry.activity = { kind: 'idle' };
@@ -347,6 +373,7 @@ export function capture(
   captive: Character,
   captors: readonly Character[],
   location: Location,
+  how: 'trap' | 'takedown' = 'takedown',
 ): void {
   const leader = captors.find((c) => isAlive(c) && !c.escorting);
   if (!leader) return;
@@ -375,6 +402,13 @@ export function capture(
   captive.pack = captive.pack.filter((p) => 'gear' in p && ctx.world.legends.has(p.gear.id));
   refreshMaxima(captive);
   captive.captive = { captorId: leader.id, since: ctx.world.time, gold: seized };
+  captive.justice.push({
+    kind: 'captured',
+    at: ctx.world.time,
+    locationId: location.id,
+    byId: leader.id,
+    how,
+  });
   leader.escorting = captive.id;
   cancelWake(captive);
   moveTo(ctx.world, captive, location.id);
@@ -415,6 +449,12 @@ export function tryEscape(ctx: SimContext, leader: Character, place: Location): 
   if (!ctx.rng.outlaws.chance(chance)) return false;
   leader.gold += captive.captive!.gold;
   free(ctx, captive, place.id);
+  captive.justice.push({
+    kind: 'escaped',
+    at: ctx.world.time,
+    locationId: place.id,
+    fromId: leader.id,
+  });
   ctx.emit(
     {
       type: 'capture.escape',
@@ -439,11 +479,11 @@ function free(ctx: SimContext, captive: Character, locationId: LocationId): void
 // ---------------------------------------------------------------------------
 // Justice (step 8): tried on what is known, jailed for years or hanged
 
-/** Years in prison: one, and more for each known crime and the worth taken; never more than twenty. */
+/** Years in prison: one, and more for each known crime and the worth taken; never more than fifteen. */
 const PRISON_YEARS = 1;
 const YEARS_PER_CRIME = 0.25;
-const YEARS_PER_GOLD = 1 / 250;
-const MOST_YEARS = 20;
+const YEARS_PER_GOLD = 1 / 500;
+const MOST_YEARS = 15;
 /** Days from a death sentence to the hanging. */
 const GALLOWS_DAYS = [3, 10] as const;
 /** Yearly chance of dying behind bars, from fever, cold and knives, before age is counted. */
@@ -514,6 +554,13 @@ function deliver(ctx: SimContext, leader: Character, captive: Character, town: L
     const shares = payBounty(ctx, bounty, amount, leader, town);
     world.bounties.delete(captive.id);
     world.tally.bountiesClaimed++;
+    captive.justice.push({
+      kind: 'delivered',
+      at: world.time,
+      townId: town.id,
+      byId: leader.id,
+      amount,
+    });
     ctx.emit(
       {
         type: 'bounty.claim',
@@ -526,7 +573,7 @@ function deliver(ctx: SimContext, leader: Character, captive: Character, town: L
           shares,
         },
       },
-      shares.map((s) => s.characterId),
+      [...shares.map((s) => s.characterId), captive.id],
       town.id,
     );
   }
@@ -536,6 +583,41 @@ function deliver(ctx: SimContext, leader: Character, captive: Character, town: L
   delete captive.captive;
   moveTo(world, captive, town.id);
   sentence(ctx, captive, town);
+}
+
+/**
+ * How a town puts murderers to death, by its culture: the noose by default,
+ * the sword in the islands, the axe in the north, arrows among the elves, the
+ * chasm under the mountains, stones on the steppe.
+ */
+const EXECUTIONS: Partial<Record<string, ExecutionMethod>> = {
+  generic: 'hanging',
+  japonic: 'beheading',
+  norse: 'axe',
+  sylvan: 'arrows',
+  deephold: 'chasm',
+  steppe: 'stoning',
+};
+
+export function executionMethod(town: Location): ExecutionMethod {
+  return EXECUTIONS[town.culture] ?? 'hanging';
+}
+
+/**
+ * What a court charges someone with: their known crimes, by kind. Murders
+ * pinned on them after the fact count; what nobody pinned doesn't.
+ */
+export function chargesOf(character: Character): Charges {
+  const charges: Charges = {};
+  for (const crime of character.crimes) {
+    // Attempts count as much as crimes that came off.
+    if (!crime.known) continue;
+    charges[crime.kind] = (charges[crime.kind] ?? 0) + 1;
+  }
+  // Murders known in some town but fallen off the record still count.
+  const murders = knownRecord(character).murders;
+  if (murders > (charges.murder ?? 0)) charges.murder = murders;
+  return charges;
 }
 
 /**
@@ -556,7 +638,18 @@ export function sentence(ctx: SimContext, prisoner: Character, town: Location): 
         ) * YEAR_DAYS,
       );
   const until = now + days * DAY;
+  const charges = chargesOf(prisoner);
+  const method = death ? executionMethod(town) : undefined;
   prisoner.activity = { kind: 'jailed', since: now, until, sentence: death ? 'death' : 'prison' };
+  prisoner.justice.push({
+    kind: 'sentenced',
+    at: now,
+    townId: town.id,
+    sentence: death ? 'death' : 'prison',
+    until,
+    charges,
+    ...(method ? { method } : {}),
+  });
   wakeAt(ctx, prisoner, until);
   ctx.emit(
     {
@@ -568,6 +661,8 @@ export function sentence(ctx: SimContext, prisoner: Character, town: Location): 
         until,
         crimes: known.crimes,
         murders: known.murders,
+        charges,
+        ...(method ? { method } : {}),
       },
     },
     [prisoner.id],
@@ -585,11 +680,12 @@ export function release(ctx: SimContext, prisoner: Character): void {
   if (activity.kind !== 'jailed') return;
   const town = ctx.world.locations.get(prisoner.locationId ?? prisoner.homeId)!;
   if (activity.sentence === 'death') {
-    die(ctx, prisoner, { kind: 'executed' });
+    die(ctx, prisoner, { kind: 'executed', method: executionMethod(town) });
     return;
   }
   prisoner.outlaw = null;
   prisoner.pardonedAt = ctx.world.time;
+  prisoner.justice.push({ kind: 'freed', at: ctx.world.time, townId: town.id });
   for (const id of Object.keys(prisoner.notoriety) as LocationId[]) settle(prisoner, id);
   prisoner.activity = { kind: 'idle' };
   ctx.emit(

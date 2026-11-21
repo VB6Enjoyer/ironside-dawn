@@ -16,7 +16,7 @@ import type { CharacterId, EntityId, EventId, LocationId, RegionId } from './ids
 import type { Item } from './item';
 import type { Motive } from './mind';
 import type { OutlawReason } from './social';
-import type { CrimeKind, Standing } from './crime';
+import type { Charges, CrimeKind, ExecutionMethod, Standing } from './crime';
 
 /**
  * Structured events: the single source of truth for "what happened"
@@ -341,6 +341,8 @@ export type EventBody =
         readonly until: number;
         readonly crimes: number;
         readonly murders: number;
+        readonly charges?: Charges;
+        readonly method?: ExecutionMethod;
       }
     >
   | Body<'outlaw.freed', CharacterAt>

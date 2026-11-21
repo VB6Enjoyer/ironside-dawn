@@ -1,4 +1,5 @@
 import type { CharacterId, LocationId } from './ids';
+import type { OutlawReason } from './social';
 
 /**
  * Crimes and what the towns know of them (0.3.0, ROADMAP.md "The Outlaws
@@ -95,3 +96,72 @@ export interface Unsolved {
   readonly crime: Crime;
   readonly pinAt: number;
 }
+
+/** How a town puts a murderer to death, by its culture (0.3.0). */
+export type ExecutionMethod = 'hanging' | 'beheading' | 'axe' | 'arrows' | 'chasm' | 'stoning';
+
+/** What a court found someone guilty of: known crimes, by kind. */
+export type Charges = Partial<Record<CrimeKind, number>>;
+
+/**
+ * A step in someone's dealings with justice, kept on them for their life
+ * story (0.3.0): events in the log can fade from memory; this doesn't.
+ */
+export type Judgment =
+  /** Took to the road as an outlaw, for this reason. */
+  | { readonly kind: 'turned'; readonly at: number; readonly reason: OutlawReason }
+  /** Paid back what they took, with interest and fines, at this town's court. */
+  | {
+      readonly kind: 'reformed';
+      readonly at: number;
+      readonly townId: LocationId;
+      readonly paid: number;
+    }
+  | {
+      readonly kind: 'captured';
+      readonly at: number;
+      readonly locationId: LocationId;
+      readonly byId: CharacterId;
+      readonly how: 'trap' | 'takedown';
+    }
+  | {
+      readonly kind: 'escaped';
+      readonly at: number;
+      readonly locationId: LocationId;
+      readonly fromId: CharacterId;
+    }
+  /** Handed over alive, and the bounty paid to `byId`. */
+  | {
+      readonly kind: 'delivered';
+      readonly at: number;
+      readonly townId: LocationId;
+      readonly byId: CharacterId;
+      readonly amount: number;
+    }
+  | {
+      readonly kind: 'sentenced';
+      readonly at: number;
+      readonly townId: LocationId;
+      readonly sentence: 'prison' | 'death';
+      readonly until: number;
+      readonly charges: Charges;
+      readonly method?: ExecutionMethod;
+    }
+  | { readonly kind: 'freed'; readonly at: number; readonly townId: LocationId }
+  /** Their head was taken, by whoever killed them, for the bounty. */
+  | {
+      readonly kind: 'head';
+      readonly at: number;
+      readonly locationId: LocationId;
+      readonly byId: CharacterId;
+    }
+  /** The bounty on their head was paid out, to `byId` (and their party). */
+  | {
+      readonly kind: 'claimed';
+      readonly at: number;
+      readonly townId: LocationId;
+      readonly byId: CharacterId;
+      readonly amount: number;
+    }
+  /** Their head was lost before anyone claimed the bounty. */
+  | { readonly kind: 'lost'; readonly at: number };
