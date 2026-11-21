@@ -1341,6 +1341,32 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
       ];
     },
   ],
+  'social.love': [
+    (e, h) => [
+      h.c(e.data.characterId),
+      ' and ',
+      h.c(e.data.otherId),
+      ' fall in love in ',
+      h.l(e.data.locationId),
+      '.',
+    ],
+    (e, h) => [
+      h.c(e.data.characterId),
+      ' and ',
+      h.c(e.data.otherId),
+      ' become lovers in ',
+      h.l(e.data.locationId),
+      '.',
+    ],
+  ],
+  'family.expecting': [
+    (e, h) => [
+      h.c(e.data.characterId),
+      ' and ',
+      h.c(e.data.otherId),
+      ` are expecting a child, due ${describeDuration(e.data.dueAt - e.t)} hence.`,
+    ],
+  ],
   'family.marry': [
     (e, h) => [
       h.c(e.data.characterId),

@@ -401,6 +401,10 @@ export type EventBody =
   | Body<'family.marry', CharacterAt & WithOther>
   /** `characterId` is the child. */
   | Body<'family.birth', CharacterAt & { readonly parentIds: readonly CharacterId[] }>
+  /** Two people fall in love and become lovers (0.3.0). */
+  | Body<'social.love', CharacterAt & WithOther>
+  /** A couple are expecting a child, due at `dueAt` (0.3.0). */
+  | Body<'family.expecting', CharacterAt & WithOther & { readonly dueAt: number }>
   | Body<
       'family.comeOfAge',
       CharacterAt & {
@@ -617,6 +621,8 @@ export const EVENT_IMPORTANCE: Record<EventType, Importance> = {
   'character.retire': Importance.Notable,
   'family.marry': Importance.Notable,
   'family.birth': Importance.Notable,
+  'social.love': Importance.Notable,
+  'family.expecting': Importance.Notable,
   'family.comeOfAge': Importance.Notable,
   'family.inherit': Importance.Normal,
   'legend.hero': Importance.Legendary,

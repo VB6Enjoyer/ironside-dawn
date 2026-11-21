@@ -16,6 +16,8 @@ export interface Opinion {
   bond: 'friend' | 'rival' | null;
   /** Times they have hunted the other without success. */
   hunted?: number;
+  /** Since when they have been lovers, if they are (0.3.0). */
+  lovers?: number;
 }
 
 /** An adventuring party, or a gang when its members are outlaws. */

@@ -89,6 +89,37 @@ describe('families', () => {
     expect(a.spouseId).toBe(b.id);
     expect(b.spouseId).toBe(a.id);
     expect(isKin(a, b)).toBe(false);
+    // They fell in love first, and married later.
+    const love = ctx.events.find((e) => e.type === 'social.love');
+    const wedding = ctx.events.find((e) => e.type === 'family.marry');
+    expect(love && wedding && love.t <= wedding.t && love.id < wedding.id).toBe(true);
+    expect(a.opinions[b.id]?.lovers).toBeDefined();
+  });
+
+  it('conceive only together, and give birth a gestation later', () => {
+    const ctx = testContext('expecting');
+    const { a, b } = couple(ctx);
+    (a as { species: string }).species = 'human';
+    (b as { species: string }).species = 'human';
+    ageTo(a, ctx.world.time, 25);
+    ageTo(b, ctx.world.time, 25);
+    a.spouseId = b.id;
+    b.spouseId = a.id;
+    // Apart, nothing comes of it.
+    b.locationId = 'witherwood' as never;
+    days(ctx, 360);
+    expect(a.expecting).toBeUndefined();
+    b.locationId = a.locationId;
+    for (let i = 0; i < 20 * 360 && !a.expecting; i++) days(ctx, 1);
+    const expecting = ctx.events.find((e) => e.type === 'family.expecting')!;
+    expect(b.expecting?.dueAt).toBe(a.expecting!.dueAt);
+    expect(a.children).toHaveLength(0);
+    for (let i = 0; i < 400 && a.children.length === 0; i++) days(ctx, 1);
+    const birth = ctx.events.find((e) => e.type === 'family.birth')!;
+    const gestation = (birth.t - expecting.t) / DAY;
+    expect(gestation).toBeGreaterThanOrEqual(SPECIES.human.gestationDays * 0.95 - 1);
+    expect(gestation).toBeLessThanOrEqual(SPECIES.human.gestationDays * 1.05 + 1);
+    expect(a.expecting).toBeUndefined();
   });
 
   it('have children who take a family name, and come of age', () => {

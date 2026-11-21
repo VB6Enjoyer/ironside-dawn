@@ -132,6 +132,8 @@ export interface Character {
   captive?: Captivity;
   /** The captive they are escorting to justice (0.3.0). */
   escorting?: CharacterId;
+  /** Expecting a child with `withId`, due at `dueAt`; kept on both parents (0.3.0). */
+  expecting?: { readonly withId: CharacterId; readonly since: number; readonly dueAt: number };
 
   /** Healing draughts carried, drunk when a fight goes badly. */
   potions: number;

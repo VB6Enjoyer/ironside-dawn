@@ -29,6 +29,7 @@ export const RELEASES: readonly Release[] = [
       'Every way out: pay back what you took, with interest and a fine; be killed, your head carried to a town that knows the bounty; or be taken alive by trap or takedown, escorted to town (with a chance to escape on the road), and jailed to await trial.',
       'Trials send thieves to prison for years, where some die; the rest come out to adventure again or settle down. Murderers are put to death on a set day, by their town’s custom: the noose, the sword, the axe, arrows, the chasm or stones.',
       'Life stories tell all of it: why someone turned, what they did, whom they murdered, who caught them and where they were tried, the charges and how long is left to serve, who claimed the bounty on their head, and for victims, who killed them, with what, and whether the body was ever found.',
+      'Love before marriage, and children after: people fall in love and become lovers, may marry later, and are expecting for nine months or so (longer for dwarves, centaurs and elves) before a child is born.',
       'The Halls of the world add Behind Bars and The Gallows; the character card shows where word of someone’s crimes has spread and any sentence; the live log tells of every crime and how justice caught up.',
     ],
   },

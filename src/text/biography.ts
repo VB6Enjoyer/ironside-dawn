@@ -363,7 +363,22 @@ export function biography(
 
   // Family, and settling down.
   const family: Segment[] = [];
-  if (c.spouseId) {
+  // Whom they loved (0.3.0): lovers first, then marriage, if it came to that.
+  const loved = (
+    Object.entries(c.opinions) as [CharacterId, NonNullable<Character['opinions'][CharacterId]>][]
+  )
+    .filter(([, o]) => o.lovers !== undefined)
+    .sort((a, b) => a[1].lovers! - b[1].lovers!);
+  for (const [id, o] of loved) {
+    family.push(
+      { text: `In ${whenIn(o.lovers!)} they ` },
+      { text: 'fell in love', mark: 'love' },
+      { text: ' with ' },
+      person(id, names),
+      { text: id === c.spouseId ? ', and in time married them. ' : '. ' },
+    );
+  }
+  if (c.spouseId && !loved.some(([id]) => id === c.spouseId)) {
     family.push(
       { text: 'They ' },
       { text: 'married', mark: 'love' },
@@ -371,6 +386,11 @@ export function biography(
       person(c.spouseId, names),
       { text: '. ' },
     );
+  }
+  if (c.expecting && !c.death) {
+    family.push({ text: 'They and ' }, person(c.expecting.withId, names), {
+      text: ` are expecting a child, due in ${whenIn(c.expecting.dueAt)}. `,
+    });
   }
   if (c.children.length > 0) {
     family.push(
