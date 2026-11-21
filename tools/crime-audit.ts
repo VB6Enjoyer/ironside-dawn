@@ -21,6 +21,8 @@ interface WorldReport {
   readonly years: number;
   /** Year (from 0) each outlaw turned, and why. */
   readonly turns: readonly { readonly year: number; readonly why: string }[];
+  /** How many different people turned (some turn more than once). */
+  readonly people: number;
   readonly robberies: number;
   readonly ambushes: number;
   readonly murders: number;
@@ -34,6 +36,7 @@ interface WorldReport {
 
 function runWorld(seed: string, adventurers: number, years: number): WorldReport {
   const turns: { year: number; why: string }[] = [];
+  const turned = new Set<CharacterId>();
   const byOutlaw = new Map<CharacterId, number>();
   let robberies = 0;
   let ambushes = 0;
@@ -46,9 +49,10 @@ function runWorld(seed: string, adventurers: number, years: number): WorldReport
     if (!sim) return;
     switch (e.type) {
       case 'outlaw.turn':
+        turned.add(e.data.characterId);
         turns.push({
           year: Math.floor((e.t - start) / YEAR),
-          why: 'why' in e.data ? String(e.data.why) : 'want',
+          why: e.data.reason ?? 'want',
         });
         break;
       case 'crime.robbery':
@@ -97,6 +101,7 @@ function runWorld(seed: string, adventurers: number, years: number): WorldReport
     seed,
     years,
     turns,
+    people: turned.size,
     robberies,
     ambushes,
     murders,
@@ -161,7 +166,7 @@ function report(reports: readonly WorldReport[], adventurers: number, years: num
     `Crime audit: ${reports.length} worlds of ${adventurers} adventurers, ${years} years\n`,
   );
   console.log(
-    'world      outlaws  first  decades  robberies  ambushes  murders  top1  top2  ends (straight/bounty/died/at large)  broke',
+    'world      outlaws (people)  first  decades  robberies  ambushes  murders  top1  top2  ends (straight/bounty/died/at large)  broke',
   );
   for (const r of reports) {
     const top1 = share(r.byOutlaw, 1);
@@ -169,7 +174,7 @@ function report(reports: readonly WorldReport[], adventurers: number, years: num
     console.log(
       [
         r.seed.padEnd(10),
-        String(r.turns.length).padStart(7),
+        `${r.turns.length} (${r.people})`.padStart(16),
         String(r.turns[0]?.year ?? '—').padStart(6),
         pct(decadesWithATurn(r)).padStart(8),
         String(r.robberies).padStart(10),
