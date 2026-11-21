@@ -73,6 +73,19 @@ interface WorldReport {
   /** Towns' standing worsening as word spread, by the standing reached; turned away at gates. */
   readonly notorious: Record<string, number>;
   readonly turnedAway: number;
+  /** Outlaw careers that ended: how long (years), crimes and murders in them, and how. */
+  readonly careers: readonly Career[];
+  /** Careers still running at the end. */
+  readonly open: readonly Career[];
+  /** Crimes (by outlaws or not) in each decade of the run. */
+  readonly crimesByDecade: readonly number[];
+}
+
+interface Career {
+  readonly years: number;
+  readonly crimes: number;
+  readonly murders: number;
+  readonly how: string;
 }
 
 function runWorld(seed: string, adventurers: number, years: number): WorldReport {
@@ -108,6 +121,23 @@ function runWorld(seed: string, adventurers: number, years: number): WorldReport
     held: 0,
   };
   const secrecy = { unnamed: 0, unsolved: 0, hidden: 0, pinned: 0 };
+  const running = new Map<CharacterId, { start: number; crimes: number; murders: number }>();
+  const careers: Career[] = [];
+  const crimesByDecade: number[] = new Array<number>(Math.ceil(years / 10)).fill(0);
+  const crimeAt = (t: number) => {
+    const decade = Math.min(crimesByDecade.length - 1, Math.floor((t - start) / YEAR / 10));
+    crimesByDecade[decade]!++;
+  };
+  const endCareer = (id: CharacterId, t: number, how: string) => {
+    const c = running.get(id);
+    if (!c) return;
+    running.delete(id);
+    careers.push({ years: (t - c.start) / YEAR, crimes: c.crimes, murders: c.murders, how });
+  };
+  const careerCrime = (id: CharacterId) => {
+    const c = running.get(id);
+    if (c) c.crimes++;
+  };
   let start = 0;
   let sim: ReturnType<typeof createSimulation> | null = null;
   const credit = (id: CharacterId) => byOutlaw.set(id, (byOutlaw.get(id) ?? 0) + 1);
@@ -115,6 +145,7 @@ function runWorld(seed: string, adventurers: number, years: number): WorldReport
     if (!sim) return;
     switch (e.type) {
       case 'outlaw.turn':
+        running.set(e.data.characterId, { start: e.t, crimes: 0, murders: 0 });
         turned.add(e.data.characterId);
         turns.push({
           year: Math.floor((e.t - start) / YEAR),
@@ -122,6 +153,8 @@ function runWorld(seed: string, adventurers: number, years: number): WorldReport
         });
         break;
       case 'crime.robbery':
+        careerCrime(e.data.characterId);
+        crimeAt(e.t);
         if (e.data.known === false) secrecy.unnamed++;
         robberies++;
         credit(e.data.characterId);
@@ -131,6 +164,8 @@ function runWorld(seed: string, adventurers: number, years: number): WorldReport
         credit(e.data.characterId);
         break;
       case 'crime.commit': {
+        careerCrime(e.data.characterId);
+        crimeAt(e.t);
         if (!sim.world.characters.get(e.data.characterId)?.outlaw) occasional++;
         else credit(e.data.characterId);
         if (e.data.fine !== undefined) fined++;
@@ -150,6 +185,7 @@ function runWorld(seed: string, adventurers: number, years: number): WorldReport
         break;
       case 'outlaw.reform':
         ends.reformed++;
+        endCareer(e.data.characterId, e.t, 'reformed');
         break;
       case 'bounty.head':
         ends.bountied++;
@@ -167,6 +203,7 @@ function runWorld(seed: string, adventurers: number, years: number): WorldReport
         if (e.data.success) {
           justice.caught++;
           ends.captured++;
+          endCareer(e.data.outlawId, e.t, 'captured');
         }
         break;
       case 'capture.escape':
@@ -193,6 +230,26 @@ function runWorld(seed: string, adventurers: number, years: number): WorldReport
         const cause = e.data.cause;
         if (cause.kind === 'character' && sim.world.characters.get(cause.characterId)?.outlaw) {
           murders++;
+          crimeAt(e.t);
+          const killer = running.get(cause.characterId);
+          if (killer) {
+            killer.murders++;
+            killer.crimes++;
+          }
+        }
+        if (dead?.outlaw && running.has(dead.id)) {
+          const bountied = cause.kind === 'character' && sim.world.bounties.has(dead.id);
+          endCareer(
+            dead.id,
+            e.t,
+            bountied
+              ? 'head'
+              : cause.kind === 'age'
+                ? 'old age'
+                : cause.kind === 'departed'
+                  ? 'fled'
+                  : 'killed',
+          );
         }
         if (cause.kind === 'executed') justice.hanged++;
         if (cause.kind === 'prison') justice.diedInside++;
@@ -234,6 +291,14 @@ function runWorld(seed: string, adventurers: number, years: number): WorldReport
     ends,
     justice,
     secrecy: { ...secrecy, unsolved: sim.world.unsolved.length },
+    careers,
+    open: [...running.values()].map((c) => ({
+      years: (sim!.world.time - c.start) / YEAR,
+      crimes: c.crimes,
+      murders: c.murders,
+      how: 'at large',
+    })),
+    crimesByDecade,
     brokeShare: looks ? broke / looks : 0,
     nameless,
     foiled,
@@ -386,6 +451,42 @@ function report(reports: readonly WorldReport[], adventurers: number, years: num
       ].join(' '),
     );
   }
+  const median = (xs: readonly number[]) => {
+    if (xs.length === 0) return 0;
+    const s = [...xs].sort((a, b) => a - b);
+    return s[Math.floor(s.length / 2)]!;
+  };
+  console.log(
+    '\nworld      careers ended  median years  within 5 yrs  crimes/career (median/max)  open (longest yrs)  murderers: old age/captured/head/killed/fled/at large',
+  );
+  for (const r of reports) {
+    const all = [...r.careers, ...r.open];
+    const killers = all.filter((c) => c.murders > 0);
+    const fate = (how: string) => killers.filter((c) => c.how === how).length;
+    const executed = killers.filter((c) => c.how === 'captured').length;
+    console.log(
+      [
+        r.seed.padEnd(10),
+        String(r.careers.length).padStart(13),
+        median(r.careers.map((c) => c.years))
+          .toFixed(1)
+          .padStart(13),
+        pct(r.careers.filter((c) => c.years <= 5).length / Math.max(1, r.careers.length)).padStart(
+          13,
+        ),
+        `${median(all.map((c) => c.crimes))}/${Math.max(0, ...all.map((c) => c.crimes))}`.padStart(
+          27,
+        ),
+        `${r.open.length} (${Math.max(0, ...r.open.map((c) => c.years)).toFixed(0)})`.padStart(19),
+        `${fate('old age')}/${executed}/${fate('head')}/${fate('killed')}/${fate('fled')}/${fate('at large')}`.padStart(
+          56,
+        ),
+      ].join(' '),
+    );
+  }
+  console.log(
+    `Crimes by decade: ${reports.map((r) => `${r.seed} ${r.crimesByDecade.join(',')}`).join('; ')}`,
+  );
   const whys = new Map<string, number>();
   for (const r of reports) for (const t of r.turns) whys.set(t.why, (whys.get(t.why) ?? 0) + 1);
   console.log(
@@ -404,7 +505,30 @@ function report(reports: readonly WorldReport[], adventurers: number, years: num
   const burst = reports.filter(
     (r) => r.turns.filter((t) => t.year === 0).length > burstOver,
   ).length;
+  const everyEra = reports.filter((r) => r.crimesByDecade.every((n) => n > 0)).length;
+  const shortCareers = reports.filter(
+    (r) =>
+      r.careers.length > 0 && r.careers.filter((c) => c.years <= 5).length / r.careers.length > 0.5,
+  ).length;
+  const killersOld = reports.reduce(
+    (n, r) => n + r.careers.filter((c) => c.murders > 0 && c.how === 'old age').length,
+    0,
+  );
+  const killersAll = reports.reduce(
+    (n, r) => n + [...r.careers, ...r.open].filter((c) => c.murders > 0).length,
+    0,
+  );
   console.log('\nTargets');
+  const ok = (b: boolean) => (b ? '✓' : '✗');
+  console.log(
+    `  ${ok(everyEra === reports.length)} crime in every decade: ${everyEra} of ${reports.length} worlds`,
+  );
+  console.log(
+    `  ${ok(shortCareers === reports.length)} most careers end within five years: ${shortCareers} of ${reports.length} worlds`,
+  );
+  console.log(
+    `  ${ok(killersOld <= Math.max(1, killersAll * 0.1))} murderers rarely die of old age: ${killersOld} of ${killersAll}`,
+  );
   const mark = (ok: boolean) => (ok ? '✓' : '✗');
   console.log(
     `  ${mark(trickle === reports.length)} someone turns outlaw in at least half the decades: ${trickle} of ${reports.length} worlds`,
