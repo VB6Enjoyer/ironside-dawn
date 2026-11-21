@@ -154,11 +154,11 @@ function considerRetiring(ctx: SimContext, c: Character, merchantRoom: boolean):
   retire(ctx, c, town, reason, merchantRoom);
 }
 
-function retire(
+export function retire(
   ctx: SimContext,
   c: Character,
   town: Location,
-  reason: 'age' | 'wealth' | 'family' | 'nerves',
+  reason: 'age' | 'wealth' | 'family' | 'nerves' | 'prison',
   merchantRoom: boolean,
 ): void {
   const rng = ctx.rng.people;

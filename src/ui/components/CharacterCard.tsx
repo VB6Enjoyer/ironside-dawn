@@ -477,6 +477,16 @@ function Bonds({
             </dd>
           </>
         )}
+        {character.activity.kind === 'jailed' && (
+          <>
+            <dt>Sentence</dt>
+            <dd className="outlaw">
+              {character.activity.sentence === 'death'
+                ? `to hang, on ${formatTimestamp(character.activity.until)}`
+                : `prison, until ${formatTimestamp(character.activity.until)}`}
+            </dd>
+          </>
+        )}
         {character.heads.length > 0 && (
           <>
             <dt>Carries</dt>

@@ -13,7 +13,7 @@ import type {
 import { isAlive } from './condition';
 import { goingPrice } from './market';
 import { wealthNeed } from './mind';
-import { isBarred, recordCrime, standingIn } from './notoriety';
+import { isBarred, recordCrime, slipOf, standingIn } from './notoriety';
 import { temptationReasons, turnOutlaw, weakConscience, worthOf } from './outlaws';
 import { practice } from './progress';
 import { nearbyPlaces, roadsFrom } from './roads';
@@ -195,7 +195,8 @@ export function commitCrime(
   }
   if (kind === 'theft') practice(ctx, character, 'stealth', 0.6, here.id);
   // A holdup or a shakedown is done to people's faces; a thief is only named if caught.
-  const known = kind !== 'theft' || !success;
+  // A masked face or a quick escape lets a few slip unnamed (0.3.0).
+  const known = (kind !== 'theft' || !success) && !rng.chance(slipOf(character) / 2);
   // Caught at it by force of arms: the watch draws blood before they get away.
   const hurt = !success && kind !== 'theft' ? wound(ctx, character) : false;
   finish(ctx, character, here, town, kind, { gold, goods, success, known, hurt });
@@ -232,7 +233,7 @@ export function nightWork(ctx: SimContext, character: Character, town: Location)
   practice(ctx, character, 'lockpicking', 0.8, town.id);
   practice(ctx, character, 'stealth', 0.4, town.id);
   // A clean job leaves nobody the wiser; a botched one may be seen.
-  const known = !success && rng.chance(0.6);
+  const known = !success && rng.chance(0.6 * (1 - slipOf(character)));
   const hurt = !success && rng.chance(0.3) ? wound(ctx, character) : false;
   finish(ctx, character, town, town, 'burglary', { gold, goods: {}, success, known, hurt });
   return true;
@@ -257,7 +258,7 @@ function vandalise(ctx: SimContext, character: Character, town: Location, market
     }
   }
   practice(ctx, character, 'stealth', 0.4, town.id);
-  const known = rng.chance(success ? 0.4 : 0.7);
+  const known = rng.chance((success ? 0.4 : 0.7) * (1 - slipOf(character)));
   finish(ctx, character, town, town, 'vandalism', {
     gold: 0,
     goods: {},
@@ -307,7 +308,7 @@ export function waylayCaravan(
     gold = takeGold(market.house, 0.05, 10 + rng.int(0, 50));
   }
   // The travelers live to tell of it, and most will know them again.
-  const known = rng.chance(0.7);
+  const known = rng.chance(0.7 * (1 - slipOf(character)));
   const hurt = !success ? wound(ctx, character) : false;
   finish(ctx, character, here, bound, 'waylay', { gold, goods, success, known, hurt });
 }

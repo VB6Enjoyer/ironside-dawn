@@ -1165,14 +1165,32 @@ site), and is checked against the targets below with the crime audit.
      adventurers over 15 years: 14–22 taken alive and 6–10 heads claimed per
      world, 4 going straight.
 
-8. **Justice.** An outlaw brought in alive is tried:
-   - Theft, assault and the like earn years in prison, scaled by the record.
-     Prisoners can die there; once freed they return to adventuring or
-     retire, with a dent in their standing that fades.
-   - Murder earns execution on a set day, a public event in the chronicle.
-   - Life stories, cards and the Halls (wanted, imprisoned, executed) show it
-     all.
-   - _Exit:_ outlaws' careers end in every way above, in proportion.
+8. **Justice.** _Done_ (`src/sim/systems/justice.ts`, `notoriety.ts`).
+   - An outlaw brought in alive is tried on what any town knows of them.
+     Theft, assault and the like earn a year in prison, plus a quarter year per
+     known crime and a year per 250 gold taken (twenty at most). Prisoners can
+     die there (3% a year, and of old age); freed, they are no outlaws, still
+     eyed warily for a while, and go back to adventuring or retire, likelier to
+     retire the longer they served and the older and more timid they are.
+   - A known murderer is sentenced to hang three to ten days later, before a
+     crowd, in the live feed and the chronicle.
+   - Life stories, the character card and the Halls (Most Wanted, **Behind
+     Bars**, **The Gallows**) show it all.
+   - Crimes can go unheard of: whether a robbery or murder is pinned on anyone
+     depends on witnesses (victims who live, companions, bystanders), how well
+     they know the culprit, the place (a town, the wilds, a dungeon) and the
+     culprit's stealth; most are still pinned. A murder nobody pins comes out
+     after about a year, if ever; with nobody about, the killer may hide the
+     body, and the victim is thought to have vanished (most such murders are
+     never pinned). Trials only count what is known.
+   - Measured (four 20-adventurer worlds, a century): 1–9 taken alive per
+     world, then tried; 0–3 hanged, a few dying in prison, the rest freed (most
+     settling down). About one robbery in six goes unnamed; 1–9 bodies hidden
+     and 0–13 murders pinned later per world. At 200 adventurers over 15
+     years: 17–19 taken alive, 8–10 jailed, 4 hanged and 2–4 dead in prison
+     per world.
+   - _Exit:_ outlaws' careers end in every way above. In proportion is still
+     to tune: hunts rarely kill, so heads stay scarce in small worlds.
 
 9. **Balance and release.**
    - Tune so that each crime is worth less than the last: notoriety compounds,

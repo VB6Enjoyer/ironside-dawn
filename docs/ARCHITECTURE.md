@@ -664,10 +664,27 @@ Built for 0.3.0 (`src/sim/systems/crime.ts`, `notoriety.ts`, `outlaws.ts`).
   captor (`Character.escorting`), who heads for the nearest town that would
   pay. Each leg of road they may escape (level and agility against the
   escort's size and level). Delivered, the bounty pays two and a half times
-  over, the seized gold goes to the town, and the captive is `jailed` until a
-  term ends (a year plus a month per crime, three times for blood, ten years
-  at most), when they walk out no outlaw. Trials, prison life and executions
-  are 0.3.0's step 8.
+  over, the seized gold goes to the town, and the captive stands trial.
+- **Justice.** The court tries a prisoner on what is known of them: the most
+  any town has heard (`knownRecord`), never crimes nobody pinned on them. A
+  known murderer is `jailed` with sentence `death` and hanged three to ten days
+  later (death cause `executed`). Anyone else serves a year, a quarter year per
+  known crime and a year per 250 gold taken, twenty at most; prisoners can die
+  inside (3% a year, death cause `prison`) or of old age. Freed, they are no
+  outlaw, each town's heat is settled down to _suspected_, and they adventure
+  again or retire (`character.retire`, reason `prison`), likelier the longer
+  they served, the older and the more timid.
+- **Crimes unheard of.** Crimes against named people are pinned on the culprit
+  only by chance (`identifyChance`): a base by place (town 0.8, wilds 0.55,
+  dungeon 0.35), more for each witness (victims who live, the victim's
+  companions still standing, bystanders) and for how well they know the
+  culprit, less by up to 30% for stealth (`slipOf`). Face-to-face crimes against
+  the nameless slip by half that. A murder nobody pins is `Unsolved`
+  (`World.unsolved`): it comes to light after about a year on average, by which
+  time it is news like any other. With no witnesses at all, the killer may hide
+  the body (`Death.hidden`, a `crime.conceal` event): then it comes out after
+  about four years, and 60% never do. Avengers rise only for murders known at
+  the time. The player always sees what happened; the towns don't.
 
 ---
 

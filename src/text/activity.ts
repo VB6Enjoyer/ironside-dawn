@@ -61,7 +61,9 @@ export function describeActivity(character: Character, names: NameResolver): Seg
     case 'fighting':
       return [{ text: 'Fighting for their life in ' }, here];
     case 'jailed':
-      return [{ text: 'In jail in ' }, here];
+      return activity.sentence === 'death'
+        ? [{ text: 'Awaiting the hangman in ' }, here]
+        : [{ text: 'In prison in ' }, here];
     case 'accompanying': {
       const name = names.character(activity.leaderId)?.name ?? 'their party';
       if (character.captive) {
@@ -98,12 +100,17 @@ export function describeActivity(character: Character, names: NameResolver): Seg
             { text: name, ref: { kind: 'character', id: death.cause.characterId } },
             { text: ' in ' },
             where,
+            ...(death.hidden ? [{ text: '; the body was never found' }] : []),
           ];
         }
         case 'creature':
           return [{ text: `Slain by ${aCreature(death.cause.creature)} in ` }, where];
         case 'age':
           return [{ text: `Died of old age, ${death.cause.age} years old, in ` }, where];
+        case 'executed':
+          return [{ text: 'Hanged for murder in ' }, where];
+        case 'prison':
+          return [{ text: 'Died in prison in ' }, where];
         case 'departed':
           return [{ text: 'Left for distant lands from ' }, where];
       }

@@ -33,7 +33,16 @@ export type { Myth, Tally, World, WorldSample } from './world';
 export type { WorldSettings, WorldSize } from './settings';
 export type { DriveId, Drives, Expectation, Goal, Memory, MemoryEvent, Motive } from './mind';
 export type { Bounty, Opinion, Outlaw, OutlawReason, Party } from './social';
-export type { Captivity, Crime, CrimeKind, Head, News, Notoriety, Standing } from './crime';
+export type {
+  Captivity,
+  Crime,
+  CrimeKind,
+  Head,
+  News,
+  Notoriety,
+  Standing,
+  Unsolved,
+} from './crime';
 export type {
   Belief,
   Ledger,

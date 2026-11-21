@@ -72,6 +72,10 @@ export function causeOfDeath(cause: DeathCause, names: NameResolver): Segment[] 
       return [{ text: `killed by their own backfiring ${spellName(cause.spell)}` }];
     case 'age':
       return [{ text: `of old age, ${cause.age} years old` }];
+    case 'executed':
+      return [{ text: 'hanged for murder' }];
+    case 'prison':
+      return [{ text: 'in prison' }];
     case 'departed':
       return [{ text: 'left for distant lands' }];
   }
@@ -310,15 +314,25 @@ export function biography(
       justice.push({ text: 'They got away from ' }, person(e.data.captorId, names), {
         text: ', with nothing but the clothes on their back. ',
       });
-    } else if (e.type === 'outlaw.jailed' && e.data.characterId === c.id) {
-      const years = Math.max(1, Math.round((e.data.until - e.t) / (360 * 86_400)));
-      justice.push(
-        { text: `They were ` },
-        { text: 'jailed', mark: 'crime' },
-        { text: ` in ` },
-        place(e.data.locationId, names),
-        { text: ` for ${countWord(years)} ${years === 1 ? 'year' : 'years'}. ` },
-      );
+    } else if (e.type === 'outlaw.sentenced' && e.data.characterId === c.id) {
+      if (e.data.sentence === 'death') {
+        justice.push(
+          { text: 'Tried in ' },
+          place(e.data.locationId, names),
+          { text: ', they were ' },
+          { text: 'sentenced to hang', mark: 'death' },
+          { text: ' for murder. ' },
+        );
+      } else {
+        const years = Math.max(1, Math.round((e.data.until - e.t) / (360 * 86_400)));
+        justice.push(
+          { text: 'Tried in ' },
+          place(e.data.locationId, names),
+          { text: ', they were ' },
+          { text: 'sentenced', mark: 'crime' },
+          { text: ` to ${countWord(years)} ${years === 1 ? 'year' : 'years'} in prison. ` },
+        );
+      }
     } else if (e.type === 'outlaw.freed' && e.data.characterId === c.id) {
       justice.push({ text: `They came out in ${whenIn(e.t)}, no outlaw any more. ` });
     }
@@ -376,7 +390,9 @@ export function biography(
       ...causeOfDeath(c.death.cause, names),
       { text: ' in ' },
       place(c.death.locationId, names),
-      { text: `, at level ${c.level}.` },
+      {
+        text: `, at level ${c.level}.${c.death.hidden ? ' Their body was never found; most thought they had simply vanished.' : ''}`,
+      },
     ]);
   }
   return paragraphs.map(trimEnd);

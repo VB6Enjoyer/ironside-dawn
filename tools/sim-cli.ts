@@ -250,6 +250,10 @@ function worldReport(
           return 'other people';
         case 'age':
           return 'old age';
+        case 'executed':
+          return 'the hangman';
+        case 'prison':
+          return 'prison';
         case 'departed':
           return 'moving on (not deaths)';
       }

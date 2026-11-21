@@ -85,3 +85,13 @@ export interface Captivity {
   readonly since: number;
   readonly gold: number;
 }
+
+/**
+ * A crime nobody has pinned on anyone yet, until word gets out at `pinAt`
+ * (0.3.0): a murder with no one to see it, or none who knew the killer.
+ */
+export interface Unsolved {
+  readonly characterId: CharacterId;
+  readonly crime: Crime;
+  readonly pinAt: number;
+}

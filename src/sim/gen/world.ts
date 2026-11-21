@@ -123,6 +123,7 @@ export function createWorldState(
     parties: new Map(),
     bounties: new Map(),
     news: [],
+    unsolved: [],
     scheduler: createScheduler(),
     takenNames: new Set(),
     nextCharacterNumber: 1,

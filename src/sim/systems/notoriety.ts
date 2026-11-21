@@ -1,8 +1,19 @@
 import { HOUR } from '../core/time';
 import type { SimContext } from '../context';
-import type { Character, Crime, CrimeKind, LocationId, News, Notoriety, Standing } from '../model';
+import type {
+  Character,
+  CharacterId,
+  Crime,
+  CrimeKind,
+  Location,
+  LocationId,
+  News,
+  Notoriety,
+  Standing,
+} from '../model';
 import { isAlive } from './condition';
 import { nearbyPlaces } from './roads';
+import { charactersAt } from './whereabouts';
 
 /**
  * Reputation that travels (0.3.0, ROADMAP.md "The Outlaws Update", step 4):
@@ -105,6 +116,7 @@ export function spreadNews(ctx: SimContext, character: Character, crime: Crime):
 export function newsDay(ctx: SimContext): void {
   const world = ctx.world;
   const now = world.time;
+  pinCrimes(ctx);
   if (world.news.length > 0) {
     const still: News[] = [];
     for (const item of world.news) {
@@ -195,14 +207,22 @@ const BOUNTY_CAP_PER_MURDER = 150;
  * outlaw's bounty grows, posted by the town it was against (or the victim's)
  * if none stands yet, and word of it sets out from there.
  */
-export function recordCrime(ctx: SimContext, character: Character, crime: Crime): void {
-  character.crimes.push(crime);
-  if (character.crimes.length > RECORD_CAP) character.crimes.shift();
+export function recordCrime(
+  ctx: SimContext,
+  character: Character,
+  crime: Crime,
+  /** False when an old crime, already on the record, comes to light. */
+  fresh = true,
+): void {
   const record = character.outlaw;
-  if (record) {
-    record.crimes++;
-    if (crime.kind === 'murder') record.murders++;
-    record.lastCrimeAt = crime.at;
+  if (fresh) {
+    character.crimes.push(crime);
+    if (character.crimes.length > RECORD_CAP) character.crimes.shift();
+    if (record) {
+      record.crimes++;
+      if (crime.kind === 'murder') record.murders++;
+      record.lastCrimeAt = crime.at;
+    }
   }
   if (!crime.known) return;
   if (record) {
@@ -259,4 +279,101 @@ export function settle(character: Character, townId: LocationId): void {
   if (!known) return;
   known.value = 0;
   known.heat = Math.min(Math.max(known.heat, SUSPECTED), (SUSPECTED + UNWELCOME) / 2);
+}
+
+// ---------------------------------------------------------------------------
+// Crimes that go unheard of (0.3.0)
+
+/**
+ * The chance anyone can name the culprit of a crime against someone: likelier
+ * the more people saw it (`witnesses`, victims who lived among them) and the
+ * better they knew the culprit, much likelier in a town than out in the wilds
+ * or down a dungeon, and a little less for the light of foot.
+ */
+export function identifyChance(
+  culprit: Character,
+  place: Location,
+  witnesses: number,
+  familiarity = 0,
+): number {
+  if (witnesses <= 0) return 0;
+  const base = place.kind === 'town' ? 0.8 : place.kind === 'dungeon' ? 0.35 : 0.55;
+  const seen = base + 0.2 * witnesses + 0.4 * familiarity;
+  return Math.min(0.98, Math.max(0.02, seen * (1 - slipOf(culprit))));
+}
+
+/** How much a culprit's quiet feet help them go unrecognized: nothing below 40 stealth, up to 0.3. */
+export function slipOf(culprit: Character): number {
+  return Math.max(0, culprit.skills.stealth - 40) / 200;
+}
+
+/** Those at a place who could see something there, besides the ones named. */
+export function bystanders(
+  ctx: SimContext,
+  locationId: LocationId,
+  except: ReadonlySet<CharacterId>,
+): number {
+  let n = 0;
+  for (const c of charactersAt(ctx.world, locationId)) {
+    if (!except.has(c.id) && isAlive(c) && !c.outlaw) n++;
+  }
+  return n;
+}
+
+/** Days on average before an unwitnessed murder is pinned on its killer; much longer with no body. */
+const PIN_DAYS = 360;
+const PIN_DAYS_HIDDEN = 4 * 360;
+/** Share of hidden murders that are never pinned on anyone. */
+const NEVER_PINNED = 0.6;
+
+/**
+ * A crime nobody pinned on anyone: in time, word may get out of who did it,
+ * a long time for a murder with no body.
+ */
+export function leaveUnsolved(
+  ctx: SimContext,
+  character: Character,
+  crime: Crime,
+  hidden: boolean,
+): void {
+  const rng = ctx.rng.outlaws;
+  if (hidden && rng.chance(NEVER_PINNED)) return;
+  const mean = hidden ? PIN_DAYS_HIDDEN : PIN_DAYS;
+  const days = -Math.log(1 - rng.next()) * mean;
+  ctx.world.unsolved.push({
+    characterId: character.id,
+    crime,
+    pinAt: crime.at + Math.round(days * 86_400),
+  });
+}
+
+/** Once a day: old crimes come to light, and are told as news from then. */
+function pinCrimes(ctx: SimContext): void {
+  const world = ctx.world;
+  if (world.unsolved.length === 0) return;
+  const now = world.time;
+  world.unsolved = world.unsolved.filter((item) => {
+    if (item.pinAt > now) return true;
+    const culprit = world.characters.get(item.characterId);
+    // Nobody bothers with the crimes of the dead.
+    if (!culprit || culprit.death) return false;
+    const townId = item.crime.townId;
+    if (townId === null) return false;
+    ctx.emit(
+      {
+        type: 'crime.pinned',
+        data: {
+          characterId: culprit.id,
+          locationId: townId,
+          crime: item.crime.kind,
+          at: item.crime.at,
+          ...(item.crime.victimId ? { victimId: item.crime.victimId } : {}),
+        },
+      },
+      [culprit.id],
+      townId,
+    );
+    recordCrime(ctx, culprit, { ...item.crime, known: true, at: now }, false);
+    return false;
+  });
 }

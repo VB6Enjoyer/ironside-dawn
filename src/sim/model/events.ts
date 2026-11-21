@@ -254,6 +254,8 @@ export type EventBody =
         readonly gold: number;
         /** A merchant's cargo, taken too. */
         readonly goods?: Goods;
+        /** False when nobody could say who did it (0.3.0). */
+        readonly known?: boolean;
       }
     >
   /**
@@ -327,9 +329,35 @@ export type EventBody =
     >
   /** A captive gets away from their escort, leaving their gold and gear behind (0.3.0). */
   | Body<'capture.escape', CharacterAt & { readonly captorId: CharacterId }>
-  /** Delivered alive: jailed until `until` (0.3.0); `freed` when they come out. */
-  | Body<'outlaw.jailed', CharacterAt & { readonly until: number }>
+  /**
+   * Tried in the town they were brought to (0.3.0), on what is known of them:
+   * years in prison, until `until`, or, for a known murderer, death on that
+   * day. `freed` when they come out, to adventure again or settle down.
+   */
+  | Body<
+      'outlaw.sentenced',
+      CharacterAt & {
+        readonly sentence: 'prison' | 'death';
+        readonly until: number;
+        readonly crimes: number;
+        readonly murders: number;
+      }
+    >
   | Body<'outlaw.freed', CharacterAt>
+  /** A murderer hides their victim's body: as far as anyone knows, the victim vanished (0.3.0). */
+  | Body<'crime.conceal', CharacterAt & { readonly victimId: CharacterId }>
+  /**
+   * Word gets out of who did a crime nobody had pinned on anyone (0.3.0).
+   * locationId is the town that hears first.
+   */
+  | Body<
+      'crime.pinned',
+      CharacterAt & {
+        readonly crime: CrimeKind;
+        readonly victimId?: CharacterId;
+        readonly at: number;
+      }
+    >
   /** Gave up the outlaw life; since 0.3.0, by paying restitution (`paid`, with interest and fines). */
   | Body<'outlaw.reform', CharacterAt & { readonly paid?: number }>
   // Trade
@@ -361,7 +389,7 @@ export type EventBody =
       'character.retire',
       CharacterAt & {
         readonly occupation: Occupation | null;
-        readonly reason: 'age' | 'wealth' | 'family' | 'nerves';
+        readonly reason: 'age' | 'wealth' | 'family' | 'nerves' | 'prison';
         /** Retiring to trade instead. */
         readonly merchant: boolean;
       }
@@ -568,7 +596,9 @@ export const EVENT_IMPORTANCE: Record<EventType, Importance> = {
   'bounty.lost': Importance.Normal,
   'capture.attempt': Importance.Notable,
   'capture.escape': Importance.Notable,
-  'outlaw.jailed': Importance.Notable,
+  'outlaw.sentenced': Importance.Notable,
+  'crime.conceal': Importance.Notable,
+  'crime.pinned': Importance.Notable,
   'outlaw.freed': Importance.Normal,
   'bounty.post': Importance.Normal,
   'bounty.claim': Importance.Notable,

@@ -12,6 +12,8 @@ function crime(at: number, kind: CrimeKind = 'burglary', known = true): Crime {
   return { kind, at, locationId: concordale, townId: concordale, value: 40, known };
 }
 
+const thiefOf = (ctx: ReturnType<typeof testContext>) => testCharacter(ctx);
+
 /** Days pass, a morning's news at a time. */
 function days(ctx: ReturnType<typeof testContext>, n: number) {
   for (let i = 0; i < n; i++) {
@@ -67,6 +69,21 @@ describe('word of crimes', () => {
     expect(standingIn(thief, concordale)).toBe('welcome');
     // The count stays: the town remembers there was something.
     expect(thief.notoriety[concordale]?.crimes).toBe(1);
+  });
+
+  it('brings an old murder to light in time, and bars the killer then', () => {
+    const ctx = testContext('pinned');
+    const killer = testCharacter(ctx);
+    const murder = { ...crime(ctx.world.time, 'murder', false), victimId: thiefOf(ctx).id };
+    recordCrime(ctx, killer, murder);
+    ctx.world.unsolved.push({ characterId: killer.id, crime: murder, pinAt: ctx.world.time + DAY });
+    expect(standingIn(killer, concordale)).toBe('welcome');
+    days(ctx, 2);
+    expect(ctx.events.some((e) => e.type === 'crime.pinned')).toBe(true);
+    expect(standingIn(killer, concordale)).toBe('barred');
+    expect(ctx.world.unsolved).toHaveLength(0);
+    // Pinned, not committed again: the record counts it once.
+    expect(killer.crimes).toHaveLength(1);
   });
 
   it('dies with the one it tells of', () => {

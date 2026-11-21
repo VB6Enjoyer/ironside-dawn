@@ -308,6 +308,7 @@ const RETIRE_REASONS = {
   wealth: 'with a fortune made',
   family: 'for the sake of their family',
   nerves: 'after one narrow escape too many',
+  prison: 'after their years behind bars',
 } as const;
 
 export const OCCUPATION_NAMES: Record<Occupation, string> = {
@@ -431,6 +432,12 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
           [c, ' leaves ', l, ' for distant lands.'],
           [c, ' sells up and leaves ', l, ', never to return.'],
         ]);
+      }
+      if (cause.kind === 'executed') {
+        return [c, ' is hanged for murder before a crowd in ', h.place(e.data.locationId), '.'];
+      }
+      if (cause.kind === 'prison') {
+        return [c, ' dies in the jail of ', h.place(e.data.locationId), ', their time unserved.'];
       }
       if (cause.kind === 'age') {
         return h.pick<Part[]>([
@@ -1025,6 +1032,7 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
       e.data.goods && Object.keys(e.data.goods).length > 0
         ? ` of ${e.data.gold} gold and ${goodsList(e.data.goods)}.`
         : ` of ${e.data.gold} gold.`,
+      e.data.known === false ? ' Nobody will be able to say who it was.' : '',
     ],
   ],
   'crime.commit': [(e, h) => describeCrime(e, h)],
@@ -1150,13 +1158,51 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
       ', with nothing but the clothes on their back.',
     ],
   ],
-  'outlaw.jailed': [
+  'outlaw.sentenced': [
+    (e, h) =>
+      e.data.sentence === 'death'
+        ? [
+            h.c(e.data.characterId),
+            ' is tried in ',
+            h.place(e.data.locationId),
+            ` and sentenced to hang for murder, ${describeDuration(e.data.until - e.t)} hence.`,
+          ]
+        : [
+            h.c(e.data.characterId),
+            ' is tried in ',
+            h.place(e.data.locationId),
+            ` and sentenced to ${describeDuration(e.data.until - e.t)} in prison.`,
+          ],
+  ],
+  'crime.conceal': [
     (e, h) => [
       h.c(e.data.characterId),
-      ' is thrown into the jail of ',
-      h.place(e.data.locationId),
-      `, for ${describeDuration(e.data.until - e.t)}.`,
+      ' hides the body of ',
+      h.c(e.data.victimId),
+      ' in ',
+      h.l(e.data.locationId),
+      ', where no one will find it.',
     ],
+  ],
+  'crime.pinned': [
+    (e, h) =>
+      e.data.victimId
+        ? [
+            'Word reaches ',
+            h.place(e.data.locationId),
+            ' at last: it was ',
+            h.c(e.data.characterId),
+            ' who killed ',
+            h.c(e.data.victimId),
+            '.',
+          ]
+        : [
+            'Word reaches ',
+            h.place(e.data.locationId),
+            ' of who was behind an old crime: ',
+            h.c(e.data.characterId),
+            '.',
+          ],
   ],
   'outlaw.freed': [
     (e, h) => [

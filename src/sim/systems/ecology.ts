@@ -14,7 +14,7 @@ import { weatherDay } from './weather';
 import { wildsDay } from './wilds';
 import { considerCrime } from './outlaws';
 import { newsDay } from './notoriety';
-import { headsDay } from './justice';
+import { justiceDay } from './justice';
 import { hearTownLanguages } from './social';
 
 /** The daily job runs in the morning, so newcomers arrive by day, and markets clear. */
@@ -52,7 +52,7 @@ export function daily(ctx: SimContext, targetPopulation: number): void {
 
   lifecycleDay(ctx, targetPopulation);
   newsDay(ctx);
-  headsDay(ctx);
+  justiceDay(ctx);
   lordsDay(ctx);
   dreadDay(ctx);
 

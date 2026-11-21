@@ -8,9 +8,10 @@ import {
   claimHeads,
   considerRestitution,
   escort,
-  headsDay,
+  justiceDay,
   release,
   restitutionBill,
+  sentence,
   tryEscape,
 } from './justice';
 import { recordCrime, standingIn } from './notoriety';
@@ -73,6 +74,53 @@ describe('restitution', () => {
   });
 });
 
+describe('justice', () => {
+  it('sends a thief to prison for years, more for a longer record', () => {
+    const { ctx, outlaw } = setup('prison');
+    const town = ctx.world.locations.get(concordale)!;
+    steal(ctx, outlaw);
+    sentence(ctx, outlaw, town);
+    const short = outlaw.activity.kind === 'jailed' ? outlaw.activity.until - ctx.world.time : 0;
+    const other = testCharacter(ctx);
+    outlawRecord(other);
+    for (let i = 0; i < 8; i++) steal(ctx, other, 200);
+    sentence(ctx, other, town);
+    const long = other.activity.kind === 'jailed' ? other.activity.until - ctx.world.time : 0;
+    expect(short).toBeGreaterThanOrEqual(360 * DAY);
+    expect(long).toBeGreaterThan(short * 2);
+  });
+
+  it('hangs a known murderer on a set day, but not for a murder nobody knows of', () => {
+    const { ctx, outlaw } = setup('gallows');
+    const town = ctx.world.locations.get(concordale)!;
+    recordCrime(ctx, outlaw, {
+      kind: 'murder',
+      at: ctx.world.time,
+      locationId: concordale,
+      townId: concordale,
+      value: 0,
+      known: true,
+    });
+    sentence(ctx, outlaw, town);
+    expect(outlaw.activity.kind === 'jailed' && outlaw.activity.sentence).toBe('death');
+    release(ctx, outlaw);
+    expect(outlaw.death?.cause.kind).toBe('executed');
+    const quiet = testCharacter(ctx);
+    outlawRecord(quiet);
+    recordCrime(ctx, quiet, {
+      kind: 'murder',
+      at: ctx.world.time,
+      locationId: woods,
+      townId: concordale,
+      value: 0,
+      known: false,
+    });
+    steal(ctx, quiet);
+    sentence(ctx, quiet, town);
+    expect(quiet.activity.kind === 'jailed' && quiet.activity.sentence).toBe('prison');
+  });
+});
+
 describe('heads', () => {
   it('are paid for in a town that knows the bounty, split with the party', () => {
     const { ctx, outlaw, hunter } = setup('head');
@@ -104,7 +152,7 @@ describe('heads', () => {
     steal(ctx, outlaw);
     hunter.heads.push({ outlawId: outlaw.id, takenAt: ctx.world.time });
     ctx.world.time += 100 * DAY;
-    headsDay(ctx);
+    justiceDay(ctx);
     expect(hunter.heads).toHaveLength(0);
     expect(ctx.world.bounties.has(outlaw.id)).toBe(false);
   });
@@ -130,7 +178,7 @@ describe('taken alive', () => {
     hunter.locationId = outlaw.locationId = concordale;
     escort(ctx, hunter, ctx.world.locations.get(concordale)!, () => true);
     expect(hunter.gold - before).toBeGreaterThan(amount * 2);
-    expect(outlaw.activity.kind).toBe('jailed');
+    expect(outlaw.activity.kind === 'jailed' && outlaw.activity.sentence).toBe('prison');
     expect(hunter.escorting).toBeUndefined();
     release(ctx, outlaw);
     expect(outlaw.outlaw).toBeNull();

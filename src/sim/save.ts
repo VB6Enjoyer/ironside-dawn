@@ -122,7 +122,7 @@ function toCrimesThatTravel(save: SaveData): Record<string, unknown> {
     c.stolenFrom = [];
     c.heads = [];
   }
-  return { ...save, world: { ...world, news: [] } };
+  return { ...save, world: { ...world, news: [], unsolved: [] } };
 }
 
 /**

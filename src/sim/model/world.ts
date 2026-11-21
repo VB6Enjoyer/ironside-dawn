@@ -13,7 +13,7 @@ import type {
   RouteId,
 } from './ids';
 import type { Bounty, Party } from './social';
-import type { News } from './crime';
+import type { News, Unsolved } from './crime';
 import type { Legend } from './item';
 import type { Job } from './jobs';
 import type { Location, Region, Route } from './location';
@@ -47,6 +47,8 @@ export interface World {
   readonly bounties: Map<CharacterId, Bounty>;
   /** Word of crimes still travelling the roads (0.3.0). */
   news: News[];
+  /** Crimes not yet pinned on anyone, and when they will be (0.3.0). */
+  unsolved: Unsolved[];
   readonly scheduler: SchedulerState<Job>;
   /** Full names in use, so new characters get distinct ones. */
   readonly takenNames: Set<string>;

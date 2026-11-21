@@ -26,6 +26,7 @@ import { rollLootItem } from './loot';
 import { cast, chooseSpell, type SpellChoice } from './magic';
 import { nudgeTrait, remember, satisfy } from './mind';
 import { onCharacterKilled } from './outlaws';
+import { bystanders } from './notoriety';
 import { capture, TAKEDOWN_BELOW, takedownChance, wantsAlive } from './justice';
 import { endRaid } from './raids';
 import { adjustOpinion, partyOf } from './social';
@@ -534,7 +535,14 @@ function killCharacter(
     .filter((id) => encounter.out[id] !== 'dead')
     .map((id) => ctx.world.characters.get(id)!);
   die(ctx, victim, { kind: 'character', characterId: killer.id });
-  onCharacterKilled(ctx, victim, killer);
+  // Who lived to see it: the victim's companions still on their feet, and anyone else about.
+  const theirs = encounter.sides.find((s) => s.characters.includes(victim.id))?.characters ?? [];
+  const seen = theirs
+    .filter((id) => id !== victim.id && encounter.out[id] !== 'dead')
+    .map((id) => ctx.world.characters.get(id)!);
+  const others = bystanders(ctx, encounter.locationId, new Set(everyoneIn(encounter)));
+  const familiarity = Math.max(0, ...seen.map((c) => c.opinions[killer.id]?.familiarity ?? 0));
+  onCharacterKilled(ctx, victim, killer, { witnesses: seen.length + others, familiarity });
   if (killer.calling === 'dread') dreadKilled(ctx, killer, victim, encounter.locationId);
   if (victim.calling === 'dread') dreadFell(ctx, victim, slayers, encounter.locationId);
 }

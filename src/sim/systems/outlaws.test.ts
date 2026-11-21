@@ -143,6 +143,14 @@ describe('ambushes', () => {
     speak(outlaw, 'common');
     speak(traveler, 'common');
     traveler.traits = { ...traveler.traits, bravery: 0.1 };
+    // They know the robber's face, so can name them.
+    traveler.opinions[outlaw.id] = {
+      affinity: 0,
+      trust: 0,
+      familiarity: 1,
+      lastSeen: 0,
+      bond: null,
+    };
     let robbed = false;
     for (let i = 0; i < 10 && !robbed; i++) {
       outlaw.activity = { kind: 'pastime', pastime: 'lurk', since: 0, until: 1e9 };
@@ -155,6 +163,22 @@ describe('ambushes', () => {
     // Word starts in the nearest town, and is still on its way to the others.
     expect(standingIn(outlaw, nearestTown(ctx, woods)!)).not.toBe('welcome');
     expect(ctx.world.news.length).toBeGreaterThan(0);
+  });
+
+  it('often go unnamed when a stranger is robbed alone in the wilds', () => {
+    let unnamed = 0;
+    for (let i = 0; i < 40; i++) {
+      const { ctx, outlaw, traveler, place } = outlawAndTraveler(`unnamed-${i}`);
+      speak(outlaw, 'common');
+      speak(traveler, 'common');
+      traveler.traits = { ...traveler.traits, bravery: 0 };
+      ambush(ctx, traveler, place);
+      const robbery = ctx.events.find((e) => e.type === 'crime.robbery');
+      if (robbery?.type === 'crime.robbery' && robbery.data.known === false) unnamed++;
+    }
+    // Most are still named: a face seen up close is remembered.
+    expect(unnamed).toBeGreaterThan(2);
+    expect(unnamed).toBeLessThan(20);
   });
 
   it('take a merchant’s cargo along with the gold', () => {
@@ -208,6 +232,26 @@ describe('bounties', () => {
     expect(traveler.gold).toBe(before);
     expect(traveler.heads.map((h) => h.outlawId)).toEqual([outlaw.id]);
     expect(ctx.world.bounties.has(outlaw.id)).toBe(true);
+  });
+
+  it('leave a murder with no witnesses unsolved, and sometimes the body hidden', () => {
+    let hidden = 0;
+    let unsolved = 0;
+    for (let i = 0; i < 30; i++) {
+      const { ctx, outlaw, traveler } = outlawAndTraveler(`desolate-${i}`);
+      traveler.death = {
+        at: 0,
+        locationId: woods,
+        cause: { kind: 'character', characterId: outlaw.id },
+      };
+      onCharacterKilled(ctx, traveler, outlaw, { witnesses: 0, familiarity: 0 });
+      expect(outlaw.crimes.at(-1)?.known).toBe(false);
+      expect(ctx.world.bounties.has(outlaw.id)).toBe(false);
+      if (traveler.death.hidden) hidden++;
+      unsolved += ctx.world.unsolved.length;
+    }
+    expect(hidden).toBeGreaterThan(5);
+    expect(unsolved).toBeGreaterThan(5);
   });
 
   it('grow with each murder', () => {

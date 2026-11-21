@@ -186,6 +186,8 @@ export interface Death {
   readonly at: number;
   readonly locationId: LocationId;
   readonly cause: DeathCause;
+  /** Their killer hid the body: as far as anyone knows, they vanished (0.3.0). */
+  readonly hidden?: boolean;
 }
 
 export type DeathCause =
@@ -194,6 +196,10 @@ export type DeathCause =
   | { readonly kind: 'trap'; readonly trap: TrapId }
   | { readonly kind: 'magic'; readonly spell: SpellId }
   | { readonly kind: 'age'; readonly age: number }
+  /** Hanged for murder (0.3.0). */
+  | { readonly kind: 'executed' }
+  /** Died behind bars (0.3.0). */
+  | { readonly kind: 'prison' }
   /** Not a death: they left for distant lands, and the world stopped following them. */
   | { readonly kind: 'departed' };
 
@@ -244,8 +250,13 @@ export type Activity =
    * or, for a captive, led under escort.
    */
   | { readonly kind: 'accompanying'; readonly leaderId: CharacterId }
-  /** Held in a town's jail until `until` (0.3.0). */
-  | { readonly kind: 'jailed'; readonly since: number; readonly until: number }
+  /** Held in a town's jail until `until`: released, or, sentenced to death, hanged (0.3.0). */
+  | {
+      readonly kind: 'jailed';
+      readonly since: number;
+      readonly until: number;
+      readonly sentence: 'prison' | 'death';
+    }
   | { readonly kind: 'dead' };
 
 export interface TravelLeg {

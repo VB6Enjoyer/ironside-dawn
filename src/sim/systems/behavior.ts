@@ -75,6 +75,8 @@ export function wakeCharacter(ctx: SimContext, character: Character): void {
     case 'jailed':
       if (ctx.world.time < activity.until) return;
       release(ctx, character);
+      // Hanged, or settled down in town: there is nothing more to decide.
+      if (character.activity.kind !== 'idle') return;
       break;
     case 'traveling': {
       if (finishLeg(ctx, character) !== 'arrived') return;

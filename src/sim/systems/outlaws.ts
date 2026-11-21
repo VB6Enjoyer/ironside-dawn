@@ -7,7 +7,7 @@ import { startBrawl } from './combat';
 import { isAlive } from './condition';
 import { remember, vividness, wealthNeed } from './mind';
 import { hasSellable } from './decide';
-import { nearestTown, recordCrime } from './notoriety';
+import { bystanders, identifyChance, leaveUnsolved, nearestTown, recordCrime } from './notoriety';
 import { considerRestitution, isHeld, layTrap, takeHead } from './justice';
 import { wakeAt } from './wake';
 import {
@@ -250,6 +250,16 @@ export function ambush(ctx: SimContext, traveler: Character, location: Location)
         0.7,
       );
       adjustOpinion(victim, leader.id, { affinity: -0.6, trust: -1 }, world.time);
+      // The robbed know they were robbed; whether they can say by whom is another matter.
+      const named = rng.chance(
+        identifyChance(
+          leader,
+          location,
+          victims.length +
+            bystanders(ctx, location.id, new Set([...lurkers, ...victims].map((c) => c.id))),
+          victim.opinions[leader.id]?.familiarity ?? 0,
+        ),
+      );
       ctx.emit(
         {
           type: 'crime.robbery',
@@ -259,6 +269,7 @@ export function ambush(ctx: SimContext, traveler: Character, location: Location)
             victimId: victim.id,
             gold,
             ...(Object.keys(goods).length > 0 ? { goods } : {}),
+            ...(named ? {} : { known: false }),
           },
         },
         [leader.id, victim.id],
@@ -272,7 +283,7 @@ export function ambush(ctx: SimContext, traveler: Character, location: Location)
         townId: nearestTown(ctx, location.id),
         victimId: victim.id,
         value: gold + worthOf(goods),
-        known: true,
+        known: named,
       });
     }
     // A good haul: off to spend it before the alarm is raised.
@@ -287,7 +298,16 @@ export function ambush(ctx: SimContext, traveler: Character, location: Location)
 }
 
 /** One character killed another: murder, or justice, with a head taken for the bounty. */
-export function onCharacterKilled(ctx: SimContext, victim: Character, killer: Character): void {
+export function onCharacterKilled(
+  ctx: SimContext,
+  victim: Character,
+  killer: Character,
+  /** Who saw it and how well they knew the killer; by default, plenty who knew them. */
+  seen: { readonly witnesses: number; readonly familiarity: number } = {
+    witnesses: 3,
+    familiarity: 1,
+  },
+): void {
   const locationId = victim.death?.locationId ?? killer.locationId ?? killer.homeId;
   if (victim.outlaw && !killer.outlaw) {
     // The bounty stands until the head is brought to a town that knows it (0.3.0).
@@ -298,16 +318,39 @@ export function onCharacterKilled(ctx: SimContext, victim: Character, killer: Ch
   ctx.world.bounties.delete(victim.id);
   if (killer.outlaw) {
     ctx.world.tally.murders++;
-    recordCrime(ctx, killer, {
+    const place = ctx.world.locations.get(locationId)!;
+    const rng = ctx.rng.outlaws;
+    const known = rng.chance(identifyChance(killer, place, seen.witnesses, seen.familiarity));
+    // With nobody about, a cool-headed killer may hide the body: the victim simply vanishes.
+    const hidden =
+      seen.witnesses === 0 &&
+      victim.death !== null &&
+      rng.chance(
+        Math.min(0.85, 0.15 + 0.3 * (1 - killer.traits.compassion) + 0.004 * killer.skills.stealth),
+      );
+    const crime = {
       kind: 'murder',
       at: ctx.world.time,
       locationId,
       townId: nearestTown(ctx, locationId),
       victimId: victim.id,
       value: 0,
-      known: true,
-    });
-    if (!victim.outlaw) raiseAvenger(ctx, victim, killer);
+      known,
+    } as const;
+    recordCrime(ctx, killer, crime);
+    if (hidden) {
+      victim.death = { ...victim.death!, hidden: true };
+      ctx.emit(
+        {
+          type: 'crime.conceal',
+          data: { characterId: killer.id, locationId, victimId: victim.id },
+        },
+        [killer.id],
+        locationId,
+      );
+    }
+    if (!known) leaveUnsolved(ctx, killer, crime, hidden);
+    else if (!victim.outlaw) raiseAvenger(ctx, victim, killer);
   }
   // Those the dread kill may leave someone sworn to destroy it.
   if (killer.calling === 'dread') raiseAvenger(ctx, victim, killer);

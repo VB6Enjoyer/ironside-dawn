@@ -4,7 +4,9 @@ import type { SimContext } from '../context';
 import type { Bounty, Character, CharacterId, Location, LocationId } from '../model';
 import { isAlive, modifier } from './condition';
 import { carriedGear, starterWeapon } from './items';
+import { die } from './death';
 import { burn } from './ledger';
+import { retire } from './lifecycle';
 import { isBarred, isKnownIn, isShunned, settle } from './notoriety';
 import { refreshMaxima } from './progress';
 import { findPath } from './roads';
@@ -220,11 +222,13 @@ export function claimHeads(ctx: SimContext, character: Character, town: Location
   });
 }
 
-/** Once a day: heads carried too long are past proving, and their bounties lapse. */
-export function headsDay(ctx: SimContext): void {
+/** Once a day: prisoners may die behind bars; heads carried too long are past proving, and their bounties lapse. */
+export function justiceDay(ctx: SimContext): void {
   const now = ctx.world.time;
   for (const c of ctx.world.characters.values()) {
-    if (c.heads.length === 0 || !isAlive(c)) continue;
+    if (!isAlive(c)) continue;
+    if (c.activity.kind === 'jailed') prisonDay(ctx, c);
+    if (c.heads.length === 0) continue;
     c.heads = c.heads.filter((head) => {
       if (now - head.takenAt < HEAD_DAYS * DAY) return true;
       loseHead(ctx, c, head.outlawId);
@@ -432,10 +436,38 @@ function free(ctx: SimContext, captive: Character, locationId: LocationId): void
   wakeAt(ctx, captive, ctx.world.time + MINUTE);
 }
 
-/** Jail before 0.3.0's trials come (step 8): a year, more for a long record, three times for blood. */
-const JAIL_DAYS = 360;
-const JAIL_DAYS_PER_CRIME = 30;
-const JAIL_MAX_DAYS = 10 * 360;
+// ---------------------------------------------------------------------------
+// Justice (step 8): tried on what is known, jailed for years or hanged
+
+/** Years in prison: one, and more for each known crime and the worth taken; never more than twenty. */
+const PRISON_YEARS = 1;
+const YEARS_PER_CRIME = 0.25;
+const YEARS_PER_GOLD = 1 / 250;
+const MOST_YEARS = 20;
+/** Days from a death sentence to the hanging. */
+const GALLOWS_DAYS = [3, 10] as const;
+/** Yearly chance of dying behind bars, from fever, cold and knives, before age is counted. */
+const PRISON_DEATH = 0.03;
+const YEAR_DAYS = 360;
+
+/**
+ * What a court can learn of someone: the most any town has heard of their
+ * crimes, murders and what they took. Crimes nobody pinned on them don't count.
+ */
+export function knownRecord(character: Character): {
+  crimes: number;
+  murders: number;
+  value: number;
+} {
+  const record = { crimes: 0, murders: 0, value: 0 };
+  for (const known of Object.values(character.notoriety)) {
+    if (!known) continue;
+    record.crimes = Math.max(record.crimes, known.crimes);
+    record.murders = Math.max(record.murders, known.murders);
+    record.value = Math.max(record.value, known.value);
+  }
+  return record;
+}
 
 /**
  * The escort's day: in a town that would pay, the captive is handed over
@@ -476,7 +508,6 @@ export function escort(
 
 function deliver(ctx: SimContext, leader: Character, captive: Character, town: Location): void {
   const world = ctx.world;
-  const now = world.time;
   const bounty = world.bounties.get(captive.id);
   if (bounty) {
     const amount = Math.round(bounty.amount * ALIVE);
@@ -501,33 +532,85 @@ function deliver(ctx: SimContext, leader: Character, captive: Character, town: L
   }
   const market = world.markets.get(town.id);
   if (market) market.house.gold += captive.captive?.gold ?? 0;
-  const record = captive.outlaw;
-  const days =
-    (JAIL_DAYS + JAIL_DAYS_PER_CRIME * (record?.crimes ?? 0)) * (hasBlood(captive) ? 3 : 1);
-  const until = now + Math.min(JAIL_MAX_DAYS, days) * DAY;
   delete leader.escorting;
   delete captive.captive;
   moveTo(world, captive, town.id);
-  captive.activity = { kind: 'jailed', since: now, until };
-  wakeAt(ctx, captive, until);
+  sentence(ctx, captive, town);
+}
+
+/**
+ * The town tries them on what is known of them: a known murderer hangs on a
+ * set day; anyone else goes to prison for years, more for a longer record and
+ * more taken.
+ */
+export function sentence(ctx: SimContext, prisoner: Character, town: Location): void {
+  const now = ctx.world.time;
+  const known = knownRecord(prisoner);
+  const death = known.murders > 0;
+  const days = death
+    ? ctx.rng.outlaws.int(...GALLOWS_DAYS)
+    : Math.round(
+        Math.min(
+          MOST_YEARS,
+          PRISON_YEARS + YEARS_PER_CRIME * known.crimes + YEARS_PER_GOLD * known.value,
+        ) * YEAR_DAYS,
+      );
+  const until = now + days * DAY;
+  prisoner.activity = { kind: 'jailed', since: now, until, sentence: death ? 'death' : 'prison' };
+  wakeAt(ctx, prisoner, until);
   ctx.emit(
-    { type: 'outlaw.jailed', data: { characterId: captive.id, locationId: town.id, until } },
-    [captive.id],
+    {
+      type: 'outlaw.sentenced',
+      data: {
+        characterId: prisoner.id,
+        locationId: town.id,
+        sentence: death ? 'death' : 'prison',
+        until,
+        crimes: known.crimes,
+        murders: known.murders,
+      },
+    },
+    [prisoner.id],
     town.id,
   );
 }
 
-/** Their time served, a prisoner walks out: no outlaw now, though the towns remember. */
+/**
+ * A prisoner's day comes: the condemned hang; the rest walk out, no outlaws
+ * now, with a dent in their standing that fades. Some go back to the road;
+ * the old, the broken and the long-jailed settle down instead.
+ */
 export function release(ctx: SimContext, prisoner: Character): void {
-  const locationId = prisoner.locationId ?? prisoner.homeId;
+  const activity = prisoner.activity;
+  if (activity.kind !== 'jailed') return;
+  const town = ctx.world.locations.get(prisoner.locationId ?? prisoner.homeId)!;
+  if (activity.sentence === 'death') {
+    die(ctx, prisoner, { kind: 'executed' });
+    return;
+  }
   prisoner.outlaw = null;
   prisoner.pardonedAt = ctx.world.time;
+  for (const id of Object.keys(prisoner.notoriety) as LocationId[]) settle(prisoner, id);
   prisoner.activity = { kind: 'idle' };
   ctx.emit(
-    { type: 'outlaw.freed', data: { characterId: prisoner.id, locationId } },
+    { type: 'outlaw.freed', data: { characterId: prisoner.id, locationId: town.id } },
     [prisoner.id],
-    locationId,
+    town.id,
   );
+  const years = (ctx.world.time - activity.since) / (YEAR_DAYS * DAY);
+  const age = (ctx.world.time - prisoner.born) / (YEAR_DAYS * DAY);
+  const settleDown =
+    0.15 + 0.06 * years + (1 - prisoner.traits.bravery) * 0.3 + (age > 50 ? 0.3 : 0);
+  if (prisoner.calling === 'adventurer' && ctx.rng.outlaws.chance(Math.min(0.9, settleDown))) {
+    retire(ctx, prisoner, town, 'prison', false);
+  }
+}
+
+/** Once a day, behind bars: some prisoners don't live to see their release. */
+function prisonDay(ctx: SimContext, prisoner: Character): void {
+  const activity = prisoner.activity;
+  if (activity.kind !== 'jailed' || activity.sentence !== 'prison') return;
+  if (ctx.rng.outlaws.chance(PRISON_DEATH / YEAR_DAYS)) die(ctx, prisoner, { kind: 'prison' });
 }
 
 /** Whether someone is held: under escort, or in jail. */
