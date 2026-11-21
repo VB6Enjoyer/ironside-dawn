@@ -781,10 +781,20 @@ export function release(ctx: SimContext, prisoner: Character): void {
   }
 }
 
-/** Once a day, behind bars: some prisoners don't live to see their release. */
+/**
+ * Once a day, behind bars: a prisoner a murder has since been pinned on is
+ * tried again, for their life; some prisoners don't live to see their release.
+ */
 function prisonDay(ctx: SimContext, prisoner: Character): void {
   const activity = prisoner.activity;
   if (activity.kind !== 'jailed' || activity.sentence !== 'prison') return;
+  if (knownRecord(prisoner).murders > 0) {
+    const town = ctx.world.locations.get(prisoner.locationId ?? prisoner.homeId);
+    if (town) {
+      sentence(ctx, prisoner, town);
+      return;
+    }
+  }
   if (ctx.rng.outlaws.chance(PRISON_DEATH / YEAR_DAYS)) die(ctx, prisoner, { kind: 'prison' });
 }
 

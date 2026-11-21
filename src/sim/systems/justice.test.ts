@@ -123,6 +123,26 @@ describe('justice', () => {
   });
 });
 
+describe('a murder pinned on a prisoner', () => {
+  it('sends them back to court, for their life', () => {
+    const { ctx, outlaw } = setup('retrial');
+    const town = ctx.world.locations.get(concordale)!;
+    steal(ctx, outlaw);
+    sentence(ctx, outlaw, town);
+    expect(outlaw.activity.kind === 'jailed' && outlaw.activity.sentence).toBe('prison');
+    recordCrime(ctx, outlaw, {
+      kind: 'murder',
+      at: ctx.world.time,
+      locationId: woods,
+      townId: concordale,
+      value: 0,
+      known: true,
+    });
+    justiceDay(ctx);
+    expect(outlaw.activity.kind === 'jailed' && outlaw.activity.sentence).toBe('death');
+  });
+});
+
 describe('heads', () => {
   it('are paid for in a town that knows the bounty, split with the party', () => {
     const { ctx, outlaw, hunter } = setup('head');
