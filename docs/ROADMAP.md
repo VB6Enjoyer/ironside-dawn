@@ -995,6 +995,133 @@ missed.** Notes from building it (design in `ARCHITECTURE.md` §4.13):
 
 ---
 
+## 0.3.0 — The Outlaws Update
+
+**Goal:** Crime is a living part of every world, large or small, and a
+hard life: each crime makes the next one harder to get away with, news of it
+travels town to town, and an outlaw's career ends in a pardon, a bounty
+collected on their head, or a cell or a scaffold.
+
+**Why (measured on 0.2.0):** turning outlaw has one trigger, being an
+adventurer with under 40 gold. Adventurers start with 7–17 gold, so every
+world opens with a burst of outlaws; after their first delves they are broke
+only 0.2–0.4% of the time, so crime then almost stops. Four 20-adventurer
+worlds made 3–13 outlaws in a century, in 2–5 distinct years, and the top two
+outlaws committed 76–100% of all crimes (one world had outlaws but no crimes
+at all). Crimes only ever have named victims, and a crime lowers an outlaw's
+standing in every town at once.
+
+**Already in place to build on:** standing per town (-1 to 1) and being
+_wanted_ in a town (no inn, unwelcome to linger); bounties posted by the
+victim's home town and paid on the outlaw's death; hunters weighing bounties;
+avengers raised by murder; and going straight by paying half one's purse.
+
+Each step is its own pull request, keeps saves loading (a `SAVE_VERSION` bump
+and a migration whenever the shape of saves changes, since `main` is the live
+site), and is checked against the targets below with the crime audit.
+
+### Steps
+
+1. **Measure first.** A headless crime audit (`npm run sim -- --report crime`
+   or a `tools/` script) over several seeds and world sizes: outlaws made per
+   decade and when, crimes by kind, how crimes spread across outlaws, how
+   careers end, how often adventurers are broke, and the state of standing in
+   each town. It records the 0.2.0 baseline above and checks every later step.
+
+2. **More ways in, and fair starting purses.**
+   - Adventurers start above the broke line, so worlds don't open with a burst
+     of outlaws.
+   - Temptation, not only want: greed and a weak conscience can turn someone
+     who isn't broke, given an opportunity (a rich caravan, an unguarded
+     house).
+   - Grudges: the robbed and the wronged may turn on whoever wronged them.
+   - A bad run: repeated empty or near-fatal delves make the desperate
+     desperate sooner.
+   - The cruel (low compassion) turn more readily, and to violence.
+   - _Exit:_ in small worlds, a steady trickle of outlaws over the decades
+     rather than one burst; no single outlaw commits more than about 40% of a
+     century's crimes.
+
+3. **Crimes against the nameless.** Outlaws prey on the world beyond the named
+   characters:
+   - Waylay caravans and travelling traders on the roads.
+   - Burgle houses and rob shops in town, which needs stealth and lockpicking;
+     a failed attempt can bring the guards.
+   - Extort farms and outlying folk, and vandalise.
+   - Stolen goods and gold come out of the town's economy (its trading house
+     and trades), and loot is fenced in other towns.
+   - Each crime records its kind, place and value, for restitution and
+     sentencing later. The log tells of them as crimes (orange, ⚖).
+   - _Exit:_ most crimes have no named victim; towns plagued by outlaws feel
+     it in their stocks and prices.
+
+4. **Reputation that travels.** A crime is known first where it happened;
+   word then spreads along the roads, carried by travelers and merchants, so
+   each town knows a different part of an outlaw's record at different
+   times.
+   - What a town knows sets how it treats someone:
+     - suspicion: dearer to buy from, paid less to sell to;
+     - unwelcome: no inn, no trade, wanted posters up;
+     - barred: guards turn them away, which always applies to a known
+       murderer.
+   - Notoriety also weighs on making friends, being helped and joining
+     parties.
+   - Outlaws prefer towns where their name isn't known yet, and their
+     standing mends slowly with time and good deeds.
+   - This replaces today's instant, everywhere drop in standing.
+   - _Exit:_ the same outlaw is barred in one town and trading in another, and
+     the map of who knows what changes as news travels.
+
+5. **Way out: restitution.** An outlaw with no blood on their hands can go to
+   a town's court and pay back what they took, with interest and a fine, to
+   clear their name and lift the bounty. Their standing still has to be won
+   back. Outlaws weigh it once crime stops paying.
+   - _Exit:_ thieves who tire of the life go straight, and their life stories
+     say so.
+
+6. **Way out: a price on their head.** Killing an outlaw no longer pays on the
+   spot. The killer takes the head and must bring it to a town that knows the
+   bounty. A party splits the reward, and a head can be lost along the way.
+   - _Exit:_ bounties are collected in towns, by those who made the journey.
+
+7. **Way out: taken alive.** Skilled hunters can capture an outlaw:
+   - **A trap**, set where they share a road, a wild place or a dungeon,
+     weighing awareness and stealth on both sides. It can fail, and the
+     outlaw escape.
+   - **A takedown** in a fight once the outlaw is badly hurt. It can fail,
+     wounding or killing the hunter.
+   - A live capture pays far more than a head. The captive is escorted to the
+     nearest town that knows the bounty, and on each stretch of road may try
+     to escape: better at higher level and agility, worse against a larger,
+     stronger escort. One who escapes has lost most of their gold and gear.
+   - _Exit:_ captures, failed traps, deadly takedowns and escapes all happen,
+     and read well in the log.
+
+8. **Justice.** An outlaw brought in alive is tried:
+   - Theft, assault and the like earn years in prison, scaled by the record.
+     Prisoners can die there; once freed they return to adventuring or
+     retire, with a dent in their standing that fades.
+   - Murder earns execution on a set day, a public event in the chronicle.
+   - Life stories, cards and the Halls (wanted, imprisoned, executed) show it
+     all.
+   - _Exit:_ outlaws' careers end in every way above, in proportion.
+
+9. **Balance and release.**
+   - Tune so that each crime is worth less than the last: notoriety compounds,
+     towns close, bounties grow and draw better hunters.
+   - Targets across world sizes: crime in every era; most careers ending
+     within a few years; murderers rarely dying of old age.
+   - Then release 0.3.0: players' notes, changelog, `SAME_HISTORY_SINCE` moved
+     to 0.3.0, a save file from 0.2.0 kept as a fixture, the architecture
+     notes, and a tag.
+
+**Alongside (separately, as 0.2.1 if wanted):** magic is used thousands of
+times a century but hidden at most speeds, and no creature casts. Make casts
+that matter (killing blows, the dread's spells, a new spell's first use)
+_Notable_, and give a few powerful creatures spell-like attacks.
+
+---
+
 ## Beyond (ideas parking lot)
 
 Not planned or committed. Ideas stay here until they earn a phase.
