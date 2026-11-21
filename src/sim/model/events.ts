@@ -345,6 +345,8 @@ export type EventBody =
         readonly method?: ExecutionMethod;
       }
     >
+  /** Handed over alive: locked up in the town's jail to await trial on `trialAt` (0.3.0). */
+  | Body<'outlaw.held', CharacterAt & { readonly trialAt: number }>
   | Body<'outlaw.freed', CharacterAt>
   /** A murderer hides their victim's body: as far as anyone knows, the victim vanished (0.3.0). */
   | Body<'crime.conceal', CharacterAt & { readonly victimId: CharacterId }>
@@ -601,6 +603,7 @@ export const EVENT_IMPORTANCE: Record<EventType, Importance> = {
   'outlaw.sentenced': Importance.Notable,
   'crime.conceal': Importance.Notable,
   'crime.pinned': Importance.Notable,
+  'outlaw.held': Importance.Normal,
   'outlaw.freed': Importance.Normal,
   'bounty.post': Importance.Normal,
   'bounty.claim': Importance.Notable,

@@ -103,6 +103,7 @@ const RARE: Record<string, (a: CharacterId, b: CharacterId) => object> = {
     at: 0,
   }),
   'outlaw.freed': (a) => ({ characterId: a, locationId: 'saltmere' }),
+  'outlaw.held': (a) => ({ characterId: a, locationId: 'saltmere', trialAt: 8 * 86_400 }),
   'market.shock': () => ({ shock: 'blockade', locationId: where, otherId: 'saltmere', days: 20 }),
   'market.recover': () => ({ shock: 'failed-harvest', locationId: 'concordale', otherId: null }),
   'character.elder': (a) => ({ characterId: a, locationId: 'concordale', age: 43 }),

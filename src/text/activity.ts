@@ -62,6 +62,7 @@ export function describeActivity(character: Character, names: NameResolver): Seg
     case 'fighting':
       return [{ text: 'Fighting for their life in ' }, here];
     case 'jailed':
+      if (activity.sentence === 'trial') return [{ text: 'In jail awaiting trial in ' }, here];
       return activity.sentence === 'death'
         ? [{ text: 'Awaiting the hangman in ' }, here]
         : [{ text: 'In prison in ' }, here];

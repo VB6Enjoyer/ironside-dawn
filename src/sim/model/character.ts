@@ -264,12 +264,15 @@ export type Activity =
    * or, for a captive, led under escort.
    */
   | { readonly kind: 'accompanying'; readonly leaderId: CharacterId }
-  /** Held in a town's jail until `until`: released, or, sentenced to death, hanged (0.3.0). */
+  /**
+   * Held in a town's jail until `until` (0.3.0): awaiting trial, then tried;
+   * serving a prison sentence, then released; or condemned, then executed.
+   */
   | {
       readonly kind: 'jailed';
       readonly since: number;
       readonly until: number;
-      readonly sentence: 'prison' | 'death';
+      readonly sentence: 'trial' | 'prison' | 'death';
     }
   | { readonly kind: 'dead' };
 

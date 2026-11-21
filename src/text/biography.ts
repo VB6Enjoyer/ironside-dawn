@@ -476,6 +476,16 @@ function judgment(
         place(j.townId, names),
         { text: `, and was paid ${j.amount} gold for it. ` },
       );
+      // Still waiting for the court.
+      if (
+        c.activity.kind === 'jailed' &&
+        c.activity.sentence === 'trial' &&
+        c.justice.at(-1) === j
+      ) {
+        out.push({
+          text: `They wait in its jail for their trial, set for ${whenIn(c.activity.until)}. `,
+        });
+      }
       break;
     case 'sentenced': {
       const charges = chargesPhrase(j.charges);

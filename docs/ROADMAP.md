@@ -1168,7 +1168,9 @@ site), and is checked against the targets below with the crime audit.
      world, 4 going straight.
 
 8. **Justice.** _Done_ (`src/sim/systems/justice.ts`, `notoriety.ts`).
-   - An outlaw brought in alive is tried on what any town knows of them.
+   - An outlaw brought in alive is handed over at the watch-house (a few
+     hours), held in jail three to ten days to await trial, and tried on what
+     any town knows of them.
      Theft, assault and the like earn a year in prison, plus a quarter year per
      known crime and a year per 500 gold taken (fifteen at most). Prisoners can
      die there (3% a year, and of old age); freed, they are no outlaws, still

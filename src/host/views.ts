@@ -364,10 +364,7 @@ export function hallsView(sim: Simulation): HallsView {
           ]
         : [],
     )
-    .sort(
-      (a, b) =>
-        (a.sentence === 'death' ? 0 : 1) - (b.sentence === 'death' ? 0 : 1) || a.until - b.until,
-    )
+    .sort((a, b) => SENTENCE_ORDER[a.sentence] - SENTENCE_ORDER[b.sentence] || a.until - b.until)
     .slice(0, HALL_SIZE * 2);
 
   const hanged: FallenEntry[] = everyone
@@ -410,6 +407,9 @@ export function hallsView(sim: Simulation): HallsView {
     hanged,
   };
 }
+
+/** Behind Bars lists the condemned first, then those awaiting trial, then those serving years. */
+const SENTENCE_ORDER = { death: 0, trial: 1, prison: 2 } as const;
 
 /** What the latest court convicted someone of. */
 function lastCharges(c: Character): Charges {

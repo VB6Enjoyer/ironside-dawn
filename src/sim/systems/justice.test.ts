@@ -198,10 +198,23 @@ describe('taken alive', () => {
     expect(bound).toBe(concordale);
     const before = hunter.gold;
     hunter.locationId = outlaw.locationId = concordale;
-    escort(ctx, hunter, ctx.world.locations.get(concordale)!, () => true);
+    const town = ctx.world.locations.get(concordale)!;
+    // The hand-over at the watch-house takes a few hours.
+    expect(escort(ctx, hunter, town, () => true)).toBe(true);
+    expect(hunter.gold).toBe(before);
+    expect(hunter.escorting).toBe(outlaw.id);
+    ctx.world.time += 4 * 3600;
+    expect(escort(ctx, hunter, town, () => true)).toBe(false);
     expect(hunter.gold - before).toBeGreaterThan(amount * 2);
-    expect(outlaw.activity.kind === 'jailed' && outlaw.activity.sentence).toBe('prison');
     expect(hunter.escorting).toBeUndefined();
+    // Then days in jail awaiting trial, before the court sits.
+    const jailed = outlaw.activity;
+    expect(jailed.kind === 'jailed' && jailed.sentence).toBe('trial');
+    expect(jailed.kind === 'jailed' && jailed.until - ctx.world.time).toBeGreaterThanOrEqual(
+      3 * DAY,
+    );
+    release(ctx, outlaw);
+    expect(outlaw.activity.kind === 'jailed' && outlaw.activity.sentence).toBe('prison');
     release(ctx, outlaw);
     expect(outlaw.outlaw).toBeNull();
   });

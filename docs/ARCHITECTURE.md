@@ -664,7 +664,10 @@ Built for 0.3.0 (`src/sim/systems/crime.ts`, `notoriety.ts`, `outlaws.ts`).
   captor (`Character.escorting`), who heads for the nearest town that would
   pay. Each leg of road they may escape (level and agility against the
   escort's size and level). Delivered, the bounty pays two and a half times
-  over, the seized gold goes to the town, and the captive stands trial.
+  over, the seized gold goes to the town, and the captive stands trial. The hand-over
+  takes one to three hours, the escort waiting on it (`Captivity.deliverAt`);
+  then the captive is `jailed` with sentence `trial` until the court sits, three
+  to ten days later at ten in the morning.
 - **Justice.** The court tries a prisoner on what is known of them: the most
   any town has heard (`knownRecord`), never crimes nobody pinned on them. A
   known murderer is `jailed` with sentence `death` and put to death three to

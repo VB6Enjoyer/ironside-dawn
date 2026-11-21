@@ -68,6 +68,7 @@ export function eventTone(event: SimEvent): Mark | null {
     case 'capture.attempt':
     case 'capture.escape':
     case 'outlaw.sentenced':
+    case 'outlaw.held':
     case 'crime.conceal':
     case 'crime.pinned':
     case 'outlaw.turn':

@@ -484,10 +484,12 @@ function Bonds({
           <>
             <dt>Sentence</dt>
             <dd className="outlaw">
-              {character.activity.sentence === 'death'
-                ? `death, on ${formatTimestamp(character.activity.until)}`
-                : `prison, until ${formatTimestamp(character.activity.until)}`}
-              {charges && `, for ${charges}`}
+              {character.activity.sentence === 'trial'
+                ? `awaiting trial, on ${formatTimestamp(character.activity.until)}`
+                : character.activity.sentence === 'death'
+                  ? `death, on ${formatTimestamp(character.activity.until)}`
+                  : `prison, until ${formatTimestamp(character.activity.until)}`}
+              {character.activity.sentence !== 'trial' && charges && `, for ${charges}`}
             </dd>
           </>
         )}

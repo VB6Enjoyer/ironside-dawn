@@ -299,7 +299,8 @@ export interface PrisonerEntry extends CharacterSummary {
   readonly townId: LocationId;
   readonly since: number;
   readonly until: number;
-  readonly sentence: 'prison' | 'death';
+  /** Awaiting trial (until is the day of it), serving years, or condemned. */
+  readonly sentence: 'trial' | 'prison' | 'death';
   /** What they were convicted of: known crimes by kind. */
   readonly charges: Charges;
 }

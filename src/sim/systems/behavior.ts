@@ -143,15 +143,11 @@ function decide(ctx: SimContext, character: Character): void {
   if (location.kind === 'town') claimHeads(ctx, character, location);
   if (
     character.escorting &&
-    escort(ctx, character, location, (to) =>
-      startJourney(ctx, character, to, 'escort', [], gatherParty(ctx, character, location)),
-    )
+    escort(ctx, character, location, (to) => {
+      character.goal = { kind: 'travel', locationId: to, why: [] };
+      return startJourney(ctx, character, to, 'escort', [], gatherParty(ctx, character, location));
+    })
   ) {
-    character.goal = {
-      kind: 'travel',
-      locationId: character.activity.kind === 'traveling' ? character.activity.destinationId : null,
-      why: [],
-    };
     return;
   }
 

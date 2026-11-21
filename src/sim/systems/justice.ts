@@ -1,5 +1,5 @@
 import type { WeaponId } from '../../content';
-import { DAY, MINUTE } from '../core/time';
+import { DAY, HOUR, MINUTE, nextTimeOfDay } from '../core/time';
 import type { SimContext } from '../context';
 import type {
   Bounty,
@@ -603,10 +603,7 @@ export function escort(
   const captive = captiveOf(ctx, leader);
   if (!captive) return false;
   const world = ctx.world;
-  if (paysFor(ctx, captive, here)) {
-    deliver(ctx, leader, captive, here);
-    return false;
-  }
+  if (paysFor(ctx, captive, here)) return handOver(ctx, leader, captive, here);
   // Nowhere pays for them any more (the bounty lapsed): a town will still lock them up.
   const towns = bountyTowns(ctx, leader);
   let best: { id: LocationId; duration: number } | null = null;
@@ -618,11 +615,36 @@ export function escort(
       best = { id: town.id, duration: path.duration };
     }
   }
-  if (!best) {
-    if (here.kind === 'town') deliver(ctx, leader, captive, here);
-    return false;
-  }
+  if (!best) return here.kind === 'town' ? handOver(ctx, leader, captive, here) : false;
   return setOut(best.id);
+}
+
+/** Hours it takes to lead a captive to the watch-house and tell what they did. */
+const HANDOVER_HOURS = [1, 3] as const;
+/** The hour a court sits. */
+const COURT_HOUR = 10;
+/** Days a prisoner waits in jail for their trial. */
+const TRIAL_DAYS = [3, 10] as const;
+
+/**
+ * In a town that will take them: the hand-over takes a few hours, the escort
+ * waiting on it; then the captive is delivered. Returns whether the escort is
+ * still busy with it.
+ */
+function handOver(ctx: SimContext, leader: Character, captive: Character, town: Location): boolean {
+  const now = ctx.world.time;
+  const held = captive.captive!;
+  if (held.deliverAt === undefined) {
+    held.deliverAt = now + ctx.rng.outlaws.int(HANDOVER_HOURS[0] * 3600, HANDOVER_HOURS[1] * 3600);
+  }
+  if (now < held.deliverAt) {
+    leader.activity = { kind: 'idle' };
+    leader.goal = { kind: 'wait', locationId: town.id, why: [] };
+    wakeAt(ctx, leader, held.deliverAt);
+    return true;
+  }
+  deliver(ctx, leader, captive, town);
+  return false;
 }
 
 function deliver(ctx: SimContext, leader: Character, captive: Character, town: Location): void {
@@ -661,7 +683,21 @@ function deliver(ctx: SimContext, leader: Character, captive: Character, town: L
   delete leader.escorting;
   delete captive.captive;
   moveTo(world, captive, town.id);
-  sentence(ctx, captive, town);
+  awaitTrial(ctx, captive, town);
+}
+
+/** Locked up in the town's jail to await trial, a few days off. */
+function awaitTrial(ctx: SimContext, prisoner: Character, town: Location): void {
+  const now = ctx.world.time;
+  // The court sits mid-morning, a few days on.
+  const trialAt = nextTimeOfDay(now + ctx.rng.outlaws.int(...TRIAL_DAYS) * DAY, COURT_HOUR * HOUR);
+  prisoner.activity = { kind: 'jailed', since: now, until: trialAt, sentence: 'trial' };
+  wakeAt(ctx, prisoner, trialAt);
+  ctx.emit(
+    { type: 'outlaw.held', data: { characterId: prisoner.id, locationId: town.id, trialAt } },
+    [prisoner.id],
+    town.id,
+  );
 }
 
 /**
@@ -758,6 +794,11 @@ export function release(ctx: SimContext, prisoner: Character): void {
   const activity = prisoner.activity;
   if (activity.kind !== 'jailed') return;
   const town = ctx.world.locations.get(prisoner.locationId ?? prisoner.homeId)!;
+  // The day of the trial.
+  if (activity.sentence === 'trial') {
+    sentence(ctx, prisoner, town);
+    return;
+  }
   if (activity.sentence === 'death') {
     die(ctx, prisoner, { kind: 'executed', method: executionMethod(town) });
     return;
