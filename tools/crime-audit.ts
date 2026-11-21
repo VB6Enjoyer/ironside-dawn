@@ -32,6 +32,18 @@ interface WorldReport {
   readonly ends: { reformed: number; bountied: number; died: number; atLarge: number };
   /** Share of monthly looks at an honest adventurer that found them broke. */
   readonly brokeShare: number;
+  /** Crimes against the nameless that came off, by kind, and those foiled (0.3.0). */
+  readonly nameless: Record<string, number>;
+  readonly foiled: number;
+  /** Of those, done by someone who was no outlaw; and fines paid. */
+  readonly occasional: number;
+  readonly fined: number;
+  /** Gold worth the towns lost to crime, and gold fences paid out. */
+  readonly stolen: number;
+  readonly fenced: number;
+  /** Towns' standing worsening as word spread, by the standing reached; turned away at gates. */
+  readonly notorious: Record<string, number>;
+  readonly turnedAway: number;
 }
 
 function runWorld(seed: string, adventurers: number, years: number): WorldReport {
@@ -41,6 +53,14 @@ function runWorld(seed: string, adventurers: number, years: number): WorldReport
   let robberies = 0;
   let ambushes = 0;
   let murders = 0;
+  const nameless: Record<string, number> = {};
+  const notorious: Record<string, number> = {};
+  let foiled = 0;
+  let occasional = 0;
+  let fined = 0;
+  let stolen = 0;
+  let fenced = 0;
+  let turnedAway = 0;
   const ends = { reformed: 0, bountied: 0, died: 0, atLarge: 0 };
   let start = 0;
   let sim: ReturnType<typeof createSimulation> | null = null;
@@ -62,6 +82,24 @@ function runWorld(seed: string, adventurers: number, years: number): WorldReport
       case 'outlaw.ambush':
         ambushes++;
         credit(e.data.characterId);
+        break;
+      case 'crime.commit': {
+        if (!sim.world.characters.get(e.data.characterId)?.outlaw) occasional++;
+        else credit(e.data.characterId);
+        if (e.data.fine !== undefined) fined++;
+        if (e.data.foiled) foiled++;
+        else nameless[e.data.crime] = (nameless[e.data.crime] ?? 0) + 1;
+        stolen += e.data.value;
+        break;
+      }
+      case 'crime.fence':
+        fenced += e.data.gold;
+        break;
+      case 'outlaw.notorious':
+        notorious[e.data.standing] = (notorious[e.data.standing] ?? 0) + 1;
+        break;
+      case 'outlaw.barred':
+        turnedAway++;
         break;
       case 'outlaw.reform':
         ends.reformed++;
@@ -108,6 +146,14 @@ function runWorld(seed: string, adventurers: number, years: number): WorldReport
     byOutlaw: [...byOutlaw.values()].sort((a, b) => b - a),
     ends,
     brokeShare: looks ? broke / looks : 0,
+    nameless,
+    foiled,
+    occasional,
+    fined,
+    stolen,
+    fenced,
+    notorious,
+    turnedAway,
   };
 }
 
@@ -187,6 +233,32 @@ function report(reports: readonly WorldReport[], adventurers: number, years: num
       ].join(' '),
     );
   }
+  console.log(
+    '\nworld      nameless  nameless share  by kind                                        foiled  by non-outlaws (fined)  stolen/yr  fenced/yr  word: suspected/unwelcome/barred  turned away',
+  );
+  for (const r of reports) {
+    const total = Object.values(r.nameless).reduce((a, b) => a + b, 0);
+    const kinds = Object.entries(r.nameless)
+      .sort((a, b) => b[1] - a[1])
+      .map(([k, n]) => `${k} ${n}`)
+      .join(', ');
+    console.log(
+      [
+        r.seed.padEnd(10),
+        String(total).padStart(8),
+        (total + r.robberies ? pct(total / (total + r.robberies)) : '—').padStart(15),
+        kinds.padEnd(46),
+        String(r.foiled).padStart(6),
+        `${r.occasional} (${r.fined})`.padStart(23),
+        String(Math.round(r.stolen / r.years)).padStart(10),
+        String(Math.round(r.fenced / r.years)).padStart(10),
+        `${r.notorious.suspected ?? 0}/${r.notorious.unwelcome ?? 0}/${r.notorious.barred ?? 0}`.padStart(
+          33,
+        ),
+        String(r.turnedAway).padStart(12),
+      ].join(' '),
+    );
+  }
   const whys = new Map<string, number>();
   for (const r of reports) for (const t of r.turns) whys.set(t.why, (whys.get(t.why) ?? 0) + 1);
   console.log(
@@ -196,6 +268,10 @@ function report(reports: readonly WorldReport[], adventurers: number, years: num
   // The step 2 targets: a trickle of outlaws through the years, and no one outlaw owning crime.
   const trickle = reports.filter((r) => decadesWithATurn(r) >= 0.5).length;
   const spread = reports.filter((r) => (share(r.byOutlaw, 1) ?? 0) <= 0.4).length;
+  const namelessMost = reports.filter((r) => {
+    const total = Object.values(r.nameless).reduce((a, b) => a + b, 0);
+    return total > r.robberies;
+  }).length;
   // More than a tenth of the adventurers turning in the first year is a burst.
   const burstOver = Math.max(2, Math.round(adventurers / 10));
   const burst = reports.filter(
@@ -208,6 +284,9 @@ function report(reports: readonly WorldReport[], adventurers: number, years: num
   );
   console.log(
     `  ${mark(spread === reports.length)} no outlaw leads more than 40% of the crimes: ${spread} of ${reports.length} worlds`,
+  );
+  console.log(
+    `  ${mark(namelessMost === reports.length)} most crimes have no named victim: ${namelessMost} of ${reports.length} worlds`,
   );
   console.log(
     `  ${mark(burst === 0)} no burst of outlaws in the first year (more than ${burstOver}): ${burst} of ${reports.length} worlds`,
