@@ -1,10 +1,17 @@
-# Magic overhaul (0.4.0): working notes
+# Magic overhaul (0.5.0): working notes
 
-A temporary working document for 0.4.0, the magic update. It records how
+A temporary working document for 0.5.0, the magic update. It records how
 magic works today and what is wrong with it, and the design for what replaces
-it, in full. The plan in steps is in `ROADMAP.md` (0.4.0). When 0.4.0 ships,
+it, in full. The plan in steps is in `ROADMAP.md` (0.5.0). When 0.5.0 ships,
 what was built moves into `WORLD.md` §4 and `ARCHITECTURE.md`, and this file
 is retired.
+
+**Scope.** Magic was first planned as 0.4.0. It moved to 0.5.0 so that the
+systems it rests on come first, each useful on its own: 0.3.2 makes today's
+magic visible and measurable, and 0.4.0 builds illness, curses, lasting
+effects on characters, allies in battle, shapeshifting, local weather, souls,
+kidnapping and faith (`ROADMAP.md`). Section 3 below lists what 0.5.0 needs
+of them.
 
 ---
 
@@ -95,7 +102,7 @@ from content packs.
 
 ---
 
-## 2. The design for 0.4.0
+## 2. The design for 0.5.0
 
 ### Five kinds of magic
 
@@ -202,6 +209,9 @@ casting.
 
 ## 3. What the design needs that the world doesn't have yet
 
+Most of these are now built first, in 0.4.0 (`ROADMAP.md`); 0.5.0 then puts
+magic on top of them.
+
 Found while writing the above down; each is folded into a step of the plan.
 
 - **Illness.** Curing illness needs illnesses: today there are wounds,
@@ -269,7 +279,8 @@ Warding as low.
 
 ### Blessings, and the world's setting
 
-- **Blessings are rare:** about 1 in 100 adventurers is born blessed.
+- ~~**Blessings are rare:** about 1 in 100 adventurers is born blessed.~~
+  Superseded in the second round: a rate by people.
 - **Half pass on:** a child of a blessed character has a 50% chance of being
   born with the same blessing.
 - **One dial for now:** the world's magic setting stays a single dial. A dial
@@ -320,12 +331,122 @@ Dark casters are judged through the same standing towns already keep
 - **Bosses**, demons and undead above all, are quite likely to know magic, and
   with decent power.
 
+### Second round (2026-11-22)
+
+#### Blessings
+
+- **The blessing rate rises instead,** by people: humans 7.5%, elves 20%,
+  centaurs 5%, dwarves 3%. These replace the earlier "1 in 100", and are to be
+  tested with the magic audit before they are confirmed as final.
+- A child of a blessed character still has a 50% chance of the same blessing.
+
+#### Against power creep
+
+- **One effect of each type at a time; effects don't stack.**
+- **The cost lasts as long as the effect:** a buff that lasts six hours leaves
+  its caster weakened or sluggish for six hours.
+- **Effects fade before they end.** Each lasting effect has a moment after
+  which it starts to fade, set by the caster's mastery, losing strength bit by
+  bit until it is gone. For example, a buff of +20 health for 6 hours: cast by
+  a weak mage, it starts to fade after 2 hours, losing 1 health every few
+  minutes; cast by a strong mage, it holds full for 5 hours.
+- **Backfire.** Besides failing, a spell can backfire: it does the opposite of
+  what was meant (a +20 health buff becomes a −20 debuff; a bolt meant for a
+  foe strikes the caster). About 5% by default, made likelier by lack of
+  experience or arcane power, by curses, by debuffs and the like, and less
+  likely the more power and experience a mage has. It never goes away
+  entirely: a deterrent against using magic casually. (This is apart from the
+  backlash of today's system, a failure that costs double.)
+- **Herbalists and alchemists:** the trades' own magic is of a higher average
+  quality than an adventurer's, which justifies the trade (what they brew and
+  tend is worth buying even for those who cast).
+
+#### Performance
+
+- Agreed: effects are statuses with an end time, checked lazily; casting
+  outside combat is one more option in the existing decisions, not a separate
+  pass; speed is measured at every step.
+
+#### Old spells and content packs
+
+- **The eight spells keep their names,** so saves, deeds and old live-feed
+  events still read. Each is catalogued under a kind of magic (a first
+  proposal is in "Affinities by culture" above; the four generic ones under
+  high magic).
+- **Content packs** are dealt with as they come: new fields get defaults.
+
+#### Townsfolk's magic, in aggregate
+
+- Townsfolk aren't simulated moment to moment, so wise folk are a town-level
+  count, as the trades are, set by the culture's low-magic affinity. They act
+  as the town: toward a visiting outlaw, a famous or well-liked adventurer.
+
+#### Mastery
+
+- **Mastery is per spell,** and grows with study, use and the passage of time.
+- **Breadth costs depth:** an experienced mage may learn many spells of many
+  kinds, but is then unlikely to master any.
+- **Passive means reach about half:** up to about 50% of a spell's mastery
+  comes from study and time; beyond that, only from actively casting it.
+- **Disuse wears it down:** years without casting a spell lower a mage's
+  proficiency with it, so nobody keeps full mastery of a spell they have long
+  stopped using.
+
+#### Faith
+
+- Tied to what exists: faith grows by prayer at shrines, to the gods of the
+  character's culture. This is the springboard for a future "Religion and
+  Cults" update. (Faith itself is built in 0.4.0.)
+
+#### Dark magic's victims
+
+- **Through the crime system:** most sacrifices are unnamed people taken from
+  towns or the roads, a crime like those of 0.3.0, raising notoriety and
+  bounties; named victims now and then.
+- **Kidnapping is hard,** much harder than murder.
+- **A rescued victim makes a bounty:** if someone kidnapped is rescued, a
+  bounty on the kidnapper has a good chance of being posted at once.
+- **A dark mage may capture an adventurer,** very rarely, after beating them in
+  a fight: like a bounty hunter taking an outlaw alive, but a little more
+  dangerous for the dark mage.
+- **The worth of a sacrifice:** an adventurer gives far more power than a
+  townsperson; a mage far more still; a divine mage most of all.
+
+#### Tone
+
+- Restrained, as the crime lines are, but the player must be able to tell
+  what happened: the common word may be "they were never seen again", but the
+  live feed makes it clear the person was sacrificed.
+- A dark mage's life story counts their sacrifices ("sacrificed seven people
+  to the dark gods", or whatever fits the lore).
+
+#### Divine casters against the dread
+
+- Divine casters are central to bands against the dread, and more vulnerable
+  for it: the dread target them first.
+
+#### Illusions and outlaws
+
+- Illusion magic can help outlaws (slipping into a town that bars them, going
+  unrecognized at a crime), but must not let an outlaw go uncaught forever:
+  it costs, can be seen through, wears off, and a failure gives them away.
+
+#### Weather
+
+- Local, never a whole region, and quite costly.
+
+#### Summoned beasts and beast forms
+
+- Built on the combat engine as it is: beasts join the caster's side as
+  ordinary fighters, and a beast form swaps the caster's fighting numbers for
+  a while. (The mechanisms are built in 0.4.0.)
+
 ## 5. Open questions
 
 What is left, with how it was read until decided otherwise.
 
-- **Whether 1 in 100 is the same for every people.** Read as: the same rate
-  for all, the kind of blessing drawn by the culture's affinities (so a
+- **Which kind a blessing is.** Read as: the chance of a blessing is by people
+  (second round), and its kind is drawn by the culture's affinities (so a
   blessed elf is most likely druidic). The dread and bosses are apart from it
   (see creatures that cast).
 - **What an affinity does exactly.** Read as: it makes a character likelier to

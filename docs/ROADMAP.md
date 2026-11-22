@@ -1249,7 +1249,154 @@ conceive only on days together, and are expecting for a gestation by their
 people (270 days for humans, up to 360 for elves) before the child is born,
 with births and populations in the range they had.
 
-## 0.4.0 — The Magic Update
+## 0.3.2 — Magic you can see
+
+**Goal:** A small fix release, next up: today's magic shown where it matters,
+its one useless spell made worth casting, and a magic audit to measure it by,
+so 0.5.0 starts from a baseline.
+
+1. **A magic audit** (`tools/magic-audit.ts`, `npm run audit:magic`), as the
+   crime audit is for crime: who can cast and how they came to it (gift,
+   study), by people and culture; spells learned and cast, by spell and
+   outcome; fights with a cast; casts by the dread; mastery (arcana) over a
+   life; costs paid, backlashes and deaths; and how many casts a player sees
+   at each speed. It records the 0.3.1 numbers (`MAGIC-0.5.0.md` §1) and is
+   the yardstick for 0.5.0. It can also try out 0.5.0's blessing rates
+   (humans 7.5%, elves 20%, centaurs 5%, dwarves 3%) before they are taken.
+2. **Magic seen.** Casts that matter become _Notable_, so they show at Day,
+   Season and Max speed and reach the chronicle: a killing blow by spell, a
+   backlash, a caster killed by their own spell, the first spell anyone learns,
+   and the dread's spells. Ordinary casts stay _Normal_, so fights don't flood
+   the log.
+3. **Mend Flesh made worth it.** Today it heals the caster at the price of
+   their own health, so it is almost never chosen (5–64 casts in 30 years,
+   against thousands of Ember Bolts). Its cost moves mostly to stamina, with a
+   little health, so a hurt caster heals when it counts; the audit checks it
+   is now cast without being cast all the time.
+4. **Release 0.3.2:** players' notes, changelog. `SAME_HISTORY_SINCE` moves if
+   history changes (step 3 changes fights).
+
+## 0.4.0 — Body and Soul
+
+(A working name.) The groundwork magic will stand on, built first as parts
+of the world in their own right, each with sources that need no magic.
+
+**Goal:** Characters fall ill, are cursed, carry lasting effects good and bad,
+fight beside allied beasts, may change shape, see the weather turn over one
+place, leave souls that linger or pass, can be taken and held for ransom, and
+keep a faith. Each is useful now and is what 0.5.0's magic acts through:
+cures and curses, buffs and debuffs on others, summoned beasts, beast forms,
+weather magic, souls for dark magic, kidnapping for sacrifice, faith for
+divine magic.
+
+Each step is its own pull request, keeps saves loading, and is measured by a
+world audit.
+
+### Steps
+
+1. **Measure first.** A world audit (`tools/world-audit.ts`) for what 0.4.0
+   touches: deaths by cause and age, time spent hurt or weary, survival in
+   delves and fights, population by people, prices of healing goods; later,
+   illness, curses, effects carried, allies, kidnappings and ransoms. It
+   records the 0.3.2 baseline.
+
+2. **Lasting effects on anyone.** One system of timed effects any character
+   can carry, good or bad: on health, stamina, a stat, attack and defense,
+   fatigue, nerve. Each has a strength, an end, and a moment from which it
+   fades, losing strength bit by bit (as 0.5.0's buffs will). One of each type
+   at a time; effects don't stack, the stronger wins. A cost can be bound to
+   an effect for as long as it lasts. Sources now: a night at a good inn (well
+   rested), a feast at a tavern (in good spirits), lingering wounds after a
+   near death (weakened for days), exhaustion after long marches, and draughts
+   from alchemists beyond healing (a tonic of vigor, a calming draught). The
+   character card shows what someone carries. Saves move to a new version.
+
+3. **Faith.** A hidden attribute per character, 0 to 1. It grows with prayer
+   at shrines (an existing pastime) to the gods of their culture (already in
+   the content), with devout traits, and slowly with age and hardship
+   survived; it falls with crimes (sins, graver ones more) and with despair.
+   Now it steadies nerve in danger, makes a shrine's blessing (a small
+   lasting effect, from step 2) stronger, and lets priests (a town-level
+   count, as the trades are) tend the sick and lift curses. It is the
+   foundation for divine magic (0.5.0) and a later "Religion and Cults"
+   update.
+
+4. **Illness.** A few sicknesses, each a condition with a course: a fever, an
+   infected wound (from fighting hurt and untreated), a winter cough, and a
+   rare plague that sweeps a town. Caught from untreated wounds, foul places
+   (marsh, sewers, dungeons of rot), the cold season, and others in a crowded
+   tavern or town. They weaken (a lasting effect), lay people up, and can kill
+   (rarely; the old and the young more). They are cured by rest, by healers
+   (the herbalists' remedies, a new demand for herbs; priests at shrines), and
+   in 0.5.0 by magic. A plague is a town event, felt by the townsfolk counts as
+   well as by named characters. Life stories tell of it; the live feed of
+   outbreaks and deaths.
+
+5. **Curses.** A curse is a condition with an effect (ill luck in fights, a
+   wasting, a weakness, a mark that makes people wary) and a way to be lifted.
+   Laid by cursed items found in dungeons, by haunted places and the myths
+   about them, by the touch of some undead, by the dread, and now and then by a
+   murder victim's dying curse on their killer. Lifted by time (minor ones),
+   by priests at shrines (stronger with faith), by wise folk in town (rarely,
+   cheaply, unreliably), by destroying a cursed item, and in 0.5.0 by magic.
+   Cursed items are worth less, and a fee to lift a curse is a new trade.
+
+6. **Allies in battle.** Creatures that fight on a character's side: war
+   hounds and hawks bought in town, beasts tamed by those with the skill, and
+   lords' soldiers riding with a band against a threat. Allies follow their
+   owner, fight as ordinary fighters (fights already allow creatures on either
+   side), can be hurt and die, and grow more useful as they last. The same
+   mechanism carries 0.5.0's summoned beasts.
+
+7. **Shapeshifting.** A form: for a while a character fights with another set
+   of numbers, as a beast. The first source is lycanthropy: werewolves as
+   creatures, whose bite can pass the curse (step 5); the afflicted turn under
+   the full moon (a moon cycle on the calendar), lose control, may kill (a
+   killing the towns may blame them for, or may not know of), and can be cured
+   by priests or wise folk, with luck. The same mechanism carries 0.5.0's
+   druid beast forms.
+
+8. **Local weather.** Weather at one place overriding its region's for a
+   while: a storm, a fog, a calm, a downpour. Sources now: the dread drawing
+   gloom over their lairs and the towns they raid, and rare natural squalls. It
+   slows travel, hides ambushes and escapes (fog), spoils or saves a harvest.
+   The mechanism carries 0.5.0's weather magic, which will be local and
+   costly.
+
+9. **Souls and the restless dead.** When a sapient being dies, their soul
+   passes on or lingers: it lingers where many die and lie unburied
+   (battlefields, murder sites, hidden bodies, dungeons). Lingering souls
+   haunt (ghosts as creatures; myths grow there), and can be laid to rest at
+   shrines by priests. The dread feed on them: a lich grows stronger from the
+   souls of those its horde slays. Souls are what 0.5.0's dark magic absorbs.
+
+10. **Kidnapping.** Outlaws take people for ransom: mostly the unnamed (a
+    traveler off the road, a townsperson from their house), a crime in the
+    0.3.0 system; rarely a named character, beaten in a fight and taken, like
+    a capture but riskier for the kidnapper. Captives are held at a hideout;
+    ransom is asked of their family or town; paid, they are let go; hunters
+    may rescue them, and a rescue has a good chance of an immediate bounty on
+    the kidnapper. A captive may escape, or die. Much harder than murder, and
+    rarer. Life stories tell it. 0.5.0 turns it to dark magic's sacrifices.
+
+11. **Seen and told.** The live feed, the chronicle, life stories, the
+    character card (effects, illness, curses, allies, faith hinted at by deeds
+    rather than shown) and the Halls take in all of the above.
+
+12. **Balance and release.** Targets: illness a real but small share of
+    deaths, populations steady; curses uncommon; kidnappings rarer than
+    murders, most ending in ransom or rescue; allies helping without making
+    bands unbeatable; effects felt but not everywhere; large worlds no more
+    than about 10% slower. Then release 0.4.0: players' notes, changelog, a
+    0.3.2 save as a fixture, the architecture notes.
+
+**Open questions for 0.4.0:** the final name; whether the moon (for
+lycanthropy) is a real cycle on the calendar or a monthly night; how deadly
+plague may be before it unbalances populations; whether named townsfolk
+(retired heroes) can fall ill and be kidnapped, or only adventurers and the
+unnamed; and whether allies cost upkeep.
+
+## 0.5.0 — The Magic Update
 
 **Goal:** Magic of five kinds (high, divine, druidic, dark and low), each
 learned its own way, held by different peoples, with its own effects and
@@ -1259,106 +1406,120 @@ odds and dark magic leading some down the road to murder.
 
 **Why:** magic as of 0.3.1 is one skill and eight spells, cast only in fights
 and only for oneself, by a handful of mages, and hidden at most speeds. The
-working notes (`MAGIC-0.4.0.md`) record how it works now, what was measured,
-the nine limits and issues, the design in full, and what it needs that the
-world lacks.
+working notes (`MAGIC-0.5.0.md`) record how it works now, what was measured,
+the nine limits and issues, the design in full, every decision taken, and
+what it needs of the world. It is built on 0.3.2 (magic seen and measured) and
+0.4.0 (lasting effects, illness, curses, allies, shapeshifting, local weather,
+souls, kidnapping and faith).
 
-Each step is its own pull request, keeps saves loading, and is checked with a
-magic audit.
+Each step is its own pull request, keeps saves loading, and is checked with
+the magic audit.
 
 ### Steps
 
-1. **Measure first.** A headless magic audit (`tools/magic-audit.ts`): who
-   can cast and how they came to, by people and kind; spells learned and cast,
-   by kind, effect and outcome; casts in and out of combat, on whom; mastery
-   over a life; costs paid, backlash and deaths; how much of it a player would
-   see at each speed. It records the 0.3.1 baseline and checks each step.
+1. **Measure again.** The magic audit (from 0.3.2) grows to the five kinds:
+   who holds each and how (blessing, study, faith, nature, affinity), by
+   people and culture; spells learned, cast and mastered, by kind and effect;
+   casts in and out of combat and on whom; effects carried, faded and
+   backfired; costs felt; dark casters, sacrifices and corruption. It records
+   the 0.4.0 baseline.
 
 2. **Five kinds of magic, and who holds them.** High, divine, druidic, dark
    and low magic as content, each with how it is obtained and how hard it is
-   to learn. Each culture's affinities (see the working notes: druidic for the
-   sylvan, low and high for the deephold, dark for the grave and infernal, and
-   so on) make its people likelier to take up and be blessed in certain kinds;
-   any people may learn any kind, except that the grave and infernal can never
-   learn divine. Each character gets an aptitude and a skill per kind in place
-   of one gift and one arcana: blessings at birth, about 1 in 100, half of
-   them passed on to children; affinities; and a hidden faith for divine
-   magic. Nobody may hold both holy and dark. The world's magic setting stays
-   one dial. Saves move to a new version; the old gift and arcana map onto the
-   new.
+   to learn. Each culture's affinities (druidic for the sylvan, low and high
+   for the deephold, dark for the grave and infernal, and so on: see the
+   working notes) make its people likelier to take up and be blessed in
+   certain kinds; any people may learn any kind, except that the grave and
+   infernal can never learn divine. Blessings at birth by people (humans 7.5%,
+   elves 20%, centaurs 5%, dwarves 3%, to be confirmed by the audit), half of
+   them passed on to children, of a kind drawn by culture. Faith (from 0.4.0)
+   for divine magic. Nobody may hold both holy and dark. The world's magic
+   setting stays one dial. The eight spells keep their names, catalogued under
+   kinds, so saves and old events still read; content packs get defaults.
+   Saves move to a new version; the old gift and arcana map onto the new.
 
-3. **Ways to learn.** High magic only by study (academies, spellbooks,
-   teachers), slow and demanding logic and willpower; divine by blessing or
-   strong faith, grown by devotion and vows, and only for the clean of crime
-   and sin; druidic by blessing, study or a bond with nature (time in the
-   wilds); dark by a dark blessing or study; low by simple learning or an
-   affinity. Several kinds in one life, given blessings, interest and time.
-   Mastery grows with study, use and years, lowering costs and raising odds and
-   power, so a lifelong mage, an elf above all, becomes formidable.
+3. **Ways to learn, and mastery.** High magic only by study (academies,
+   spellbooks, teachers), slow and demanding logic and willpower; divine by
+   blessing or strong faith, grown by devotion and vows, and only for the clean
+   of crime and sin; druidic by blessing, study or a bond with nature (time in
+   the wilds); dark by a dark blessing or study; low by simple learning or an
+   affinity. Many spells of many kinds may be learned in one life, but breadth
+   costs depth. Mastery is per spell: study and time bring up to about half of
+   it; the rest only comes from casting it; years of disuse wear it down. A
+   mage who gives their life to it, an elf above all, becomes formidable.
 
-4. **Spells, effects and costs.** Effects beyond today's four: healing and
-   buffing others and the whole party, debuffs, area spells, illusions,
-   curses and their lifting, cures, easing fatigue, summoned beasts,
-   shapeshifting, weather. Durations from a round to hours, and timed effects
-   anyone can carry. Costs by kind, always something (lingering weakness or
-   sluggishness for a long buff, health for blood magic, faith strained for
-   divine, a soul's price for dark), with high magic's casting time and
-   concentration that a blow can break. Spells for each kind, flavored by
-   culture; the content pack format follows.
+4. **Spells, effects and costs.** On top of 0.4.0's lasting effects, allies,
+   forms and local weather: healing and buffing others and the whole party,
+   debuffs, area spells, illusions, curses and their lifting, cures, easing
+   fatigue, summoned beasts, beast forms, weather. One effect of each type at a
+   time, never stacking. Costs by kind, always something, and lasting as long
+   as the effect (a six-hour buff leaves its caster weakened for six hours).
+   Effects fade before they end, from a moment set by mastery (a weak mage's
+   six-hour buff starts fading after two hours, a strong mage's after five).
+   Any spell may backfire, doing the opposite of what was meant (about 5%,
+   likelier for the inexperienced, the weak in power, the cursed and the
+   debuffed; never zero). High magic needs casting time and concentration, and
+   a blow can break it. Spells for each kind, flavored by culture.
 
-5. **Illness and curses.** A simple model of sickness (fevers, infected
-   wounds) and of curses (laid by low and dark magic), so that cures and curse
-   removal have something to do.
-
-6. **Magic in everyday life.** Casting outside combat: healing after a fight,
+5. **Magic in everyday life.** Casting outside combat: healing after a fight,
    easing fatigue on the road, curing the sick, a party buff before a delve
-   that lasts hours at a cost to the caster, low magic in town (healing rites,
-   lifting curses, burning a lock of hair to sever a bond, voodoo against a
-   grudge that leaves its target weaker in their next fight), druids turning
-   the weather. Townsfolk practice low magic too, weakly and rarely: a wise
-   woman may heal or bless a liked or famous adventurer, and a town may try to
-   curse a visiting outlaw or a controversial figure (about 1 in 20 visits),
-   leaving them slightly weaker in battle for a few hours.
+   that lasts hours, low magic in town (healing rites, lifting curses, burning
+   a lock of hair to sever a bond, voodoo against a grudge that leaves its
+   target weaker in their next fight), druids turning the weather over one
+   place at a steep cost. Townsfolk practice low magic in aggregate (wise folk
+   per town, by the culture's affinity), weakly and rarely: blessing a liked or
+   famous adventurer, and trying to curse a visiting outlaw or controversial
+   figure (about 1 in 20 visits), leaving them slightly weaker for a few hours.
+   Herbalists' and alchemists' magic is of a higher quality than the average
+   adventurer's, so their trade stays worth paying for.
 
-7. **Magic in battle.** Party heals and buffs, debuffs and area spells; high
+6. **Magic in battle.** Party heals and buffs, debuffs and area spells; high
    magic's concentration and the risk of being cut down mid-spell; divine
-   magic strong against demons and the undead; dark magic's destruction, and
-   its power to restore the undead and demons; wild beasts called to fight; a
-   druid's beast form. Creatures that cast: intelligent creatures now and
-   then, weakly and in kinds that suit them (some skeletons with basic dark
-   spells), never beasts like a giant rat; bosses, demons and undead above all,
-   likely to, and with decent power.
+   magic strong against demons and the undead, its casters central to bands
+   against the dread and so the dread's first targets; dark magic's
+   destruction, and its power to restore the undead and demons; wild beasts
+   called to fight; a druid's beast form. Creatures that cast: intelligent
+   creatures now and then, weakly and in kinds that suit them (some skeletons
+   with basic dark spells), never beasts like a giant rat; bosses, demons and
+   undead above all, likely to, and with decent power.
 
-8. **Holy and dark in society.** Most humanoid peoples fear dark magic:
-   its casters are shunned or treated with caution. Dark magic grows by
-   absorbing souls of the dead (humans, dwarves, elves, centaurs, high-level
-   demons) and through rituals, sacrifice and murder, so a dark caster who
-   prizes their power may turn outlaw, killing or kidnapping for sacrifice
-   (built on 0.3.0's capture). Holy and dark casters almost never befriend
-   each other. Shunning goes through the towns' standing, weighed against
-   all that is known of the caster: some command of dark magic makes them
-   suspected, a known dark mage is unwelcome in most places, and only one
-   known to have killed or sacrificed for power is barred; heroic deeds can
-   win a dark mage some neutrality. Divine power follows faith and morality:
-   small crimes make it fade until time, penance, prayer and restitution bring
-   it back; the deliberate murder of an innocent takes it away entirely (over
-   90%), or corrupts it into dark magic (under 10%, by knowledge and traits).
+7. **Holy and dark in society.** Most humanoid peoples fear dark magic.
+   Shunning goes through the towns' standing, weighed against all that is
+   known of the caster: some command of dark magic makes them suspected, a
+   known dark mage is unwelcome in most places, only one known to have killed
+   or sacrificed for power is barred, and heroic deeds can win some
+   neutrality. Dark magic grows by absorbing souls (0.4.0) of the dead
+   (humans, dwarves, elves, centaurs, high-level demons) and through rituals,
+   sacrifice and murder, so a dark caster who prizes their power may turn
+   outlaw. Sacrifices come through 0.4.0's kidnapping: mostly unnamed people,
+   much harder than murder, a rescue likely to raise a bounty at once; very
+   rarely an adventurer beaten and taken (more dangerous for the dark mage
+   than a hunter's capture). An adventurer's soul is worth far more than a
+   townsperson's, a mage's more, a divine mage's most. Told with restraint but
+   plainly: the feed makes clear someone was sacrificed, and a dark mage's
+   life story counts their sacrifices. Holy and dark casters almost never
+   befriend each other. Divine power follows faith and morality: small crimes
+   make it fade until time, penance, prayer and restitution bring it back; the
+   deliberate murder of an innocent takes it away (over 90%) or corrupts it
+   into dark magic (under 10%, by knowledge and traits). Illusions can help an
+   outlaw slip past a barred gate or go unrecognized, but cost, can be seen
+   through, wear off and give them away when they fail, so nobody stays
+   uncaught forever.
 
-9. **Seen and told.** Casts that matter (killing blows, great spells, the
-   first of a kind, backlash) become _Notable_ and reach the chronicle; life
+8. **Seen and told.** Every kind of magic in the live feed, colored by kind;
+   great spells, backfires, sacrifices and corruptions in the chronicle; life
    stories, the character card and the Halls (great mages) show each
-   character's kinds of magic, their mastery and their deeds; the live feed
-   colors each kind.
+   character's kinds of magic, their mastery and their deeds.
 
-10. **Balance and release.** Targets across world sizes: mages in every
-    world, of every kind where its peoples live, about 1 in 100 born blessed,
-    dark casters rare; magic in a
-    fair share of fights and of everyday life; costs that bite (backlash and
-    lingering weakness felt, deaths rare but real); a lifelong mage outclassing
-    a young one; the world's magic setting meaning more than gift odds. Then
-    release 0.4.0: players' notes, changelog, a 0.3.1 save kept as a fixture,
-    the architecture notes, `WORLD.md` §4 rewritten, and the working notes
-    retired.
+9. **Balance and release.** Targets across world sizes: mages in every world,
+   of every kind where its peoples live, dark casters rare; blessing rates
+   confirmed; magic in a fair share of fights and of everyday life; costs that
+   bite (backfires, fading and lingering weakness felt, deaths rare but real);
+   a lifelong mage outclassing a young one; the world's magic setting meaning
+   more than gift odds; no power creep in deaths, delves or the healing trade.
+   Then release 0.5.0: players' notes, changelog, a 0.4.0 save kept as a
+   fixture, the architecture notes, `WORLD.md` §4 rewritten, and the working
+   notes retired.
 
 ---
 
