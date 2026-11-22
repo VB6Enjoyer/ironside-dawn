@@ -513,7 +513,7 @@ Built in Phase 8 (`src/sim/systems/lifecycle.ts`, `death.ts`, `social.ts`).
   people may move on, which takes them out of the world without a death.
 - **Families.** Two free characters who love each other (high mutual affinity
   and familiarity, a friend bond) may become lovers (`Opinion.lovers`, since
-  0.3.0), and lovers may later marry; across peoples only rarely, never close
+  0.3.1), and lovers may later marry; across peoples only rarely, never close
   kin. A couple in its fertile years conceives only on days the two are in the
   same place, at its people's fertility (scaled up for those days, and down for
   unwed lovers), less the fuller the people's settled young already are (that
@@ -669,7 +669,7 @@ Built for 0.3.0 (`src/sim/systems/crime.ts`, `notoriety.ts`, `outlaws.ts`).
   captor (`Character.escorting`), who heads for the nearest town that would
   pay. Each leg of road they may escape (level and agility against the
   escort's size and level). Delivered, the bounty pays two and a half times
-  over, the seized gold goes to the town, and the captive stands trial. The hand-over
+  over, the seized gold goes to the town, and the captive stands trial. Since 0.3.1 the hand-over
   takes one to three hours, the escort waiting on it (`Captivity.deliverAt`);
   then the captive is `jailed` with sentence `trial` until the court sits, three
   to ten days later at ten in the morning.

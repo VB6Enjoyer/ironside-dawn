@@ -16,6 +16,16 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: '0.3.1',
+    date: '2026-11-22',
+    title: 'Courts and courtships',
+    intro: 'Two fixes after the Outlaws Update: justice takes its time, and so does family life.',
+    changes: [
+      'An outlaw brought in alive is no longer tried the minute they arrive. Handing them over takes a few hours, and they wait in jail for three to ten days before the court sits.',
+      'Love before marriage, and children after: people fall in love and become lovers, may marry later, and a couple are expecting for nine months or so (longer for dwarves, centaurs and elves) before a child is born. Only couples who spend time together have children.',
+    ],
+  },
+  {
     version: '0.3.0',
     date: '2026-11-21',
     title: 'The Outlaws Update',
@@ -26,10 +36,9 @@ export const RELEASES: readonly Release[] = [
       'Outlaws hold up caravans, steal from shops, rob trading houses at blade point, break into houses by night, make farmers pay and spoil stores for spite. Towns feel it in their stores, and stolen goods turn up with fences far away. Now and then even someone who is no outlaw steals, when it looks safe.',
       'Word of a crime starts where it happened and travels the roads to other towns. A town that has heard of someone eyes them warily, shuts its doors, or bars them outright, as it always does a known murderer. Outlaws go where nobody has heard of them yet.',
       'Some crimes are never pinned on anyone: a robbery nobody could see clearly, a murder far from any witness. A killer may hide the body, and folk think the victim simply vanished. Old crimes can come to light years later.',
-      'Every way out: pay back what you took, with interest and a fine; be killed, your head carried to a town that knows the bounty; or be taken alive by trap or takedown, escorted to town (with a chance to escape on the road), and jailed to await trial.',
+      'Every way out: pay back what you took, with interest and a fine; be killed, your head carried to a town that knows the bounty; or be taken alive by trap or takedown, escorted to town (with a chance to escape on the road) and tried.',
       'Trials send thieves to prison for years, where some die; the rest come out to adventure again or settle down. Murderers are put to death on a set day, by their town’s custom: the noose, the sword, the axe, arrows, the chasm or stones.',
       'Life stories tell all of it: why someone turned, what they did, whom they murdered, who caught them and where they were tried, the charges and how long is left to serve, who claimed the bounty on their head, and for victims, who killed them, with what, and whether the body was ever found.',
-      'Love before marriage, and children after: people fall in love and become lovers, may marry later, and are expecting for nine months or so (longer for dwarves, centaurs and elves) before a child is born.',
       'The Halls of the world add Behind Bars and The Gallows; the character card shows where word of someone’s crimes has spread and any sentence; the live log tells of every crime and how justice caught up.',
     ],
   },

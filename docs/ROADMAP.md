@@ -1168,9 +1168,7 @@ site), and is checked against the targets below with the crime audit.
      world, 4 going straight.
 
 8. **Justice.** _Done_ (`src/sim/systems/justice.ts`, `notoriety.ts`).
-   - An outlaw brought in alive is handed over at the watch-house (a few
-     hours), held in jail three to ten days to await trial, and tried on what
-     any town knows of them.
+   - An outlaw brought in alive is tried on what any town knows of them.
      Theft, assault and the like earn a year in prison, plus a quarter year per
      known crime and a year per 500 gold taken (fifteen at most). Prisoners can
      die there (3% a year, and of old age); freed, they are no outlaws, still
@@ -1242,6 +1240,14 @@ site), and is checked against the targets below with the crime audit.
    - Released as 0.3.0: players' notes, changelog, a save from 0.2.0 kept as a
      fixture (its standing carried over as what the towns have heard).
      (`SAME_HISTORY_SINCE` moved to 0.3.0 with step 2.)
+
+**0.3.1, fixes after release:** a captive is no longer handed over and
+sentenced in the same minute; the hand-over takes a few hours and the
+prisoner waits three to ten days in jail for the court. And births follow
+from conception: couples fall in love and become lovers before marrying,
+conceive only on days together, and are expecting for a gestation by their
+people (270 days for humans, up to 360 for elves) before the child is born,
+with births and populations in the range they had.
 
 **Alongside (separately, as 0.2.1 if wanted):** magic is used thousands of
 times a century but hidden at most speeds, and no creature casts. Make casts
