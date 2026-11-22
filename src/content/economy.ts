@@ -102,6 +102,9 @@ export const NEEDS_PER_HEAD: Goods = {
   tools: 0.002,
   clothes: 0.003,
   potions: 0.0004,
+  // 0.4.0: townsfolk take a tonic or a calming draught now and then, too.
+  vigor: 0.0007,
+  calm: 0.0007,
   arms: 0.0002,
   armor: 0.0001,
 };
