@@ -25,6 +25,7 @@ export const GOODS = [
   { id: 'tools', name: 'tools', plural: 'crates of tools', value: 12 },
   { id: 'clothes', name: 'clothes', plural: 'bales of clothes', value: 8 },
   { id: 'potions', name: 'healing draughts', plural: 'healing draughts', value: 15 },
+  { id: 'remedies', name: 'remedies', plural: 'remedies', value: 10 },
   { id: 'vigor', name: 'tonics of vigor', plural: 'tonics of vigor', value: 20 },
   { id: 'calm', name: 'calming draughts', plural: 'calming draughts', value: 14 },
   { id: 'arms', name: 'arms', plural: 'weapons', value: 40 },
@@ -79,6 +80,8 @@ export const PROFESSIONS = [
       { inputs: { herbs: 2, reagents: 0.5 }, outputs: { vigor: 1.5 } },
       { inputs: { herbs: 3 }, outputs: { vigor: 1 } },
       { inputs: { herbs: 3 }, outputs: { calm: 1 } },
+      // 0.4.0: remedies for the sick, by their own recipe.
+      { inputs: { herbs: 2 }, outputs: { remedies: 1.5 } },
     ],
   },
   {
@@ -102,7 +105,8 @@ export const NEEDS_PER_HEAD: Goods = {
   tools: 0.002,
   clothes: 0.003,
   potions: 0.0004,
-  // 0.4.0: townsfolk take a tonic or a calming draught now and then, too.
+  // 0.4.0: the town's sick need remedies, and townsfolk take a tonic or a calming draught now and then.
+  remedies: 0.0008,
   vigor: 0.0007,
   calm: 0.0007,
   arms: 0.0002,

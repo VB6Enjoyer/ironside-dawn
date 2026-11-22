@@ -47,7 +47,7 @@ const HOUSE_SPREAD = 0.15;
 /** The trading house keeps this many days of the town's use of every good. */
 const HOUSE_STOCK_DAYS = 2;
 /** And a stock of what adventurers buy. */
-const HOUSE_RETAIL: Goods = { potions: 12, vigor: 3, calm: 3, arms: 4, armor: 3 };
+const HOUSE_RETAIL: Goods = { potions: 12, remedies: 4, vigor: 3, calm: 3, arms: 4, armor: 3 };
 /** Share of its gold the trading house spends at one day's auction. */
 const HOUSE_BUDGET = 0.1;
 /** Gold the trading house keeps in hand, per townsperson, before paying out its surplus. */

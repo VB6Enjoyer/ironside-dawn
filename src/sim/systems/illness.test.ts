@@ -4,7 +4,8 @@ import { DAY, YEAR } from '../core/time';
 import { createSimulation } from '../simulation';
 import { testCharacter, testContext } from '../test-support';
 import { isFitToDelve, needsRecovery } from './condition';
-import { fallIll, frailty, illnessDay, sicknessLevels } from './illness';
+import { careIn, fallIll, frailty, healersIn, illnessDay, sicknessLevels } from './illness';
+import { town } from '../test-support';
 import { takedownChance } from './justice';
 
 function someone(seed = 'illness') {
@@ -57,6 +58,27 @@ describe('illness', () => {
     expect(frailty(c, ctx.world.time)).toBeGreaterThan(grown);
     (c as { born: number }).born = ctx.world.time - 6 * YEAR;
     expect(frailty(c, ctx.world.time)).toBeGreaterThan(grown);
+  });
+
+  it('is cut short by a remedy, at a price set by how good the healers are', () => {
+    const { ctx, c } = someone('remedy');
+    const here = town(ctx);
+    const market = ctx.world.markets.get(here.id)!;
+    market.house.stock.remedies = 10;
+    c.locationId = here.id;
+    c.gold = 1000;
+    fallIll(ctx, c, 'fever', here.id);
+    const course = c.illness!.until - c.illness!.since;
+    illnessDay(ctx, c, sicknessLevels(ctx, [c]), false);
+    expect(c.illness!.treated).toBe(true);
+    expect(c.illness!.until - c.illness!.since).toBeLessThan(course);
+    expect(c.gold).toBeLessThan(1000);
+    expect(healersIn(ctx, here.id)).toBeGreaterThanOrEqual(0.5);
+    expect(careIn(ctx, here.id)).toBeGreaterThan(0);
+    // Without remedies to be had, a town cares for its sick far less.
+    const stocked = careIn(ctx, here.id);
+    market.house.stock.remedies = 0;
+    expect(careIn(ctx, here.id)).toBeLessThan(stocked);
   });
 
   it('makes an outlaw easier to take', () => {
