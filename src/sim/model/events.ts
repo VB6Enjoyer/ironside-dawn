@@ -1,5 +1,7 @@
 import type {
   CreatureId,
+  CurseId,
+  CurseSource,
   EffectId,
   EffectSource,
   Goods,
@@ -88,6 +90,15 @@ export type EventBody =
       { readonly locationId: LocationId; readonly fromId: LocationId; readonly severity: number }
     >
   | Body<'plague.end', { readonly locationId: LocationId; readonly dead: number }>
+  /** A curse is laid on someone, or lifted (0.4.0). */
+  | Body<
+      'character.cursed',
+      CharacterAt & { readonly curse: CurseId; readonly source: CurseSource }
+    >
+  | Body<
+      'character.uncursed',
+      CharacterAt & { readonly curse: CurseId; readonly by: 'priest' | 'wise' | 'discard' }
+    >
   /** Someone falls ill (0.4.0); `recovered` when they are well again. */
   | Body<'character.sick', CharacterAt & { readonly sickness: SicknessId }>
   | Body<'character.recover', CharacterAt & { readonly sickness: SicknessId }>
@@ -638,6 +649,8 @@ export const EVENT_IMPORTANCE: Record<EventType, Importance> = {
   'character.rest': Importance.Trivial,
   'character.effect': Importance.Trivial,
   'character.sick': Importance.Trivial,
+  'character.cursed': Importance.Normal,
+  'character.uncursed': Importance.Normal,
   'plague.outbreak': Importance.Notable,
   'plague.spread': Importance.Notable,
   'plague.end': Importance.Notable,

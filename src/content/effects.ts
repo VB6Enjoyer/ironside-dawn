@@ -53,6 +53,12 @@ export const EFFECTS = {
   blessed: { name: 'blessed', cost: false, mods: { nerve: 0.1, recovery: 0.15 }, hours: [8, 8] },
   /** Sick (0.4.0): what each sickness does is in `illness.ts`; its course is the sickness's. */
   sick: { name: 'sick', cost: false },
+  /** Curses (0.4.0, step 8): their lengths are set by `curses.ts`, and some last until lifted. */
+  'ill-luck': { name: 'ill-starred', cost: false, mods: { attack: -2, defense: -2 } },
+  wasting: { name: 'wasting', cost: false, mods: { health: -0.2, recovery: -0.4 } },
+  weakness: { name: 'cursed with weakness', cost: false, mods: { might: -3 } },
+  /** The mark: people are wary of them, and it shows a little in their nerve. */
+  marked: { name: 'marked', cost: false, mods: { nerve: -0.05 } },
   /** Slow to mend after a brush with death: less health, and slower to heal, for days. */
   weakened: { name: 'weakened', cost: false, mods: { health: -0.15, recovery: -0.25 }, hours: [72, 48] },
   /** Worn out by a long march: slower in a fight, and slow to recover. */
@@ -67,3 +73,10 @@ export const DIZZY_PENALTY = 2;
 /** Where a lasting effect came from (0.4.0), as the log tells it. */
 export type EffectSource =
   'inn' | 'home' | 'feast' | 'meal' | 'luck' | 'shrine' | 'tonic' | 'near-death' | 'march';
+
+/** The curses (0.4.0): lasting effects laid on someone, lifted by time, priests or wise folk. */
+export const CURSES = ['ill-luck', 'wasting', 'weakness', 'marked'] as const;
+export type CurseId = (typeof CURSES)[number];
+
+/** Where a curse came from. */
+export type CurseSource = 'item' | 'haunt' | 'undead' | 'dread' | 'dying';

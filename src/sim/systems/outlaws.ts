@@ -3,6 +3,7 @@ import { HOUR } from '../core/time';
 import type { SimContext } from '../context';
 import { createCharacter } from '../gen/people';
 import type { Character, CharacterId, Location, OutlawReason, World } from '../model';
+import { anyCurse, layCurse } from './curses';
 import { startBrawl } from './combat';
 import { isAlive } from './condition';
 import { remember, vividness, wealthNeed } from './mind';
@@ -27,6 +28,8 @@ import { charactersAt } from './whereabouts';
  */
 
 /** Daily chance of turning outlaw from want, for the most susceptible and desperate. */
+/** Chance a murder victim's dying curse falls on their killer, at middling faith (0.4.0). */
+const DYING_CURSE = 0.1;
 const TURN_CHANCE = 0.04;
 /** Below this much gold an adventurer counts as broke. */
 const BROKE = 40;
@@ -346,6 +349,16 @@ export function onCharacterKilled(
   ctx.world.bounties.delete(victim.id);
   if (killer.outlaw) {
     ctx.world.tally.murders++;
+    // With their last breath, a victim may curse their killer: the faithful likelier (0.4.0).
+    if (ctx.rng.people.chance(DYING_CURSE * (0.5 + victim.faith))) {
+      layCurse(
+        ctx,
+        killer,
+        ctx.rng.people.chance(0.5) ? 'marked' : anyCurse(ctx),
+        'dying',
+        locationId,
+      );
+    }
     const place = ctx.world.locations.get(locationId)!;
     const rng = ctx.rng.outlaws;
     const known = rng.chance(identifyChance(killer, place, seen.witnesses, seen.familiarity));

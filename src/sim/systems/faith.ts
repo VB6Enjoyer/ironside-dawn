@@ -1,5 +1,6 @@
 import type { SimContext } from '../context';
 import type { Character, Location } from '../model';
+import { seekPriest } from './curses';
 import { grant } from './effects';
 import { hasFaith, priestsIn, shiftFaith } from './faith-core';
 import { payHouse } from './market';
@@ -35,6 +36,8 @@ export function pray(ctx: SimContext, character: Character, town: Location): voi
     character.sins -= given;
     shiftFaith(character, given);
   }
+  // A priest may lift a curse they know of (0.4.0, step 8).
+  seekPriest(ctx, character, town.id);
   // A blessing, as strong as their faith, and as often: seldom and slight for the doubter.
   if (ctx.rng.behavior.chance(character.faith)) {
     grant(ctx, character, 'blessed', 'shrine', town.id, 0.3 + character.faith);

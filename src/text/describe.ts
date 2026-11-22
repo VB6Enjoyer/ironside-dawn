@@ -1,5 +1,6 @@
 import {
   creatureDef,
+  type CurseId,
   itemBase,
   LANGUAGES,
   packOf,
@@ -72,6 +73,14 @@ export type Segment =
     };
 
 type Part = string | Segment;
+
+/** What each curse leaves someone, in a word or two (0.4.0). */
+const CURSE_WORDS: Record<CurseId, string> = {
+  'ill-luck': 'ill-starred',
+  wasting: 'wasting away',
+  weakness: 'weakened by a curse',
+  marked: 'marked, so that people shy from them',
+};
 
 /** Being born with the gift for magic, marked wherever it is told (0.3.2). */
 export const GIFT_BORN: Segment = { text: 'born with the gift for magic', mark: 'magic' };
@@ -412,6 +421,37 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
         ? ` burns itself out, having taken ${e.data.dead.toLocaleString('en-US')} of its people.`
         : ' burns itself out.',
     ],
+  ],
+  'character.cursed': [
+    (e, h) => {
+      const c = h.c(e.data.characterId);
+      const curse = CURSE_WORDS[e.data.curse];
+      switch (e.data.source) {
+        case 'item':
+          return [c, ` puts on something cursed, and is ${curse}.`];
+        case 'haunt':
+          return [c, ` leaves `, h.l(e.data.locationId), ` ${curse}, as the tales warned.`];
+        case 'undead':
+          return [c, ` is touched by the dead, and left ${curse}.`];
+        case 'dread':
+          return [c, ` bears the curse of the dread, and is ${curse}.`];
+        case 'dying':
+          return [c, ` is cursed with their victim's last breath, and is ${curse}.`];
+      }
+    },
+  ],
+  'character.uncursed': [
+    (e, h) => {
+      const c = h.c(e.data.characterId);
+      switch (e.data.by) {
+        case 'priest':
+          return ['A priest lifts the curse from ', c, '.'];
+        case 'wise':
+          return ['The wise folk of ', h.l(e.data.locationId), ' lift the curse from ', c, '.'];
+        case 'discard':
+          return [c, ' throws away a cursed thing, and the curse goes with it.'];
+      }
+    },
   ],
   'character.sick': [
     (e, h) => [h.c(e.data.characterId), ` falls ill with ${SICKNESSES[e.data.sickness].caught}.`],

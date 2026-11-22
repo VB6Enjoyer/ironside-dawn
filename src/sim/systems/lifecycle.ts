@@ -6,6 +6,7 @@ import { merchantsFor } from '../gen/world';
 import type { Character, Location, LocationId, Occupation, World } from '../model';
 import { driftFaith, shiftFaith } from './faith-core';
 import { illnessDay, sicknessLevels } from './illness';
+import { cursesDay } from './curses';
 import { plagueDay } from './plague';
 import { isAlive } from './condition';
 import { die, LEGENDARY_RENOWN, renownOf } from './death';
@@ -81,6 +82,7 @@ export function lifecycleDay(ctx: SimContext, targetPopulation: number): void {
       plagued,
     );
     if (!isAlive(c)) continue;
+    cursesDay(ctx, c);
     const def = SPECIES[c.species];
     if (!(def as SpeciesDef).ageless) {
       grow(ctx, c);

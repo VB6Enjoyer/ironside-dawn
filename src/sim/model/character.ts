@@ -197,6 +197,8 @@ export interface Effect {
    */
   readonly fadeFrom: number;
   readonly until: number;
+  /** A curse that comes from wearing this item, and goes with it (0.4.0). */
+  readonly itemId?: ItemId;
 }
 
 /** Something carried to sell: a trophy or a piece of gear not worth wearing. */

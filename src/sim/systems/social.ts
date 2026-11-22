@@ -25,6 +25,7 @@ import { sharePrices } from './merchants';
 import { taleToTell } from './myths';
 import { charactersAt, idsAt, moveTo } from './whereabouts';
 import { isNotorious } from './notoriety';
+import { isMarked } from './curses';
 
 /**
  * Bonds between characters (ROADMAP.md Phase 5): opinions, language, tavern
@@ -256,10 +257,13 @@ function meet(ctx: SimContext, a: Character, b: Character, location: Location): 
       0.1;
     // What the town says of them colors the meeting, for the honest.
     const wary = !self.outlaw && isNotorious(other, location.id);
+    // Someone carrying the mark puts people off, whatever they have done (0.4.0).
+    const marked = isMarked(other, now);
     const warmth =
       (0.012 + 0.05 * speciesAttitude(self, other) + 0.5 * compatibility) * (0.3 + 0.7 * comm) +
       rng.gaussian(0, 0.04) -
-      (wary ? 0.06 : 0);
+      (wary ? 0.06 : 0) -
+      (marked ? 0.05 : 0);
     adjustOpinion(
       self,
       other.id,
@@ -440,6 +444,8 @@ function considerLove(ctx: SimContext, a: Character, b: Character, location: Loc
   const rng = ctx.rng.social;
   if (a.species !== b.species && !rng.chance(MIXED_MARRIAGE)) return;
   if (!rng.chance(ROMANCE)) return;
+  // The marked find it hard to be loved (0.4.0).
+  if ((isMarked(a, ctx.world.time) || isMarked(b, ctx.world.time)) && rng.chance(0.6)) return;
   const now = ctx.world.time;
   a.opinions[b.id]!.lovers = now;
   b.opinions[a.id]!.lovers = now;

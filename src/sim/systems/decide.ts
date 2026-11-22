@@ -1,4 +1,4 @@
-import { PASTIMES, type PastimeId } from '../../content';
+import { CURSES, PASTIMES, type PastimeId } from '../../content';
 import { HOUR } from '../core/time';
 import type { SimContext } from '../context';
 import type {
@@ -85,6 +85,8 @@ const NAMED_REASON = 0.1;
 /** The plain appeal of a day in town, whatever the pastime, for the content. Restlessness wears it away. */
 const TOWN_COMFORT = 0.3;
 /** How much harder study is than an afternoon at the tavern. */
+/** Curses, which send the cursed to a shrine in hope of a priest (0.4.0). */
+const CURSE_KINDS: ReadonlySet<string> = new Set(CURSES);
 const STUDY_EFFORT = 0.1;
 /** Restlessness at which a dungeon's full appeal is felt. */
 const RESTLESS = 0.3;
@@ -624,9 +626,16 @@ function addPastimeTerms(terms: Term[], character: Character, pastime: PastimeId
       return;
     case 'shrine': {
       const shaken = character.memories.some((m) => m.kind === 'near-death');
-      // The faithful go to pray; skeptics seldom do (0.4.0).
+      // The faithful go to pray; skeptics seldom do; the cursed seek a priest (0.4.0).
+      // (Effects over and done with are cleared before any decision.)
+      const cursed = character.effects.some((e) => CURSE_KINDS.has(e.kind) && !e.itemId);
       terms.push({
-        value: 0.02 + 0.06 * traits.compassion + 0.1 * character.faith + (shaken ? 0.1 : 0),
+        value:
+          0.02 +
+          0.06 * traits.compassion +
+          0.1 * character.faith +
+          (shaken ? 0.1 : 0) +
+          (cursed ? 0.4 : 0),
         motive: null,
       });
       return;

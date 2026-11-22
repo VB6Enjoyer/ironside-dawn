@@ -86,6 +86,8 @@ interface WorldReport {
   readonly carrying: Tally<string>;
   /** The living at the end, by their faith in a word (0.4.0). */
   readonly faith: Tally<string>;
+  /** Curses laid, by where from, and lifted, by whom (0.4.0). */
+  readonly curses: { laid: Tally<string>; lifted: Tally<string> };
   /** Plagues (0.4.0): outbreaks, how many spread from them, and townsfolk lost. */
   readonly plagues: { outbreaks: number; spread: number; dead: number; worst: number };
   /** Fights adventurers were in, how they ended, and how many died in them. */
@@ -151,6 +153,7 @@ function runWorld(seed: string, adventurers: number, years: number): WorldReport
   const fights = { started: 0, won: 0, escaped: 0, deaths: 0 };
   const delves = { entered: 0, fled: 0, deaths: 0 };
   let departed = 0;
+  const curses = { laid: {} as Tally<string>, lifted: {} as Tally<string> };
   let sim: ReturnType<typeof createSimulation> | null = null;
 
   const onEvent = (e: SimEvent) => {
@@ -161,6 +164,12 @@ function runWorld(seed: string, adventurers: number, years: number): WorldReport
         break;
       case 'combat.start':
         fights.started++;
+        break;
+      case 'character.cursed':
+        add(curses.laid, e.data.source);
+        break;
+      case 'character.uncursed':
+        add(curses.lifted, e.data.by);
         break;
       case 'combat.victory':
         fights.won++;
@@ -275,6 +284,7 @@ function runWorld(seed: string, adventurers: number, years: number): WorldReport
     looks,
     carrying,
     faith,
+    curses,
     plagues,
     fights,
     delves,
@@ -425,6 +435,13 @@ function report(reports: readonly WorldReport[], adventurers: number, years: num
       .join(', ')}`,
   );
 
+  const laid = merge(reports.map((r) => r.curses.laid));
+  const lifted = merge(reports.map((r) => r.curses.lifted));
+  const listed = (t: Tally<string>) =>
+    Object.entries(t)
+      .map(([k, n]) => `${k} ${n}`)
+      .join(', ') || 'none';
+  console.log(`  curses laid: ${listed(laid)}; lifted: ${listed(lifted)}`);
   const pl = reports.map((r) => r.plagues);
   console.log(
     `  plagues: ${sum(pl.map((p) => p.outbreaks))} outbreaks, ${sum(pl.map((p) => p.spread))} spread to other towns, ${sum(
