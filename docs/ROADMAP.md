@@ -1462,12 +1462,29 @@ Ten steps, each small enough to be looked over before the next begins.
    now, and deaths by sickness; the card shows sickness and curses with the
    other lasting effects; the Halls gain the Plagues.
 
-10. **Balance and release.** Targets: illness about 5–10% of deaths in
-    ordinary times, retired adventurers about 1 in 5 to 1 in 7 dying of it,
-    2 or 3 plagues a century, populations steady with no death spirals; curses
-    uncommon; effects felt but not everywhere; large worlds no more than about
-    10% slower. Then release 0.4.0: players' notes, changelog, a 0.3.2 save as
-    a fixture, the architecture notes.
+10. **Balance and release.** _Done._ Measured with `npm run audit:world` on
+    eight 20-adventurer worlds over a century and four 100-adventurer worlds
+    over half a century:
+
+    |                                             | 8 × 20, 100 years                                         | 4 × 100, 50 years                        |
+    | ------------------------------------------- | --------------------------------------------------------- | ---------------------------------------- |
+    | Illness, share of deaths                    | 7.8%                                                      | 5.0%                                     |
+    | The retired dying of it                     | 1 in 6.5                                                  | 1 in 5.8                                 |
+    | Children dying of it                        | 1                                                         | 2                                        |
+    | Plagues (spread)                            | 20 (17)                                                   | 5 (11)                                   |
+    | Townsfolk lost to plague                    | 853 (worst 132)                                           | 408 (worst 125)                          |
+    | Curses laid / lifted                        | 1,022 / 969                                               | 1,710 / 1,643                            |
+    | Faith: devout, believer, doubter, faithless | 20%, 41%, 29%, 10%                                        | 16%, 39%, 33%, 8%                        |
+    | Effects carried at a look                   | at ease 13%, blessed 10%, good spirits 5%, well rested 4% | at ease 11%, blessed 10%, well rested 4% |
+    | Time a world-year                           | 1.88 s (0.3.2: 1.58)                                      | 7.94 s (0.3.2: 7.20)                     |
+
+    A plague's daily toll was then rounded by chance, so a town's smaller
+    peoples lose some too: four small worlds over a century then lost 1,158
+    townsfolk to 14 plagues (the worst 291), illness still 7.9% of deaths.
+    Large worlds are 10% slower, at the budget; small ones 19%, as the new
+    daily rules cost the same whatever a world's size. Released as 0.4.0:
+    players' notes, changelog, a 0.3.2 save as a fixture, and the
+    architecture notes (`ARCHITECTURE.md` §4.15, `WORLD.md` §3b).
 
 ## 0.4.1 — Body and Soul: beasts and storms
 
