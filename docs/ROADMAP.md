@@ -1334,16 +1334,22 @@ Ten steps, each small enough to be looked over before the next begins.
    0.3.2 baseline is in `BODY-AND-SOUL-0.4.md` §5. It grows with each step
    (effects carried, faith, illness, plague, curses).
 
-2. **Lasting effects: the system.** One system of timed effects any character
-   can carry, good or bad: on health, stamina, a stat, attack and defense,
-   fatigue, nerve. Each has a strength, an end, and a moment from which it
-   fades, losing strength bit by bit (as 0.5.0's buffs will). One of each type
-   at a time; benefits don't stack, the stronger wins; costs do stack, up to a
-   cap. A cost can be bound to an effect for as long as it lasts. Today's
-   dizziness and stat drains (spell costs) fold into it, keeping casting as
-   costly as now. Nerve becomes a modifier on when someone flees a fight and
-   how much risk they take in choosing to delve, fight or cast. Effects are
-   checked lazily, never ticked one by one. Saves move to a new version.
+2. **Lasting effects: the system.** _Done:_ one system of timed effects any
+   character can carry, good or bad (`src/sim/systems/effects.ts`, kinds in
+   `src/content/effects.ts`). Each acts on aspects: maximum health or stamina
+   (a share), attack and defense (points), an attribute (points), recovery
+   (how fast they heal and get their breath back, a share) and nerve. Each has
+   a strength, an end, and a moment from which it fades, losing strength
+   evenly to nothing. Benefits and ailments don't stack: of a kind only one is
+   carried, and a new one replaces it only if stronger now. Costs stack, up to
+   a cap on each aspect. A cost can be bound to an effect for as long as it
+   lasts. Today's dizziness and stat drains (spell and trap costs) are the
+   first costs, as costly as before. Nerve is added to bravery wherever someone
+   chooses to flee a fight, press on or turn back in a delve, dare a master's
+   lair, slip past a foe, take a delve or a hunt, or weigh a spell's risk.
+   Effects are read when they matter and dropped once over, never ticked.
+   Saves move to version 8 (statuses become effects); a 0.3.2 save is kept as
+   a fixture. The first month of a seed's history is unchanged.
 
 3. **Lasting effects: where they come from.** Good effects come from what is
    rare, costly or lucky: a good inn (dearer than the common one), a feast, a
