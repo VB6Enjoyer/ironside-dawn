@@ -1255,26 +1255,28 @@ with births and populations in the range they had.
 its one useless spell made worth casting, and a magic audit to measure it by,
 so 0.5.0 starts from a baseline.
 
-1. **A magic audit** (`tools/magic-audit.ts`, `npm run audit:magic`), as the
-   crime audit is for crime: who can cast and how they came to it (gift,
-   study), by people and culture; spells learned and cast, by spell and
-   outcome; fights with a cast; casts by the dread; mastery (arcana) over a
-   life; costs paid, backlashes and deaths; and how many casts a player sees
-   at each speed. It records the 0.3.1 numbers (`MAGIC-0.5.0.md` §1) and is
-   the yardstick for 0.5.0. It can also try out 0.5.0's blessing rates
-   (humans 7.5%, elves 20%, centaurs 5%, dwarves 3%) before they are taken.
-2. **Magic seen.** Casts that matter become _Notable_, so they show at Day,
-   Season and Max speed and reach the chronicle: a killing blow by spell, a
-   backlash, a caster killed by their own spell, the first spell anyone learns,
-   and the dread's spells. Ordinary casts stay _Normal_, so fights don't flood
-   the log.
-3. **Mend Flesh made worth it.** Today it heals the caster at the price of
-   their own health, so it is almost never chosen (5–64 casts in 30 years,
-   against thousands of Ember Bolts). Its cost moves mostly to stamina, with a
-   little health, so a hurt caster heals when it counts; the audit checks it
-   is now cast without being cast all the time.
-4. **Release 0.3.2:** players' notes, changelog. `SAME_HISTORY_SINCE` moves if
-   history changes (step 3 changes fights).
+1. **A magic audit.** _Done:_ `npm run audit:magic` (`tools/magic-audit.ts`),
+   as the crime audit is for crime: the gifted and casters by people, studied
+   casters, casters at once, fights with a cast, casts by spell and outcome and
+   who knows each spell, the dread's casts, mastery (arcana) at the end, kills
+   by spell, backlash deaths, and how much magic shows at Day speed and up.
+   `--blessings` tries other chances of the gift; 0.5.0's rates (humans 7.5%,
+   elves 20%, centaurs 5%, dwarves 3%) were tried, results in
+   `MAGIC-0.5.0.md` §4, "Second round".
+2. **Magic seen.** _Done:_ learning a spell, felling a strong creature (level 4
+   and up) by spell, and a death by spell (a killing blow, or a caster's own
+   backlash) are _Notable_, so they show at Day, Season and Max speed and
+   reach the chronicle. Lesser spell kills name the spell; a backlash is its
+   own `magic.backlash` event. Measured first, two of the plan's choices were
+   dropped: Notable backlashes (18–25 a world-year, half the chronicle) and
+   Notable casts by the dread (up to 50 a year); both stay _Normal_, and their
+   deadly ones show as deaths.
+3. **Mend Flesh made worth it.** _Done:_ it costs 4 stamina and 1 health
+   (before: 4 health), and a hurt caster weighs healing higher, so it is cast
+   near half health or lower: 221 casts by 35 who knew it in four 30-year
+   worlds, against 94 by 24, and about 1 for every 55 Ember Bolts.
+4. **Release 0.3.2:** players' notes, changelog; `SAME_HISTORY_SINCE` moves to
+   0.3.2.
 
 ## 0.4.0 — Body and Soul
 

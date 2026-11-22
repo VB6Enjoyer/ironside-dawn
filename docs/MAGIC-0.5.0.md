@@ -96,7 +96,15 @@ of them.
 9. **The world setting is thin.** "Magic: common" only makes the gift likelier;
    nothing about how strong or dangerous magic is, or who may study it.
 
-**Solid enough to keep:** the d20 roll with partial and backlash outcomes, the
+**Fixed in 0.3.2:** part of 1 and 3. Learning a spell, felling a strong
+creature (level 4 and up) by spell and a death by spell are now _Notable_;
+other spell kills name the spell, and a backlash is its own event, still
+_Normal_ (measured at 18–25 a world-year, a Notable backlash would have been
+half the chronicle). Mend Flesh costs stamina and a little health and is
+weighed higher when hurt: 221 casts by 35 who knew it in four 30-year worlds,
+against 94 by 24. `npm run audit:magic` measures all of this.
+
+the d20 roll with partial and backlash outcomes, the
 cost profiles, the utility weighing of spells, culture traditions, and spells
 from content packs.
 
@@ -339,6 +347,30 @@ Dark casters are judged through the same standing towns already keep
   centaurs 5%, dwarves 3%. These replace the earlier "1 in 100", and are to be
   tested with the magic audit before they are confirmed as final.
 - A child of a blessed character still has a 50% chance of the same blessing.
+
+**Trial in 0.3.2** (`npm run audit:magic -- --blessings ...`, today's gift
+chances against the new ones, same seeds):
+
+|                           | Today (5 / 18 / 6 / 3) | New (7.5 / 20 / 5 / 3) |
+| ------------------------- | ---------------------- | ---------------------- |
+| 4 worlds of 100, 20 years |                        |                        |
+| Gifted: human             | 5.6% (51 of 903)       | 9.2% (89 of 971)       |
+| Gifted: elf               | 18.8% (49 of 260)      | 24.4% (65 of 266)      |
+| Gifted: centaur           | 5.8% (16 of 278)       | 6.5% (16 of 246)       |
+| Gifted: dwarf             | 6.3% (10 of 158)       | 2.5% (4 of 163)        |
+| Anyone who ever cast      | 171                    | 193                    |
+| Casters among adventurers | 19% at any time        | 23% at any time        |
+| 8 worlds of 20, 30 years  |                        |                        |
+| Anyone who ever cast      | 94                     | 91                     |
+| Casters among adventurers | ~4 of 20               | ~4 of 20               |
+
+(Today: human / elf / centaur / dwarf.) The gift runs about a fifth above
+its rate, because a gifted parent's child has it 35% of the time; at the
+planned 50% that rises further and compounds over a century. Study still
+gives a quarter to a third of all casters, so in a small world the new
+rates are lost in the noise; they show in a big one, where humans become the
+most gifted people by number (4 humans to each elf) and elves stay the most
+gifted by share.
 
 #### Against power creep
 
