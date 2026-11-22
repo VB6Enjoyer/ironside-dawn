@@ -1390,11 +1390,9 @@ world audit.
     than about 10% slower. Then release 0.4.0: players' notes, changelog, a
     0.3.2 save as a fixture, the architecture notes.
 
-**Open questions for 0.4.0:** the final name; whether the moon (for
-lycanthropy) is a real cycle on the calendar or a monthly night; how deadly
-plague may be before it unbalances populations; whether named townsfolk
-(retired heroes) can fall ill and be kidnapped, or only adventurers and the
-unnamed; and whether allies cost upkeep.
+**Working notes and open questions:** `BODY-AND-SOUL-0.4.0.md` holds the
+design of each system, what is decided, and the open questions (42 of them,
+each with a proposal), to settle after 0.3.2 ships and before 0.4.0 begins.
 
 ## 0.5.0 — The Magic Update
 

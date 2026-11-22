@@ -454,3 +454,8 @@ What is left, with how it was read until decided otherwise.
   it, and likelier to be blessed in it.
 - **How many blessings one person may have.** Read as: at most one at birth;
   any number of kinds may be learned later (never both holy and dark).
+- **Backlash and backfire.** Today's backlash (a failure that costs double
+  and burns) and the new backfire (the opposite effect) are both kept, or
+  backfire replaces backlash. Read as: both kept, backfire the rarer.
+- **The spell list for each kind.** To be drafted at step 4, with costs and
+  durations, and reviewed before it is built.
