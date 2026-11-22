@@ -1249,10 +1249,99 @@ conceive only on days together, and are expecting for a gestation by their
 people (270 days for humans, up to 360 for elves) before the child is born,
 with births and populations in the range they had.
 
-**Alongside (separately, as 0.2.1 if wanted):** magic is used thousands of
-times a century but hidden at most speeds, and no creature casts. Make casts
-that matter (killing blows, the dread's spells, a new spell's first use)
-_Notable_, and give a few powerful creatures spell-like attacks.
+## 0.4.0 — The Magic Update
+
+**Goal:** Magic of five kinds (high, divine, druidic, dark and low), each
+learned its own way, held by different peoples, with its own effects and
+costs; used every day as well as in battle, on others as well as oneself;
+mastered over a lifetime; and woven into society, with holy and dark magic at
+odds and dark magic leading some down the road to murder.
+
+**Why:** magic as of 0.3.1 is one skill and eight spells, cast only in fights
+and only for oneself, by a handful of mages, and hidden at most speeds. The
+working notes (`MAGIC-0.4.0.md`) record how it works now, what was measured,
+the nine limits and issues, the design in full, and what it needs that the
+world lacks.
+
+Each step is its own pull request, keeps saves loading, and is checked with a
+magic audit.
+
+### Steps
+
+1. **Measure first.** A headless magic audit (`tools/magic-audit.ts`): who
+   can cast and how they came to, by people and kind; spells learned and cast,
+   by kind, effect and outcome; casts in and out of combat, on whom; mastery
+   over a life; costs paid, backlash and deaths; how much of it a player would
+   see at each speed. It records the 0.3.1 baseline and checks each step.
+
+2. **Five kinds of magic, and who holds them.** High, divine, druidic, dark
+   and low magic as content, each with how it is obtained, how hard it is to
+   learn, and the peoples and cultures it gathers in (druidic among elves; dark
+   among the undead and demons, and very rarely the born-blessed). Each
+   character gets an aptitude and a skill per kind in place of one gift and
+   one arcana: blessings at birth (some inherited), affinities for low magic,
+   and a hidden faith for divine magic. Nobody may hold both holy and dark.
+   Saves move to a new version; the old gift and arcana map onto the new.
+
+3. **Ways to learn.** High magic only by study (academies, spellbooks,
+   teachers), slow and demanding logic and willpower; divine by blessing or
+   strong faith, grown by devotion and vows, and only for the clean of crime
+   and sin; druidic by blessing, study or a bond with nature (time in the
+   wilds); dark by a dark blessing or study; low by simple learning or an
+   affinity. Several kinds in one life, given blessings, interest and time.
+   Mastery grows with study, use and years, lowering costs and raising odds and
+   power, so a lifelong mage, an elf above all, becomes formidable.
+
+4. **Spells, effects and costs.** Effects beyond today's four: healing and
+   buffing others and the whole party, debuffs, area spells, illusions,
+   curses and their lifting, cures, easing fatigue, summoned beasts,
+   shapeshifting, weather. Durations from a round to hours, and timed effects
+   anyone can carry. Costs by kind, always something (lingering weakness or
+   sluggishness for a long buff, health for blood magic, faith strained for
+   divine, a soul's price for dark), with high magic's casting time and
+   concentration that a blow can break. Spells for each kind, flavored by
+   culture; the content pack format follows.
+
+5. **Illness and curses.** A simple model of sickness (fevers, infected
+   wounds) and of curses (laid by low and dark magic), so that cures and curse
+   removal have something to do.
+
+6. **Magic in everyday life.** Casting outside combat: healing after a fight,
+   easing fatigue on the road, curing the sick, a party buff before a delve
+   that lasts hours at a cost to the caster, low magic in town (healing rites,
+   lifting curses, burning a lock of hair to sever a bond, voodoo against a
+   grudge that leaves its target weaker in their next fight), druids turning
+   the weather.
+
+7. **Magic in battle.** Party heals and buffs, debuffs and area spells; high
+   magic's concentration and the risk of being cut down mid-spell; divine
+   magic strong against demons and the undead; dark magic's destruction, and
+   its power to restore the undead and demons; wild beasts called to fight; a
+   druid's beast form. The dread, and perhaps other creatures, cast spells of
+   their own kind.
+
+8. **Holy and dark in society.** Most humanoid peoples fear dark magic:
+   its casters are shunned or treated with caution. Dark magic grows by
+   absorbing souls of the dead (humans, dwarves, elves, centaurs, high-level
+   demons) and through rituals, sacrifice and murder, so a dark caster who
+   prizes their power may turn outlaw, killing or kidnapping for sacrifice
+   (built on 0.3.0's capture). Holy and dark casters almost never befriend
+   each other. Divine power follows faith and morality, and sin weakens it.
+
+9. **Seen and told.** Casts that matter (killing blows, great spells, the
+   first of a kind, backlash) become _Notable_ and reach the chronicle; life
+   stories, the character card and the Halls (great mages) show each
+   character's kinds of magic, their mastery and their deeds; the live feed
+   colors each kind.
+
+10. **Balance and release.** Targets across world sizes: mages in every
+    world, of every kind where its peoples live, dark casters rare; magic in a
+    fair share of fights and of everyday life; costs that bite (backlash and
+    lingering weakness felt, deaths rare but real); a lifelong mage outclassing
+    a young one; the world's magic setting meaning more than gift odds. Then
+    release 0.4.0: players' notes, changelog, a 0.3.1 save kept as a fixture,
+    the architecture notes, `WORLD.md` §4 rewritten, and the working notes
+    retired.
 
 ---
 
