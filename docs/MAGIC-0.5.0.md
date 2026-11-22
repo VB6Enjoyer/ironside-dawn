@@ -372,6 +372,31 @@ rates are lost in the noise; they show in a big one, where humans become the
 most gifted people by number (4 humans to each elf) and elves stay the most
 gifted by share.
 
+**Inheritance at 50%, over a century** (4 worlds of 100 adventurers, 100
+years, the new rates; the gifted share among those born in the world, by when
+they were born, and among the living at the end):
+
+|                    | Human 35% | Human 50% | Centaur 35% | Centaur 50% |
+| ------------------ | --------- | --------- | ----------- | ----------- |
+| Born, years 0–25   | 13.4%     | 11.3%     | 12.8%       | 20.5%       |
+| Born, years 25–50  | 13.7%     | 15.3%     | 23.1%       | 22.2%       |
+| Born, years 50–75  | 13.0%     | 12.3%     | 9.8%        | 24.4%       |
+| Born, years 75–100 | 11.7%     | 13.9%     | 9.5%        | 28.2%       |
+| Living at the end  | 8.7%      | 10.2%     | 8.6%        | 14.3%       |
+
+(About 120–170 humans and 40 centaurs born in each span.) No runaway: the
+share born gifted settles near twice the rate and does not climb from one
+generation to the next, and everyone who ever cast (641 against 642) is the
+same at both settings. What holds it down is that most people come into the
+world grown (half of all humans) with the plain rate, and a gifted parent
+mostly marries someone without the gift. Elves have too few children (about
+13 every 25 years in four worlds) for inheritance to matter to them, and
+dwarves too. Centaurs move most: at 50% their children run 20–28% gifted
+and the living end at 14%, above humans, where their place is between
+humans and dwarves. Worth watching once the blessing kinds land. Should a
+later version make the world mostly born rather than arriving (fewer
+newcomers, or a closed-world setting), check this again.
+
 #### Against power creep
 
 - **One effect of each type at a time; effects don't stack.**
