@@ -1,6 +1,6 @@
 [package]
 name = "ironside-dawn"
-version = "0.3.2"
+version = "0.4.0"
 description = "A fantasy world simulation you watch rather than play."
 edition = "2021"
 rust-version = "1.77"

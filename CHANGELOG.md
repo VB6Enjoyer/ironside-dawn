@@ -8,6 +8,8 @@ The public notes players see under "What's new" are kept in `src/ui/releases.ts`
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-22
+
 ### Added
 
 - `npm run audit:world`, a headless world audit over several worlds (`tools/world-audit.ts`): deaths by cause, by calling (the retired apart) and by stage of life; how often adventurers are hurt, weary or laid up; how fights and delves go; the living by people and calling and the towns' counts every ten years; healing draught and herb prices; and how long each world took. It measures what the Body and Soul releases change.
@@ -24,8 +26,8 @@ The public notes players see under "What's new" are kept in `src/ui/releases.ts`
 
 ### Changed
 
-- Dizziness and drained attributes are now lasting effects (`src/sim/systems/effects.ts`, `src/content/effects.ts`), the groundwork for the good and bad effects to come: each acts on health, stamina, attack, defense, an attribute, recovery or nerve, holds for a while and may fade. Nerve now steadies or shakes a character's bravery when they decide to flee, press on, delve, hunt or cast. Nothing plays differently yet. Saves move to version 8; saves from every earlier release still load, and a 0.3.2 save is kept as a test fixture (`src/sim/fixtures/save-0.3.2.json.gz`).
-- Worlds turn out differently from their seed than in 0.3.2 over the long run (`src/host/version.ts`), so links from 0.3.2 open with a note that history differs.
+- Dizziness and drained attributes are now lasting effects (`src/sim/systems/effects.ts`, `src/content/effects.ts`), the groundwork for the good and bad effects to come: each acts on health, stamina, attack, defense, an attribute, recovery or nerve, holds for a while and may fade. Nerve now steadies or shakes a character's bravery when they decide to flee, press on, delve, hunt or cast. Saves move to version 8; saves from every earlier release still load, and a 0.3.2 save is kept as a test fixture (`src/sim/fixtures/save-0.3.2.json.gz`).
+- Worlds turn out differently from their seed than in 0.3.2 (`src/host/version.ts`), so links from 0.3.2 open with a note that history differs.
 
 ## [0.3.2] - 2026-11-22
 
@@ -152,7 +154,8 @@ The public notes players see under "What's new" are kept in `src/ui/releases.ts`
 
 - The first release: procedural worlds with their people, markets, generations, cultures and myths; the observatory to watch them; world settings, content packs, saves and links; and the desktop app. How it was built is told phase by phase in `docs/ROADMAP.md`.
 
-[Unreleased]: https://github.com/VB6Enjoyer/ironside-dawn/compare/v0.3.2...HEAD
+[Unreleased]: https://github.com/VB6Enjoyer/ironside-dawn/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/VB6Enjoyer/ironside-dawn/compare/v0.3.2...v0.4.0
 [0.3.2]: https://github.com/VB6Enjoyer/ironside-dawn/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/VB6Enjoyer/ironside-dawn/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/VB6Enjoyer/ironside-dawn/compare/v0.2.0...v0.3.0

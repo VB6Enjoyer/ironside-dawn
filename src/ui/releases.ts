@@ -16,6 +16,21 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: '0.4.0',
+    date: '2026-11-22',
+    title: 'Body and Soul: the body',
+    intro:
+      'People now carry more than their wounds: good days and bad ones, a faith of their own, sickness, and the occasional curse.',
+    changes: [
+      'Lasting effects, good and bad, shown on the character card with the time left: well rested after the best room at a fine inn, at ease after a night at home, in good spirits after standing a feast, well fed, lucky after a great find; weakened for days after a brush with death, worn out after a long march. Alchemists brew tonics of vigor and calming draughts for those who can afford them.',
+      'Everyone has a faith: devout, believer, doubter or skeptic, or faithless or corrupted for those who lost it. It runs in families and towns, grows with prayer, great deeds and narrow escapes, and wears down with crime, grief and poverty. The faithful hold their nerve a little better and are blessed at the shrines, and priests can give back what crime took. Life stories tell it.',
+      'Sickness: fevers, winter coughs and festering wounds, commoner in winter and in poor, crowded towns. The sick are weaker, keep out of the dungeons and rest if they can afford it; remedies and good healers help. Most get well, but sickness carries off one in ten, the very old above all.',
+      'Plague, two or three times a century: it breaks out in a town, takes its people for months, and travels the roads to towns nearby. The Halls now list the Plagues.',
+      'Curses: ill luck, a wasting, a weakness, or the mark that makes people shy away. They come from cursed things found in the deeps, haunted places, the undead, the dread, and murdered souls. Priests, likelier for the faithful, and wise folk can lift them.',
+      'A new Hardship setting when making a world: gentle, normal or harsh.',
+    ],
+  },
+  {
     version: '0.3.2',
     date: '2026-11-22',
     title: 'Magic you can see',
