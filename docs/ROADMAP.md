@@ -1436,19 +1436,21 @@ Ten steps, each small enough to be looked over before the next begins.
    town), towns' growth flattened late in the century; illness 6.2% of
    deaths, the retired about 1 in 9 before a last nudge for the very old.
 
-8. **Curses.** A curse is a condition with an effect (ill luck in fights, a
-   wasting, a weakness, or the mark, which makes people wary: harder to win
-   friends, a party or a spouse; a town's standing stays about known crimes)
-   and a way to be lifted. Laid by cursed items found in dungeons, by haunted
-   places and the myths about them, by the touch of some undead, by the dread,
-   and by a murder victim's dying curse on their killer (about 1 murder in
-   10, likelier from the faithful). Characters notice a curse after a while
-   and seek help. Lifted by time (minor ones), by priests at shrines (stronger
-   with faith), by wise folk in town (rarely, cheaply, unreliably), by getting
-   rid of a cursed item, and in 0.5.0 by magic. Cursed items are worth less;
-   they can be inherited, and an heir who notices the curse throws or sells
-   the item. (Lycanthropy, a curse passed by a bite, comes with shapeshifting
-   in 0.4.1.)
+8. **Curses.** _Done_ (`src/sim/systems/curses.ts`): ill luck (−2 attack and
+   defense, weeks), wasting (−20% health, −40% recovery, until lifted),
+   weakness (−3 might, weeks) and the mark (months; people take to them less
+   at every meeting, and they find love far harder; a town's standing stays
+   about known crimes). Laid by cursed armor and trinkets found in dungeons
+   (worth half; the curse lasts while worn), by delving where dark tales are
+   told, by the touch of the undead in a hard fight, by fighting the dread,
+   and by a murder victim's dying breath (about 1 in 10, likelier from the
+   faithful). After some days the cursed notice: they seek a shrine, where a
+   priest may lift it for a fee (likelier the more faith they have), or try
+   the town's wise folk (cheap, seldom any use); a cursed thing is thrown away
+   once its curse is noticed, heirs included. Measured over four worlds and a
+   century: about 590 curses, most from haunted places; most lifted by
+   priests; ill luck carried 0.1% of the time. (Lycanthropy comes with
+   shapeshifting in 0.4.1.)
 
 9. **Hardship, seen and told.** One "hardship" dial at world creation
    (gentle, normal, harsh) sets how much illness and curses there are; old
