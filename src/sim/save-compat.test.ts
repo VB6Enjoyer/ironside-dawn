@@ -75,6 +75,22 @@ describe('save files from earlier releases', () => {
     expect(read.appVersion).toBe('0.1.1');
   });
 
+  it('carry 0.3.2 dizziness and drains over as lasting effects', () => {
+    const game = open('save-0.3.2.json.gz');
+    expect(game.madeWith).toBe('0.3.2');
+    const sim = createSimulation({ seed: game.seed, restore: game.world, watch: 'none' });
+    const everyone = [...sim.world.characters.values()];
+    for (const c of everyone) {
+      expect(c.effects).toBeInstanceOf(Array);
+      expect('statuses' in c).toBe(false);
+    }
+    // The save was made while someone reeled from a spell's cost or a trap.
+    const dizzy = everyone.flatMap((c) => c.effects).find((e) => e.kind === 'dizzy')!;
+    expect(dizzy.mods).toEqual({ attack: -2, defense: -2 });
+    expect(dizzy.fadeFrom).toBe(dizzy.until);
+    expect(dizzy.until).toBeGreaterThan(sim.world.time);
+  });
+
   it('refuse, saying why, what this version cannot load', () => {
     const game = open('save-0.1.0.json.gz');
     const file = (world: object) =>

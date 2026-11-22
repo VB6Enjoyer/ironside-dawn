@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { spellDef } from '../../content';
 import { testCharacter, testContext } from '../test-support';
+import { dizziness } from './effects';
 import { cast, costsFor, learnSpells, successChance } from './magic';
 import { refreshMaxima, xpForLevel } from './progress';
 
@@ -15,7 +16,7 @@ function mage(seed = 'magic') {
   c.xp = xpForLevel(50);
   refreshMaxima(c);
   const rested = () => {
-    c.statuses = [];
+    c.effects = [];
     c.hp = c.maxHp;
     c.stamina = c.maxStamina;
   };
@@ -42,7 +43,7 @@ describe('casting', () => {
       let backlashes = 0;
       for (let i = 0; i < 2000; i++) {
         rested();
-        if (dizzy) c.statuses = [{ kind: 'dizzy', until: ctx.world.time + 1 }];
+        if (dizzy) c.effects = [dizziness(ctx.world.time, 1)];
         if (cast(ctx, c, 'ember-bolt', c.homeId, null).outcome === 'backlash') backlashes++;
       }
       return backlashes / 2000;
@@ -87,7 +88,7 @@ describe('casting', () => {
     let died = false;
     for (let i = 0; i < 200 && !died; i++) {
       c.hp = 3;
-      c.statuses = [];
+      c.effects = [];
       died = cast(ctx, c, 'mend-flesh', c.homeId, null).fatal;
     }
     expect(died).toBe(true);

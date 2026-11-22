@@ -6,10 +6,10 @@ export type {
   DeathCause,
   Deed,
   DelveProgress,
+  Effect,
   LifeSample,
   LootItem,
   Occupation,
-  TimedStatus,
   TravelLeg,
 } from './character';
 export type { CreatureRef, Encounter, EncounterSide, FighterState, Herd, Side } from './encounter';

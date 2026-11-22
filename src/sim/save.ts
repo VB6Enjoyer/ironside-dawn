@@ -10,7 +10,7 @@ import type { World, WorldSettings } from './model';
 
 export const SAVE_FORMAT = 'ironside-dawn/world';
 /** Bump when the world's shape changes in a way old saves can't be read as. */
-export const SAVE_VERSION = 7;
+export const SAVE_VERSION = 8;
 
 export interface WorldSave {
   readonly format: typeof SAVE_FORMAT;
@@ -88,6 +88,7 @@ type SaveData = Record<string, unknown> & { version: number };
  */
 const MIGRATIONS: Readonly<Record<number, (save: SaveData) => Record<string, unknown>>> = {
   6: toCrimesThatTravel,
+  7: toLastingEffects,
 };
 
 type Encoded = Record<string, unknown>;
@@ -124,6 +125,31 @@ function toCrimesThatTravel(save: SaveData): Record<string, unknown> {
     c.justice = [];
   }
   return { ...save, world: { ...world, news: [], unsolved: [] } };
+}
+
+/**
+ * 0.4.0: timed statuses (dizziness and drained attributes) become lasting
+ * effects, which carry what they do to each aspect and when they fade. Those
+ * from before hold at full strength to their end, as they did.
+ */
+function toLastingEffects(save: SaveData): Record<string, unknown> {
+  const world = save.world as Encoded;
+  const characters = (world.characters as { $map: [unknown, Encoded][] }).$map;
+  for (const [, c] of characters) {
+    const statuses = (c.statuses ?? []) as (
+      | { kind: 'dizzy'; until: number }
+      | { kind: 'drained'; stat: string; amount: number; until: number }
+    )[];
+    c.effects = statuses.map((s) => ({
+      kind: s.kind,
+      mods: s.kind === 'dizzy' ? { attack: -2, defense: -2 } : { [s.stat]: -s.amount },
+      since: world.time,
+      fadeFrom: s.until,
+      until: s.until,
+    }));
+    delete c.statuses;
+  }
+  return save;
 }
 
 /**

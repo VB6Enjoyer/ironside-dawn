@@ -1,6 +1,8 @@
 import type {
+  Aspect,
   CreatureId,
   CultureId,
+  EffectId,
   Goods,
   LanguageId,
   LootId,
@@ -8,7 +10,6 @@ import type {
   SkillId,
   SpeciesId,
   SpellId,
-  StatId,
   Stats,
   TrapId,
   Traits,
@@ -80,8 +81,11 @@ export interface Character {
   maxHp: number;
   stamina: number;
   maxStamina: number;
-  /** Timed conditions. Wounded and exhausted are derived from hp and stamina instead. */
-  statuses: TimedStatus[];
+  /**
+   * Lasting effects carried now (0.4.0; see `systems/effects.ts`). Wounded and
+   * exhausted are derived from hp and stamina instead.
+   */
+  effects: Effect[];
 
   gold: number;
   /** Loot carried, waiting to be sold. */
@@ -157,15 +161,22 @@ export interface Character {
 /** [time, level, gold, kills], compact because there are many. */
 export type LifeSample = readonly [t: number, level: number, gold: number, kills: number];
 
-export type TimedStatus =
-  | { readonly kind: 'dizzy'; readonly until: number }
-  /** An attribute temporarily weakened, usually by magic. */
-  | {
-      readonly kind: 'drained';
-      readonly stat: StatId;
-      readonly amount: number;
-      readonly until: number;
-    };
+/**
+ * Something a character carries for a while (0.4.0): a lasting effect, good or
+ * bad, acting on some of their aspects (see `content/effects.ts`).
+ */
+export interface Effect {
+  readonly kind: EffectId;
+  /** What it does to each aspect at full strength. */
+  readonly mods: Partial<Record<Aspect, number>>;
+  readonly since: number;
+  /**
+   * From here its strength falls off evenly to nothing at `until`. The same as
+   * `until` for one that holds at full strength to the end.
+   */
+  readonly fadeFrom: number;
+  readonly until: number;
+}
 
 /** Something carried to sell: a trophy or a piece of gear not worth wearing. */
 export type LootItem =

@@ -11,6 +11,7 @@ import type {
   Motive,
 } from '../model';
 import { isDizzy, isFitToDelve, needsRecovery } from './condition';
+import { courageOf } from './effects-core';
 import { fearOf, hasVisited, healthNeed, wealthNeed } from './mind';
 import { canFence, dayCrimes, farmsToExtort, lyingLow, type DayCrime } from './crime';
 import { isBarred, isKnownIn, isShunned, standingIn } from './notoriety';
@@ -483,11 +484,13 @@ function delveTerms(
   nearness: number,
 ): Term[] {
   const { traits, drives } = character;
+  // Nerve (0.4.0) steadies or shakes their bravery while it lasts.
+  const bravery = courageOf(character, ctx.world.time);
   const expectation = character.expectations[place];
   const terms: Term[] = [
     { value: 1.4 * drives.purpose ** 1.5, motive: DRIVE.purpose },
     {
-      value: 0.4 * drives.glory * (0.5 + traits.bravery),
+      value: 0.4 * drives.glory * (0.5 + bravery),
       motive: DRIVE.glory,
     },
     { value: 0.4 * wealthNeed(character), motive: DRIVE.wealth },
@@ -503,7 +506,7 @@ function delveTerms(
   }
   // What they fear there: what befell them, and the tales they grew up on.
   const fear = fearOf(character, place, ctx.world.time) + mythFear(ctx.world, character, place);
-  if (fear > 0) terms.push({ value: -0.8 * fear * (1.2 - traits.bravery), motive: null });
+  if (fear > 0) terms.push({ value: -0.8 * fear * (1.2 - bravery), motive: null });
   // One of the dread lairs there: a call to the brave who stand a chance, a
   // dread to everyone else.
   const masterId = ctx.world.locations.get(place)?.dungeon?.masterId;
@@ -518,11 +521,10 @@ function delveTerms(
     const odds = lairOdds(character.level, band, master.level);
     const infamy = Math.min(1, master.slain / 10);
     terms.push({
-      value:
-        odds * (0.5 * drives.glory * traits.bravery + 0.3 * infamy * traits.honor + 0.2 * odds),
+      value: odds * (0.5 * drives.glory * bravery + 0.3 * infamy * traits.honor + 0.2 * odds),
       motive: { kind: 'dread', characterId: master.id },
     });
-    terms.push({ value: -0.4 * (1 - odds) * (1.2 - traits.bravery), motive: null });
+    terms.push({ value: -0.4 * (1 - odds) * (1.2 - bravery), motive: null });
   }
   // Glory and gold only call once restlessness has built up: nobody goes
   // straight back in for the sake of it.
@@ -537,6 +539,8 @@ function delveTerms(
  */
 function huntOptions(ctx: SimContext, character: Character, here: Location): Option[] {
   const { traits, drives } = character;
+  // Nerve (0.4.0) steadies or shakes their bravery while it lasts.
+  const bravery = courageOf(character, ctx.world.time);
   const options: Option[] = [];
   const eagerness = Math.min(1, drives.purpose / RESTLESS);
   for (const bounty of ctx.world.bounties.values()) {
@@ -555,7 +559,7 @@ function huntOptions(ctx: SimContext, character: Character, here: Location): Opt
       : 0;
     const party = 1 + followersOrMembers(ctx, character) + posse;
     const outmatched = character.level + 2 * (party - 1) < outlaw.level - 1;
-    if (outmatched && !(revenge && traits.bravery >= 0.6)) continue;
+    if (outmatched && !(revenge && bravery >= 0.6)) continue;
 
     const where = outlaw.outlaw.lastSeenAt;
     const hours = (findPath(ctx.world, here.id, where)?.duration ?? Infinity) / HOUR;
@@ -571,7 +575,7 @@ function huntOptions(ctx: SimContext, character: Character, here: Location): Opt
           nearness *
           persistence *
           (0.05 + 0.25 * traits.honor + 0.4 * traits.greed * reward) *
-          (0.5 + traits.bravery),
+          (0.5 + bravery),
         motive: { kind: 'bounty', outlawId: outlaw.id },
       },
     ];

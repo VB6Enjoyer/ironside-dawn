@@ -177,7 +177,7 @@ export function createCharacter(ctx: SimContext, home: Location, arrival: Arriva
     maxHp: 0,
     stamina: 0,
     maxStamina: 0,
-    statuses: [],
+    effects: [],
     gold:
       calling === 'merchant'
         ? stake(rng.roll('2d6'))

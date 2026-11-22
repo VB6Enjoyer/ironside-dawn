@@ -5,6 +5,8 @@ import type { Character, DelveProgress, Dungeon, Item, Location, LootItem, Motiv
 import { startDelveFight } from './combat';
 import { isDizzy, modifier, retreatThreshold } from './condition';
 import { die } from './death';
+import { addEffect, dizziness } from './effects';
+import { courageOf } from './effects-core';
 import { escortOf, masterAt } from './dread';
 import { claimLegend, generateItem, takeGear } from './items';
 import { mint } from './ledger';
@@ -220,7 +222,7 @@ function shouldLeave(
     const master = ctx.world.characters.get(dungeon.masterId)!;
     if (!master.death && !dareLair(ctx, character, master)) return true;
   }
-  if (character.hp < character.maxHp * retreatThreshold(character)) return true;
+  if (character.hp < character.maxHp * retreatThreshold(character, ctx.world.time)) return true;
   if (character.stamina < character.maxStamina * 0.25) return true;
   if (isDizzy(character, ctx.world.time)) return true;
   // Out to destroy the master, they press on to the lair while they can.
@@ -251,7 +253,7 @@ function onCrusade(ctx: SimContext, character: Character, masterId: Character['i
 function dareLair(ctx: SimContext, character: Character, master: Character): boolean {
   const party = 1 + followersOf(ctx, character).length;
   const odds = lairOdds(character.level, party, master.level);
-  const nerve = 0.3 + 0.5 * character.traits.bravery + 0.2 * character.drives.glory;
+  const nerve = 0.3 + 0.5 * courageOf(character, ctx.world.time) + 0.2 * character.drives.glory;
   return odds * nerve > 0.4 && ctx.rng.delve.chance(0.5 + 0.5 * odds);
 }
 
@@ -277,7 +279,7 @@ function avoidFight(
   const level = creatureDef(species).level;
   if (level * count < AVOID_THREAT) return false;
   const rng = ctx.rng.delve;
-  if (!rng.chance(1 - 0.7 * character.traits.bravery)) return false;
+  if (!rng.chance(1 - 0.7 * courageOf(character, ctx.world.time))) return false;
 
   const success =
     rng.int(1, 20) + modifier(character, 'agility') + skillBonus(character, 'stealth') >=
@@ -426,7 +428,7 @@ function trapChamber(
 
   character.hp = Math.max(0, character.hp - damage);
   if (dizzy) {
-    character.statuses.push({ kind: 'dizzy', until: ctx.world.time + trap.dizzyMinutes * MINUTE });
+    addEffect(character, dizziness(ctx.world.time, trap.dizzyMinutes), ctx.world.time);
   }
   ctx.emit(
     {

@@ -2,16 +2,11 @@ import { PASTIMES, type PastimeId } from '../../content';
 import { DAY, HOUR, nextTimeOfDay, timeOfDay } from '../core/time';
 import type { SimContext } from '../context';
 import type { Character, Goal, Location, LocationId, Motive } from '../model';
-import {
-  convalescenceHours,
-  expireStatuses,
-  needsRecovery,
-  recover,
-  type RecoveryPlace,
-} from './condition';
+import { convalescenceHours, needsRecovery, recover, type RecoveryPlace } from './condition';
 import { decideAt, type Action } from './decide';
 import { DAILY_AT } from './ecology';
 import { delveStep, enterDelve } from './delve';
+import { expireEffects } from './effects';
 import { weaponSkillOf } from './items';
 import { townsfolkAt } from './lifecycle';
 import { learnSpells } from './magic';
@@ -131,7 +126,7 @@ export function wakeCharacter(ctx: SimContext, character: Character): void {
 function decide(ctx: SimContext, character: Character): void {
   const location = locationOf(ctx, character);
   const now = ctx.world.time;
-  expireStatuses(character, now);
+  expireEffects(character, now);
   updateDrives(character, now);
 
   if (isNight(now)) {

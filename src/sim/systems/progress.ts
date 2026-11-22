@@ -9,6 +9,7 @@ import {
 } from '../../content';
 import type { SimContext } from '../context';
 import type { Character, Deed, LocationId } from '../model';
+import { aspectOf } from './effects-core';
 import { gearTotals } from './items';
 import { remember, satisfy } from './mind';
 
@@ -105,23 +106,28 @@ export function levelDefenseBonus(character: Character): number {
 }
 
 /**
- * Recomputes maximum hit points and stamina from toughness, level and gear.
- * Gains are added to current values; losses only cap them.
+ * Recomputes maximum hit points and stamina from toughness, level, gear and
+ * any lasting effect on them (0.4.0). Gains are added to current values;
+ * losses only cap them.
  */
-export function refreshMaxima(character: Character): void {
+export function refreshMaxima(character: Character, now?: number): void {
   const gear = gearTotals(character);
   const toughness = character.stats.toughness + (gear.stats.toughness ?? 0);
   const might = character.stats.might + (gear.stats.might ?? 0);
   // The dread take far more killing than any mortal.
   const vitality = (SPECIES[character.species] as SpeciesDef).vitality ?? 1;
   const maxHp = Math.round(
-    (BASE_HP + toughness + HP_PER_LEVEL * (character.level - 1) + gear.maxHp) * vitality,
+    (BASE_HP + toughness + HP_PER_LEVEL * (character.level - 1) + gear.maxHp) *
+      vitality *
+      (1 + aspectOf(character, 'health', now)),
   );
-  const maxStamina =
-    BASE_STAMINA +
-    Math.round((toughness + might) / 2) +
-    Math.floor((character.level - 1) / 2) +
-    gear.maxStamina;
+  const maxStamina = Math.round(
+    (BASE_STAMINA +
+      Math.round((toughness + might) / 2) +
+      Math.floor((character.level - 1) / 2) +
+      gear.maxStamina) *
+      (1 + aspectOf(character, 'stamina', now)),
+  );
 
   character.hp = Math.min(maxHp, character.hp + Math.max(0, maxHp - character.maxHp));
   character.stamina = Math.min(
