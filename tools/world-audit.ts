@@ -18,6 +18,7 @@ import { SPECIES } from '../src/content';
 import {
   ageOf,
   createSimulation,
+  faithWord,
   DAY,
   goingPrice,
   YEAR,
@@ -82,6 +83,8 @@ interface WorldReport {
   };
   /** At the same looks, how many carried each kind of lasting effect (0.4.0). */
   readonly carrying: Tally<string>;
+  /** The living at the end, by their faith in a word (0.4.0). */
+  readonly faith: Tally<string>;
   /** Fights adventurers were in, how they ended, and how many died in them. */
   readonly fights: { started: number; won: number; escaped: number; deaths: number };
   /** Delves begun, fled, and deaths in dungeons. */
@@ -245,6 +248,11 @@ function runWorld(seed: string, adventurers: number, years: number): WorldReport
     if (month % (LOOK_YEARS * 12) === 0) lookAtEra();
   }
   const ms = Math.round(performance.now() - began);
+  const faith: Tally<string> = {};
+  for (const c of sim.world.characters.values()) {
+    const word = c.death ? null : faithWord(c);
+    if (word) add(faith, word);
+  }
   return {
     seed,
     years,
@@ -255,6 +263,7 @@ function runWorld(seed: string, adventurers: number, years: number): WorldReport
     lifeShare,
     looks,
     carrying,
+    faith,
     fights,
     delves,
     eras,
@@ -387,6 +396,21 @@ function report(reports: readonly WorldReport[], adventurers: number, years: num
     `  carrying a lasting effect: ${
       kinds.length ? kinds.map(([k, n]) => `${k} ${pct((n as number) / seen)}`).join(', ') : 'none'
     }`,
+  );
+
+  const faith = merge(reports.map((r) => r.faith));
+  const believers = total(faith);
+  console.log(
+    `  the living's faith at the end: ${[
+      'devout',
+      'believer',
+      'doubter',
+      'skeptic',
+      'faithless',
+      'corrupted',
+    ]
+      .map((w) => `${w} ${pct((faith[w] ?? 0) / Math.max(1, believers))}`)
+      .join(', ')}`,
   );
 
   const f = reports.map((r) => r.fights);
