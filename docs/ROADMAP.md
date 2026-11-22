@@ -1422,14 +1422,19 @@ Ten steps, each small enough to be looked over before the next begins.
    remedies suffer far less than poor ones. Measured: illness fell to 4% of
    deaths before plague; herbs a little dearer.
 
-7. **Illness: plague.** Plague comes 2 or 3 times a century, of different size
-   and severity. It starts in one town, likelier a poor and crowded one in
-   winter, travels the trade roads with merchants and travelers to nearby
-   towns over weeks, thins the townsfolk counts as well as killing named
-   characters, and leaves a town or a region hurt for some years (population,
-   then trade). It never reaches the whole world, and rich towns weather it
-   far better. The audit guards against death spirals (sickness, fewer
-   workers, dearer remedies, more sickness).
+7. **Illness: plague.** _Done_ (`src/sim/systems/plague.ts`): about three a
+   century in a world, of every severity (0.3, a bad season, to 1, a
+   scourge). One breaks out in a town, likelier a poor, crowded one in
+   winter, and rages for months: it takes a share of the townsfolk each day
+   (fewer where the town cares well for its sick), the named folk there catch
+   the plague itself (deadly, a quarter of the hale), and it travels the roads
+   to towns within a few days, milder as it goes. A town it passed through is
+   spared for fifteen years. Its trade follows its people, so both recover
+   over the years after. Outbreaks, spreads and ends are told (Notable).
+   Measured over four worlds and a century, with step 5's sickness retuned:
+   11 outbreaks and 9 spreads, 1,055 townsfolk lost (the worst some 18% of a
+   town), towns' growth flattened late in the century; illness 6.2% of
+   deaths, the retired about 1 in 9 before a last nudge for the very old.
 
 8. **Curses.** A curse is a condition with an effect (ill luck in fights, a
    wasting, a weakness, or the mark, which makes people wary: harder to win
