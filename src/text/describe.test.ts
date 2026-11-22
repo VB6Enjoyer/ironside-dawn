@@ -41,6 +41,12 @@ const text = (e: SimEvent) => toPlainText(describeEvent(e, names));
 /** Event types too rare to count on in one year of one world, with sample data. */
 const where = 'witherwood' as LocationId;
 const RARE: Record<string, (a: CharacterId, b: CharacterId) => object> = {
+  'magic.kill': (a) => ({
+    characterId: a,
+    locationId: where,
+    spell: 'ember-bolt',
+    foe: { species: 'troll', affix: null, ordinal: 0 },
+  }),
   'social.rival': (a, b) => ({ characterId: a, locationId: where, otherId: b }),
   'party.leave': (a, b) => ({ characterId: a, locationId: where, leaderId: b, reason: 'quarrel' }),
   'party.disband': (a) => ({ characterId: a, locationId: where, reason: 'outlaw' }),

@@ -1,5 +1,6 @@
 import type { Charges, CrimeKind, ExecutionMethod } from '../sim';
-import { weaponName } from './items';
+import type { SpellId } from '../content';
+import { spellName, weaponName } from './items';
 import { article, countWord, listOf } from './words';
 
 /**
@@ -66,4 +67,13 @@ export function withWeapon(base: string | undefined): string {
   if (!base) return '';
   const name = weaponName(base);
   return name ? ` with ${article(name)} ${name}` : '';
+}
+
+/** " with an Ember Bolt" for a killing spell, else the weapon (0.3.2). */
+export function withMeans(cause: { readonly weapon?: string; readonly spell?: SpellId }): string {
+  if (cause.spell) {
+    const name = spellName(cause.spell);
+    return ` with ${article(name)} ${name}`;
+  }
+  return withWeapon(cause.weapon);
 }

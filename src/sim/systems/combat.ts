@@ -1,4 +1,11 @@
-import { AFFIX_CHANCE, AFFIXES, creatureDef, spellDef, type CreatureId } from '../../content';
+import {
+  AFFIX_CHANCE,
+  AFFIXES,
+  creatureDef,
+  spellDef,
+  type CreatureId,
+  type SpellId,
+} from '../../content';
 import { schedule } from '../core/scheduler';
 import { MINUTE } from '../core/time';
 import type { SimContext } from '../context';
@@ -525,6 +532,8 @@ function killCharacter(
   victim: Character,
   killer: Character,
   encounter: Encounter,
+  /** The spell that did it, rather than a weapon. */
+  spell?: SpellId,
 ): void {
   killer.gold += victim.gold;
   victim.gold = 0;
@@ -537,7 +546,7 @@ function killCharacter(
   die(ctx, victim, {
     kind: 'character',
     characterId: killer.id,
-    weapon: killer.equipment.weapon.base,
+    ...(spell ? { spell } : { weapon: killer.equipment.weapon.base }),
     ...(killer.outlaw ? { murder: true } : {}),
   });
   // Who lived to see it: the victim's companions still on their feet, and anyone else about.
@@ -558,6 +567,7 @@ function slay(
   encounter: Encounter,
   side: Side,
   index: number,
+  spell?: SpellId,
 ): void {
   const foe = encounter.sides[side].creatures[index]!;
   const species = foe.ref.species;
@@ -575,11 +585,12 @@ function slay(
     if (rng.chance(drop.chance)) encounter.spoils.items.push(rollLootItem(rng, drop.loot));
   }
 
+  const at = { characterId: killer.id, locationId: encounter.locationId, foe: foe.ref };
   ctx.emit(
-    {
-      type: 'combat.kill',
-      data: { characterId: killer.id, locationId: encounter.locationId, foe: foe.ref },
-    },
+    // Only a strong foe felled by a spell is worth the chronicle (0.3.2).
+    spell && def.level >= MEMORABLE_LEVEL
+      ? { type: 'magic.kill', data: { ...at, spell } }
+      : { type: 'combat.kill', data: spell ? { ...at, spell } : at },
     [killer.id],
     encounter.locationId,
   );
@@ -632,14 +643,14 @@ function applySpell(
         foe.fighter.hp = Math.max(0, foe.fighter.hp - amount);
         if (foe.fighter.hp === 0) {
           foe.fighter.out = 'dead';
-          slay(ctx, caster, encounter, casterSide === 0 ? 1 : 0, index);
+          slay(ctx, caster, encounter, casterSide === 0 ? 1 : 0, index, choice.spell);
         }
       } else {
         const victim = ctx.world.characters.get(target.id)!;
         victim.hp = Math.max(0, victim.hp - amount);
         if (victim.hp === 0) {
           encounter.out[victim.id] = 'dead';
-          killCharacter(ctx, victim, caster, encounter);
+          killCharacter(ctx, victim, caster, encounter, choice.spell);
         }
       }
       return;

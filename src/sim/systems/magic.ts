@@ -132,7 +132,8 @@ export function cast(
 
   ctx.emit(
     {
-      type: 'magic.cast',
+      // A backlash is its own event (0.3.2), told apart from everyday casts.
+      type: outcome === 'backlash' ? 'magic.backlash' : 'magic.cast',
       data: {
         characterId: character.id,
         locationId,

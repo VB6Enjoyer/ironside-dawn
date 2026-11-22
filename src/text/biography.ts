@@ -13,7 +13,7 @@ import {
 import { seasonName } from './calendar';
 import type { Segment } from './describe';
 import { spellName } from './items';
-import { chargesPhrase, EXECUTED, SENTENCED_TO, withWeapon } from './justice';
+import { chargesPhrase, EXECUTED, SENTENCED_TO, withMeans } from './justice';
 import { personalitySummary } from './mind';
 import { SPECIES_NAMES, type NameResolver } from './names';
 import { aCreature, article, capitalize, countWord, listOf, TRAP_NAMES } from './words';
@@ -70,7 +70,7 @@ export function causeOfDeath(cause: DeathCause, names: NameResolver): Segment[] 
       return [
         { text: cause.murder ? 'murdered by ' : 'killed by ' },
         person(cause.characterId, names),
-        { text: withWeapon(cause.weapon) },
+        { text: withMeans(cause) },
       ];
     case 'trap':
       return [{ text: `killed by ${article(TRAP_NAMES[cause.trap])} ${TRAP_NAMES[cause.trap]}` }];

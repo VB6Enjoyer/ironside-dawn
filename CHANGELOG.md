@@ -8,6 +8,16 @@ The public notes players see under "What's new" are kept in `src/ui/releases.ts`
 
 ## [Unreleased]
 
+### Added
+
+- Spell kills get their own line (`src/sim/systems/combat.ts`, `src/text/describe.ts`): the log says when a spell deals the killing blow, and felling a strong creature (a troll, a jotunn, an oni) with one is now _Notable_, so it shows at Day speed and up and reaches the chronicle. Someone killed by a spell is "struck down … with an Ember Bolt" in the log, and their life story names the spell (`src/text/biography.ts`).
+
+### Changed
+
+- A spell that backlashes is its own event (`magic.backlash` in `src/sim/model/events.ts`), shown with the Magic tint, so it can be filtered and counted apart from ordinary casts.
+- Learning a spell is now _Notable_, so it reaches the chronicle.
+- Worlds turn out differently from their seed than in 0.3.1 (`src/host/version.ts`), so links from 0.3.1 open with a note that history differs.
+
 ## [0.3.1] - 2026-11-22
 
 ### Added
