@@ -1275,13 +1275,17 @@ magic audit.
    see at each speed. It records the 0.3.1 baseline and checks each step.
 
 2. **Five kinds of magic, and who holds them.** High, divine, druidic, dark
-   and low magic as content, each with how it is obtained, how hard it is to
-   learn, and the peoples and cultures it gathers in (druidic among elves; dark
-   among the undead and demons, and very rarely the born-blessed). Each
-   character gets an aptitude and a skill per kind in place of one gift and
-   one arcana: blessings at birth (some inherited), affinities for low magic,
-   and a hidden faith for divine magic. Nobody may hold both holy and dark.
-   Saves move to a new version; the old gift and arcana map onto the new.
+   and low magic as content, each with how it is obtained and how hard it is
+   to learn. Each culture's affinities (see the working notes: druidic for the
+   sylvan, low and high for the deephold, dark for the grave and infernal, and
+   so on) make its people likelier to take up and be blessed in certain kinds;
+   any people may learn any kind, except that the grave and infernal can never
+   learn divine. Each character gets an aptitude and a skill per kind in place
+   of one gift and one arcana: blessings at birth, about 1 in 100, half of
+   them passed on to children; affinities; and a hidden faith for divine
+   magic. Nobody may hold both holy and dark. The world's magic setting stays
+   one dial. Saves move to a new version; the old gift and arcana map onto the
+   new.
 
 3. **Ways to learn.** High magic only by study (academies, spellbooks,
    teachers), slow and demanding logic and willpower; divine by blessing or
@@ -1311,14 +1315,19 @@ magic audit.
    that lasts hours at a cost to the caster, low magic in town (healing rites,
    lifting curses, burning a lock of hair to sever a bond, voodoo against a
    grudge that leaves its target weaker in their next fight), druids turning
-   the weather.
+   the weather. Townsfolk practice low magic too, weakly and rarely: a wise
+   woman may heal or bless a liked or famous adventurer, and a town may try to
+   curse a visiting outlaw or a controversial figure (about 1 in 20 visits),
+   leaving them slightly weaker in battle for a few hours.
 
 7. **Magic in battle.** Party heals and buffs, debuffs and area spells; high
    magic's concentration and the risk of being cut down mid-spell; divine
    magic strong against demons and the undead; dark magic's destruction, and
    its power to restore the undead and demons; wild beasts called to fight; a
-   druid's beast form. The dread, and perhaps other creatures, cast spells of
-   their own kind.
+   druid's beast form. Creatures that cast: intelligent creatures now and
+   then, weakly and in kinds that suit them (some skeletons with basic dark
+   spells), never beasts like a giant rat; bosses, demons and undead above all,
+   likely to, and with decent power.
 
 8. **Holy and dark in society.** Most humanoid peoples fear dark magic:
    its casters are shunned or treated with caution. Dark magic grows by
@@ -1326,7 +1335,14 @@ magic audit.
    demons) and through rituals, sacrifice and murder, so a dark caster who
    prizes their power may turn outlaw, killing or kidnapping for sacrifice
    (built on 0.3.0's capture). Holy and dark casters almost never befriend
-   each other. Divine power follows faith and morality, and sin weakens it.
+   each other. Shunning goes through the towns' standing, weighed against
+   all that is known of the caster: some command of dark magic makes them
+   suspected, a known dark mage is unwelcome in most places, and only one
+   known to have killed or sacrificed for power is barred; heroic deeds can
+   win a dark mage some neutrality. Divine power follows faith and morality:
+   small crimes make it fade until time, penance, prayer and restitution bring
+   it back; the deliberate murder of an innocent takes it away entirely (over
+   90%), or corrupts it into dark magic (under 10%, by knowledge and traits).
 
 9. **Seen and told.** Casts that matter (killing blows, great spells, the
    first of a kind, backlash) become _Notable_ and reach the chronicle; life
@@ -1335,7 +1351,8 @@ magic audit.
    colors each kind.
 
 10. **Balance and release.** Targets across world sizes: mages in every
-    world, of every kind where its peoples live, dark casters rare; magic in a
+    world, of every kind where its peoples live, about 1 in 100 born blessed,
+    dark casters rare; magic in a
     fair share of fights and of everyday life; costs that bite (backlash and
     lingering weakness felt, deaths rare but real); a lifelong mage outclassing
     a young one; the world's magic setting meaning more than gift odds. Then

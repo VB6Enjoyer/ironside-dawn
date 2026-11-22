@@ -229,23 +229,107 @@ Found while writing the above down; each is folded into a step of the plan.
   of 0.3.0 (traps, takedowns, escorts), turned to a dark caster's ends.
 - **Faith.** A hidden attribute, and what raises or lowers it: devotion
   (prayer at shrines, a pastime that exists), vows, sin (any crime).
+- **Content fields.** Cultures need affinities per kind of magic (with
+  defaults for content packs), and creatures a mark of which are intelligent
+  and which kinds of magic they may cast.
 - **Saves.** One `gifted` flag and one `arcana` skill become several kinds of
   aptitude and skill: a save version bump, and a migration that maps the old
   onto the new (the gifted and their arcana to high magic, most likely).
 
-## 4. Open questions
+## 4. Decisions
 
-- Which kind of magic each culture leans to (Japonic, Norse, the generic
-  lands, the steppe, the deep halls, the grave and infernal), and whether each
-  culture's tradition is a kind of its own or flavor within the five.
-- How rare each blessing is, by people, and how the world's magic setting
-  scales each (one dial, or one per kind).
-- Whether low magic is open to townsfolk (village wise-folk who never
-  adventure), which would make it the most common magic in the world.
-- What becomes of a divine caster who sins: power fading with faith, or lost
-  at once; and whether it can be won back by penance (and whether this waits
-  for the religions update).
-- How far shunning goes for dark casters: the same standing as notoriety
-  (suspected, unwelcome, barred), or its own.
-- Whether creatures (not only the dread) cast: fey, spirits, shamans of the
-  wild peoples.
+Settled on 2026-11-22, answering the first round of open questions.
+
+### Affinities by culture
+
+Every people and culture may learn any kind of magic, except that the grave
+and infernal can never learn divine magic. Each culture has its own common
+affinities, which make its people likelier to take up, and to be blessed in,
+certain kinds. Cultures' traditions are flavors within the five kinds, not
+kinds of their own.
+
+| Culture  | Leans to                                         | Notes                                                        |
+| -------- | ------------------------------------------------ | ------------------------------------------------------------ |
+| Generic  | no real affinity; slightly more for low and high |                                                              |
+| Sylvan   | druidic, strongly; dark, slightly                |                                                              |
+| Deephold | low and high; less for the other three           | Less given to magic overall: dwarves are rarely mages.       |
+| Steppe   | druidic and high                                 | Less given to magic than elves or humans, more than dwarves. |
+| Japonic  | druidic (less than sylvan); divine, slightly     |                                                              |
+| Norse    | low and divine (pagan), slightly; dark, a little | Divine may later split into sub-types (pagan among them).    |
+| Grave    | dark, very strongly                              | Can never learn divine magic.                                |
+| Infernal | dark, very strongly                              | Can never learn divine magic.                                |
+
+Content packs that add cultures will need to say their affinities; a culture
+that doesn't gets the generic ones.
+
+The traditions already in the game become flavored spells within the kinds.
+A first proposal, to review when spells are written: Foxfire (spirit-fire) as
+druidic, Ofuda Ward as divine, Thunder Rune as divine (pagan), Rune of
+Warding as low.
+
+### Blessings, and the world's setting
+
+- **Blessings are rare:** about 1 in 100 adventurers is born blessed.
+- **Half pass on:** a child of a blessed character has a 50% chance of being
+  born with the same blessing.
+- **One dial for now:** the world's magic setting stays a single dial. A dial
+  per kind of magic comes later.
+
+### Low magic among the townsfolk
+
+- **Yes: townsfolk can practice low magic** (village wise folk), which makes
+  it the most common magic in the world. Their success rate and power are
+  low.
+- **They may help or hinder adventurers:** healing or buffing adventurers they
+  like or who are famous, cursing or debuffing outlaws and controversial
+  figures.
+- **This is rare, not common.** For example, when an outlaw visits a town, its
+  people might try to curse them, leaving them slightly weaker in battle for a
+  few hours: about a 1 in 20 chance.
+
+### A divine caster who sins
+
+It depends on the sin.
+
+- **Small crimes** (theft, vandalism and the like) make divine power fade. It
+  takes time, penance, prayer and restitution to return to its former
+  strength.
+- **The deliberate murder of an innocent** makes divine power vanish entirely,
+  with a high chance (over 90%), or, with a low chance (under 10%, depending on
+  the caster's knowledge and traits), corrupts it into dark magic.
+- The religions update may deepen this later.
+
+### Shunning dark casters
+
+Dark casters are judged through the same standing towns already keep
+(suspected, unwelcome, barred), weighed against everything else known of them.
+
+- **Some command of dark magic** makes someone suspected.
+- **A known dark mage** becomes unwelcome in most places.
+- **Barred** only if known to have killed or sacrificed people to feed their
+  power.
+- **Weighed against known deeds:** a dark mage known for rightful or heroic
+  acts may be seen with some neutrality.
+
+### Creatures that cast
+
+- **Regular intelligent creatures** may have a low chance of using certain
+  kinds of magic: some skeletons cast very basic dark spells, for instance.
+  Unintelligent creatures never do: a giant rat cannot use magic. Creatures
+  will need a mark of which are intelligent, and which kinds they may cast.
+- **Bosses**, demons and undead above all, are quite likely to know magic, and
+  with decent power.
+
+## 5. Open questions
+
+What is left, with how it was read until decided otherwise.
+
+- **Whether 1 in 100 is the same for every people.** Read as: the same rate
+  for all, the kind of blessing drawn by the culture's affinities (so a
+  blessed elf is most likely druidic). The dread and bosses are apart from it
+  (see creatures that cast).
+- **What an affinity does exactly.** Read as: it makes a character likelier to
+  take an interest in a kind (to study it, to seek it out), quicker to learn
+  it, and likelier to be blessed in it.
+- **How many blessings one person may have.** Read as: at most one at birth;
+  any number of kinds may be learned later (never both holy and dark).
