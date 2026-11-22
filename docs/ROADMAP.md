@@ -1398,19 +1398,19 @@ Ten steps, each small enough to be looked over before the next begins.
    living end a century devout 18%, believers 43%, doubters 30%, faithless
    8%, skeptics 1%; blessed 10% of the time.
 
-5. **Illness: the sick.** A few sicknesses, each a condition with a course: a
-   fever, an infected wound (from fighting hurt and untreated), a winter
-   cough. Each town keeps a sickness level (raised by the sick and by winter);
-   a character rolls to catch it for each day in such a town or in a party
-   with someone sick. Some are born hardier than others (a hidden hardiness,
-   passed on a little in families), and toughness, age and the effects
-   someone carries count too; the old and children resist least. Sickness
-   lowers attributes while it lasts (a lasting effect); the sick are less
-   willing to adventure and rest until cured if they can afford to; sick
-   outlaws are easier to capture, and one who fears dying of it is likelier to
-   pay restitution. Illness can kill: about 5–10% of all deaths in ordinary
-   times, and about 1 in 5 to 1 in 7 retired adventurers. Rest and priests
-   cure it.
+5. **Illness: the sick.** _Done_ (`src/content/illness.ts`,
+   `src/sim/systems/illness.ts`): fever, winter cough and infected wounds,
+   each with a course of days, weakening while it lasts (a lasting effect,
+   named on the card). Each day, anyone in a town rolls to catch something
+   against its sickness level (higher in winter, and with every sick person
+   there), or from a sick companion on the road; a near death's wound may
+   fester in the wilds. Some are born hardier (a hidden hardiness, passed on a
+   little); toughness, age, being weakened or worn out count too. Children
+   catch more but seldom die of it; the very old die of it most. The sick
+   don't delve, and lie up until well if they can afford it; a sick outlaw is
+   easier to take, and readier to make restitution. Coming through it raises
+   faith. Measured over four worlds and a century: illness 10.7% of deaths,
+   1 in 7 of the retired, 4 children.
 
 6. **Illness: remedies and healers.** Remedies, a new good made from herbs by
    its own recipe (so healing draughts keep their herbs); some healers make
