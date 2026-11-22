@@ -171,6 +171,7 @@ function toLastingEffects(save: SaveData): Record<string, unknown> {
     c.hardiness = ((h >>> 0) % 1000) / 1000;
     c.illness = null;
   }
+  world.plagues = [];
   const markets = (world.markets as { $map: [unknown, Encoded][] }).$map;
   for (const [, market] of markets) {
     for (const agent of [...(market.agents as Encoded[]), market.house as Encoded]) {

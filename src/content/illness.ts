@@ -21,8 +21,8 @@ export interface SicknessDef {
 
 // prettier-ignore
 export const SICKNESSES = {
-  fever: { name: 'fever', caught: 'a fever', mods: { might: -2, agility: -1, recovery: -0.3 }, days: [4, 10], deadliness: 0.003, contagious: true },
-  cough: { name: 'winter cough', caught: 'a winter cough', mods: { stamina: -0.2, recovery: -0.2 }, days: [6, 16], deadliness: 0.0015, contagious: true },
+  fever: { name: 'fever', caught: 'a fever', mods: { might: -2, agility: -1, recovery: -0.3 }, days: [4, 10], deadliness: 0.006, contagious: true },
+  cough: { name: 'winter cough', caught: 'a winter cough', mods: { stamina: -0.2, recovery: -0.2 }, days: [6, 16], deadliness: 0.003, contagious: true },
   rot: { name: 'infected wound', caught: 'an infected wound', mods: { health: -0.1, toughness: -2, recovery: -0.5 }, days: [6, 14], deadliness: 0.02, contagious: false },
   plague: { name: 'plague', caught: 'the plague', mods: { might: -3, toughness: -3, health: -0.2, recovery: -0.6 }, days: [7, 14], deadliness: 0.25, contagious: true },
 } as const satisfies Record<string, SicknessDef>;

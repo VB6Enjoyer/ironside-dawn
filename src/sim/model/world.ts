@@ -23,6 +23,19 @@ import type { WorldSettings } from './settings';
  * The whole world state: plain data, entities referring to each other by ID
  * (ARCHITECTURE.md §4.3). Behavior lives in systems, never on these objects.
  */
+/** A plague in one town (0.4.0): how bad, how long, and how many of the townsfolk it took. */
+export interface Plague {
+  readonly townId: LocationId;
+  readonly startedAt: number;
+  readonly until: number;
+  /** 0.3 (a bad season) to 1 (a scourge). */
+  readonly severity: number;
+  /** Townsfolk it has taken so far (the counts, not named folk). */
+  dead: number;
+  /** Where it came from, if it spread along the roads. */
+  readonly fromId: LocationId | null;
+}
+
 export interface World {
   readonly seed: string;
   /** What was chosen when it was created. */
@@ -49,6 +62,8 @@ export interface World {
   news: News[];
   /** Crimes not yet pinned on anyone, and when they will be (0.3.0). */
   unsolved: Unsolved[];
+  /** Plagues, raging and past, town by town (0.4.0); the last few kept. */
+  plagues: Plague[];
   readonly scheduler: SchedulerState<Job>;
   /** Full names in use, so new characters get distinct ones. */
   readonly takenNames: Set<string>;

@@ -86,6 +86,8 @@ interface WorldReport {
   readonly carrying: Tally<string>;
   /** The living at the end, by their faith in a word (0.4.0). */
   readonly faith: Tally<string>;
+  /** Plagues (0.4.0): outbreaks, how many spread from them, and townsfolk lost. */
+  readonly plagues: { outbreaks: number; spread: number; dead: number; worst: number };
   /** Fights adventurers were in, how they ended, and how many died in them. */
   readonly fights: { started: number; won: number; escaped: number; deaths: number };
   /** Delves begun, fled, and deaths in dungeons. */
@@ -251,6 +253,12 @@ function runWorld(seed: string, adventurers: number, years: number): WorldReport
     if (month % (LOOK_YEARS * 12) === 0) lookAtEra();
   }
   const ms = Math.round(performance.now() - began);
+  const plagues = {
+    outbreaks: sim.world.plagues.filter((p) => !p.fromId).length,
+    spread: sim.world.plagues.filter((p) => p.fromId).length,
+    dead: sim.world.plagues.reduce((s, p) => s + p.dead, 0),
+    worst: Math.max(0, ...sim.world.plagues.map((p) => p.dead)),
+  };
   const faith: Tally<string> = {};
   for (const c of sim.world.characters.values()) {
     const word = c.death ? null : faithWord(c);
@@ -267,6 +275,7 @@ function runWorld(seed: string, adventurers: number, years: number): WorldReport
     looks,
     carrying,
     faith,
+    plagues,
     fights,
     delves,
     eras,
@@ -414,6 +423,13 @@ function report(reports: readonly WorldReport[], adventurers: number, years: num
     ]
       .map((w) => `${w} ${pct((faith[w] ?? 0) / Math.max(1, believers))}`)
       .join(', ')}`,
+  );
+
+  const pl = reports.map((r) => r.plagues);
+  console.log(
+    `  plagues: ${sum(pl.map((p) => p.outbreaks))} outbreaks, ${sum(pl.map((p) => p.spread))} spread to other towns, ${sum(
+      pl.map((p) => p.dead),
+    )} townsfolk lost (the worst ${Math.max(...pl.map((p) => p.worst))})`,
   );
 
   const f = reports.map((r) => r.fights);

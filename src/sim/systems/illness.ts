@@ -28,6 +28,8 @@ const SEASON_SICKNESS = [1, 0.6, 1.3, 2.8] as const;
 const CONTAGION = 25;
 /** A day's chance of catching it from a sick companion on the road. */
 const PARTY_CONTAGION = 0.02;
+/** What a raging plague adds to a town's daily sickness, at full severity. */
+const PLAGUE_SICKNESS = 0.012;
 /** A town's trading house holding this much gold a head counts as wealthy. */
 const WEALTHY_PER_HEAD = 3;
 /** A remedy cuts a sickness's course to this share of what it would have been. */
@@ -54,7 +56,7 @@ export function frailty(c: Character, now: number): number {
 /** How much likelier a sickness is to kill them: the very old most, children a little. */
 function mortality(c: Character, now: number): number {
   const { child, old } = lifeStage(c, now);
-  return (1.5 - c.hardiness) * (child ? 0.8 : 1 + 18 * old);
+  return (1.5 - c.hardiness) * (child ? 0.5 : 1 + 40 * old);
 }
 
 /** Whether someone can fall ill at all: the dread cannot. */
@@ -69,6 +71,8 @@ function mortal(c: Character): boolean {
 export function sicknessLevels(
   ctx: SimContext,
   living: readonly Character[],
+  /** Towns where plague rages, and how badly (step 7). */
+  plagued: ReadonlyMap<LocationId, number> = new Map(),
 ): Map<LocationId, number> {
   const season = SEASON_SICKNESS[toCalendar(ctx.world.time).season as 0 | 1 | 2 | 3];
   const counts = new Map<LocationId, { sick: number; all: number }>();
@@ -87,7 +91,8 @@ export function sicknessLevels(
     const care = place?.kind === 'town' ? 1.3 - 0.8 * careIn(ctx, id) : 1;
     levels.set(
       id,
-      BASE_SICKNESS * season * wild * care * (1 + (CONTAGION * sick) / Math.max(1, all)),
+      BASE_SICKNESS * season * wild * care * (1 + (CONTAGION * sick) / Math.max(1, all)) +
+        (plagued.get(id) ?? 0) * PLAGUE_SICKNESS,
     );
   }
   return levels;
@@ -194,6 +199,7 @@ export function illnessDay(
   c: Character,
   levels: ReadonlyMap<LocationId, number>,
   companionSick: boolean,
+  plagued: ReadonlyMap<LocationId, number> = new Map(),
 ): void {
   if (!mortal(c)) return;
   const now = ctx.world.time;
@@ -228,9 +234,15 @@ export function illnessDay(
   const level = c.locationId ? (levels.get(c.locationId) ?? 0) : BASE_SICKNESS * WILD_SICKNESS;
   const chance = level * frailty(c, now) + (companionSick ? PARTY_CONTAGION : 0);
   if (!rng.chance(chance)) return;
-  // In winter it is most often a cough; otherwise a fever.
+  // Where plague rages it is most often the plague; in winter a cough; otherwise a fever.
+  const plague = c.locationId ? (plagued.get(c.locationId) ?? 0) : 0;
   const winter = toCalendar(now).season === 3;
-  fallIll(ctx, c, winter && rng.chance(0.6) ? 'cough' : 'fever', at);
+  const sickness: SicknessId = rng.chance(plague)
+    ? 'plague'
+    : winter && rng.chance(0.6)
+      ? 'cough'
+      : 'fever';
+  fallIll(ctx, c, sickness, at);
 }
 
 /** Hours of rest a day that being sick costs someone who can afford it: what they would rather do. */

@@ -81,6 +81,13 @@ export type EventBody =
         readonly comfort?: 'inn' | 'home';
       }
     >
+  /** Plague breaks out in a town, reaches another along the roads, or burns itself out (0.4.0). */
+  | Body<'plague.outbreak', { readonly locationId: LocationId; readonly severity: number }>
+  | Body<
+      'plague.spread',
+      { readonly locationId: LocationId; readonly fromId: LocationId; readonly severity: number }
+    >
+  | Body<'plague.end', { readonly locationId: LocationId; readonly dead: number }>
   /** Someone falls ill (0.4.0); `recovered` when they are well again. */
   | Body<'character.sick', CharacterAt & { readonly sickness: SicknessId }>
   | Body<'character.recover', CharacterAt & { readonly sickness: SicknessId }>
@@ -631,6 +638,9 @@ export const EVENT_IMPORTANCE: Record<EventType, Importance> = {
   'character.rest': Importance.Trivial,
   'character.effect': Importance.Trivial,
   'character.sick': Importance.Trivial,
+  'plague.outbreak': Importance.Notable,
+  'plague.spread': Importance.Notable,
+  'plague.end': Importance.Notable,
   'character.recover': Importance.Trivial,
   'character.convalesce': Importance.Trivial,
   'character.levelup': Importance.Normal,

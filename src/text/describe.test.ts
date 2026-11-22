@@ -41,6 +41,9 @@ const text = (e: SimEvent) => toPlainText(describeEvent(e, names));
 /** Event types too rare to count on in one year of one world, with sample data. */
 const where = 'witherwood' as LocationId;
 const RARE: Record<string, (a: CharacterId, b: CharacterId) => object> = {
+  'plague.outbreak': () => ({ locationId: 'saltmere', severity: 0.8 }),
+  'plague.spread': () => ({ locationId: 'concordale', fromId: 'saltmere', severity: 0.6 }),
+  'plague.end': () => ({ locationId: 'saltmere', dead: 412 }),
   'magic.kill': (a) => ({
     characterId: a,
     locationId: where,

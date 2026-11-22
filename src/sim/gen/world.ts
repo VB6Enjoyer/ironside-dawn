@@ -124,6 +124,7 @@ export function createWorldState(
     bounties: new Map(),
     news: [],
     unsolved: [],
+    plagues: [],
     scheduler: createScheduler(),
     takenNames: new Set(),
     nextCharacterNumber: 1,

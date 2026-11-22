@@ -394,6 +394,25 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
       );
     },
   ],
+  'plague.outbreak': [
+    (e, h) => [
+      e.data.severity >= 0.7 ? 'A great plague breaks out in ' : 'Plague breaks out in ',
+      h.l(e.data.locationId),
+      '.',
+    ],
+  ],
+  'plague.spread': [
+    (e, h) => ['The plague spreads from ', h.l(e.data.fromId), ' to ', h.l(e.data.locationId), '.'],
+  ],
+  'plague.end': [
+    (e, h) => [
+      'The plague in ',
+      h.l(e.data.locationId),
+      e.data.dead > 0
+        ? ` burns itself out, having taken ${e.data.dead.toLocaleString('en-US')} of its people.`
+        : ' burns itself out.',
+    ],
+  ],
   'character.sick': [
     (e, h) => [h.c(e.data.characterId), ` falls ill with ${SICKNESSES[e.data.sickness].caught}.`],
   ],

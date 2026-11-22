@@ -56,6 +56,9 @@ export function eventTone(event: SimEvent): Mark | null {
       return event.data.cause.kind === 'departed' ? null : 'death';
     case 'raid.sack':
     case 'dread.fall':
+    case 'plague.outbreak':
+    case 'plague.spread':
+    case 'plague.end':
       return 'death';
     case 'family.birth':
       // A child born with the gift is a matter for magic as much as for family.

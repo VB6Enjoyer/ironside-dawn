@@ -6,6 +6,7 @@ import { merchantsFor } from '../gen/world';
 import type { Character, Location, LocationId, Occupation, World } from '../model';
 import { driftFaith, shiftFaith } from './faith-core';
 import { illnessDay, sicknessLevels } from './illness';
+import { plagueDay } from './plague';
 import { isAlive } from './condition';
 import { die, LEGENDARY_RENOWN, renownOf } from './death';
 import { remember } from './mind';
@@ -62,14 +63,23 @@ export function lifecycleDay(ctx: SimContext, targetPopulation: number): void {
   const merchants = living.filter((c) => c.calling === 'merchant').length;
   const merchantRoom = merchants < MERCHANT_ROOM * merchantsFor(targetPopulation);
 
-  // How much sickness is about, town by town, and who travels with someone sick (0.4.0).
-  const levels = sicknessLevels(ctx, living);
+  // Plague's day, then how much sickness is about, town by town, and who travels with someone sick (0.4.0).
+  plagueDay(ctx);
+  const plagued = new Map<LocationId, number>();
+  for (const p of world.plagues) if (p.until > world.time) plagued.set(p.townId, p.severity);
+  const levels = sicknessLevels(ctx, living, plagued);
   const sickParties = new Set<string>();
   for (const c of living) if (c.illness && c.partyId) sickParties.add(c.partyId);
 
   for (const c of living) {
     if (!isAlive(c)) continue; // died earlier today
-    illnessDay(ctx, c, levels, c.partyId !== null && sickParties.has(c.partyId) && !c.illness);
+    illnessDay(
+      ctx,
+      c,
+      levels,
+      c.partyId !== null && sickParties.has(c.partyId) && !c.illness,
+      plagued,
+    );
     if (!isAlive(c)) continue;
     const def = SPECIES[c.species];
     if (!(def as SpeciesDef).ageless) {
