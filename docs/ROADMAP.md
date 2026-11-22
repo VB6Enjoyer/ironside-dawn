@@ -1327,52 +1327,76 @@ ill and are cursed, and all of it is seen.
    can carry, good or bad: on health, stamina, a stat, attack and defense,
    fatigue, nerve. Each has a strength, an end, and a moment from which it
    fades, losing strength bit by bit (as 0.5.0's buffs will). One of each type
-   at a time; effects don't stack, the stronger wins. A cost can be bound to
-   an effect for as long as it lasts. Sources now: a night at a good inn (well
-   rested), a feast at a tavern (in good spirits), lingering wounds after a
-   near death (weakened for days), exhaustion after long marches, and draughts
-   from alchemists beyond healing (a tonic of vigor, a calming draught). The
-   character card shows what someone carries. Saves move to a new version.
+   at a time; benefits don't stack, the stronger wins; costs do stack, up to a
+   cap. Today's dizziness and stat drains (spell costs) fold into it. A cost
+   can be bound to an effect for as long as it lasts. Nerve becomes a modifier
+   on when someone flees a fight and how much risk they take in choosing to
+   delve, fight or cast. Good effects come from what is rare, costly or lucky:
+   a good inn (dearer than the common one), a feast, a night in a home of
+   one's own, a particularly good meal, a stroke of luck, and alchemists'
+   draughts beyond healing (a tonic of vigor, a calming draught); bad ones
+   from a near death (weakened for days) and long marches (exhausted). The
+   character card shows them in words, with the time left. Saves move to a new
+   version.
 
-3. **Faith.** A hidden attribute per character, 0 to 1. It grows with prayer
-   at shrines (an existing pastime) to the gods of their culture (already in
-   the content), with devout traits, and slowly with age and hardship
-   survived; it falls with crimes (sins, graver ones more) and with despair.
-   Now it steadies nerve in danger, makes a shrine's blessing (a small
-   lasting effect, from step 2) stronger, and lets priests (a town-level
-   count, as the trades are) tend the sick and lift curses. It is the
-   foundation for divine magic (0.5.0) and a later "Religion and Cults"
-   update.
+3. **Faith.** Everyone has a faith level, from skeptic to devout, set at the
+   start by culture, people and traits, and in some towns more than others;
+   children take their parents' faith, give or take a little. The grave,
+   infernal and dread have none. It grows with prayer at shrines (an existing
+   pastime) to the gods of their culture (already in the content), surviving
+   an illness, memorable victories and good fortune, by how much depending on
+   the person; it falls with crimes (graver ones more), despair and years away
+   from shrines; a priest can restore it. Now it steadies nerve in danger and
+   makes a shrine's blessing (a small lasting effect, from step 2) stronger.
+   Priests are a town-level count (as the trades are) who, for a fee, tend the
+   sick, lift curses and restore faith. Faith is never shown as a number: life
+   stories name it ("devout", "believer", "skeptic", "corrupted"), and deeds
+   hint at it. It is the foundation for divine magic (0.5.0) and a later
+   "Religion and Cults" update.
 
 4. **Illness.** A few sicknesses, each a condition with a course: a fever, an
-   infected wound (from fighting hurt and untreated), a winter cough, and a
-   rare plague that sweeps a town. Caught from untreated wounds, foul places
-   (marsh, sewers, dungeons of rot), the cold season, and others in a crowded
-   tavern or town. They weaken (a lasting effect), lay people up, and can kill
-   (rarely; the old and the young more). They are cured by rest, by healers
-   (the herbalists' remedies, a new demand for herbs; priests at shrines), and
-   in 0.5.0 by magic. A plague is a town event, felt by the townsfolk counts as
-   well as by named characters.
+   infected wound (from fighting hurt and untreated), a winter cough, and
+   plague. Sickness is commoner in winter. Each town keeps a sickness level
+   (raised by the sick, the season and plague, lowered by good remedies and
+   wealth); a character rolls to catch it for each day in such a town or in a
+   party with someone sick. Some are born hardier than others; the old and
+   children resist least. Illness weakens (a lasting effect), lays people up,
+   and can kill; about 1 in 5 to 1 in 7 retired adventurers die of it in
+   ordinary times. It is cured by rest, by remedies (a new good, made from
+   herbs by its own recipe; some healers make better ones and sell them
+   dearer), by priests, and in 0.5.0 by magic. Plague comes 2 or 3 times a
+   century, of different size and severity: it starts in one town, likelier a
+   poor and crowded one, travels the roads, thins the townsfolk counts as well
+   as killing named characters, and leaves a town or a region hurt for some
+   years. Wealthy towns with good remedies suffer far less than poor ones.
 
 5. **Curses.** A curse is a condition with an effect (ill luck in fights, a
-   wasting, a weakness, a mark that makes people wary) and a way to be lifted.
-   Laid by cursed items found in dungeons, by haunted places and the myths
-   about them, by the touch of some undead, by the dread, and now and then by a
-   murder victim's dying curse on their killer. Lifted by time (minor ones),
-   by priests at shrines (stronger with faith), by wise folk in town (rarely,
-   cheaply, unreliably), by destroying a cursed item, and in 0.5.0 by magic.
-   Cursed items are worth less, and a fee to lift a curse is a new trade.
-   (Lycanthropy, a curse passed by a bite, comes with shapeshifting in 0.4.1.)
+   wasting, a weakness, or the mark, which makes people wary: harder to win
+   friends, a party or a spouse; a town's standing stays about known crimes)
+   and a way to be lifted. Laid by cursed items found in dungeons, by haunted
+   places and the myths about them, by the touch of some undead, by the dread,
+   and by a murder victim's dying curse on their killer (about 1 murder in
+   10, likelier from the faithful). Characters notice a curse after a while
+   and seek help. Lifted by time (minor ones), by priests at shrines (stronger
+   with faith), by wise folk in town (rarely, cheaply, unreliably), by getting
+   rid of a cursed item, and in 0.5.0 by magic. Cursed items are worth less;
+   they can be inherited, and an heir who notices the curse throws or sells
+   the item. (Lycanthropy, a curse passed by a bite, comes with shapeshifting
+   in 0.4.1.)
+
+   One "hardship" dial at world creation (gentle, normal, harsh) sets how
+   much illness and curses there are; old saves and links read as normal.
 
 6. **Seen and told.** The live feed (outbreaks, deaths by illness, curses laid
    and lifted), the chronicle, life stories, the character card (effects,
-   illness, curses; faith hinted at by deeds rather than shown) and the Halls.
+   illness, curses; faith named in words, never as a number) and the Halls.
 
-7. **Balance and release.** Targets: illness a real but small share of
-   deaths, populations steady; curses uncommon; effects felt but not
-   everywhere; large worlds no more than about 10% slower. Then release 0.4.0:
-   players' notes, changelog, a 0.3.2 save as a fixture, the architecture
-   notes.
+7. **Balance and release.** Targets: illness a real but modest share of
+   deaths, retired adventurers about 1 in 5 to 1 in 7 dying of it in ordinary
+   times, 2 or 3 plagues a century, populations steady with no death spirals;
+   curses uncommon; effects felt but not everywhere; large worlds no more than
+   about 10% slower. Then release 0.4.0: players' notes, changelog, a 0.3.2
+   save as a fixture, the architecture notes.
 
 ## 0.4.1 — Body and Soul: beasts and storms
 

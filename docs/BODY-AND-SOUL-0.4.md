@@ -126,78 +126,136 @@ than murder. 0.5.0 turns it to sacrifice.
 - **Weather is local,** never a whole region.
 - **Allies and beast forms run on the combat engine as it is.**
 
+### For 0.4.0 (settled 2026-11-22)
+
+Open questions 1–20 are answered here; what is still open for 0.4.0 is at the
+start of §4.
+
+**The update as a whole**
+
+- **Name and order:** "Body and Soul" stays the working name; the steps run as
+  in the roadmap (effects, faith, illness, curses).
+- **One "hardship" dial** at world creation (gentle, normal, harsh) covers
+  illness and curses. Old saves and links read as normal. Finer options come
+  in some later update, not now.
+- **Named townsfolk fall ill, gently.** The old and children are more prone
+  to illness and resist it less. In ordinary times (no plague) about 1 in 5
+  to 1 in 7 retired adventurers die of illness; the rest die of old age or as
+  before.
+
+**Lasting effects**
+
+- **Today's dizziness and drains fold into the one system.** Benefits never
+  stack; costs do, up to a cap, so casting again stays as costly as it is now.
+- **Nerve** becomes a modifier on two things: when someone breaks and flees a
+  fight, and how much risk they take in choosing to delve, fight or cast.
+  Every effect on nerve acts through these.
+- **Good effects come from what is rare, costly or lucky:** a good inn (dearer
+  than the common one), a feast, a home of one's own, a particularly good meal,
+  a stroke of luck. Never from every night's rest or every tavern visit, so
+  that most adventurers carry an effect some of the time, not all of it.
+  "Weakened" follows only a near death.
+- **The card** shows effects in words with the time left, numbers on hover.
+
+**Faith**
+
+- **Everyone has a faith level,** from skeptic to devout. Those made at the
+  world's start, and those who take up adventuring, get theirs by culture,
+  people and traits, varying from person to person. Some towns are more
+  religious than others.
+- **Children inherit their parents' faith:** devout parents raise devout
+  children (their parents' level, give or take a little).
+- **The grave, infernal and dread have no faith.** A dark or demonic faith may
+  come in a later update.
+- **It falls with crime,** the graver the crime the more, and with despair
+  (the death of a spouse or child, a long run of bad luck) and long years away
+  from shrines.
+- **It rises with prayer at shrines, surviving an illness, defeating enemies,
+  and good fortune,** by how much depending on the person.
+- **A priest can restore it.**
+- **Shown, not counted:** life stories name a person's faith in words
+  ("devout", "believer", "skeptic", "corrupted" and others), and deeds and
+  phrases hint at it in the feed; no number is shown.
+- **What it does before 0.5.0:** a small steadying of nerve in danger, and
+  stronger shrine blessings.
+- **Priests** are a town-level count by town size, more where there is a
+  shrine to the local gods. For a fee they tend the sick, lift curses, restore
+  faith, and in 0.4.2 lay souls to rest.
+
+**Illness**
+
+- **Sicknesses:** fever, infected wound, winter cough and plague; more later.
+- **Sickness is commoner in winter.**
+- **Some are more prone to illness, others more resistant;** the old and
+  children least resistant.
+- **Catching it:** a roll for each day spent in a town where sickness is about,
+  or in a party with someone sick. Towns keep a sickness level (raised by the
+  sick, the season and plague) that characters roll against, never one
+  character against another, so it stays cheap.
+- **How deadly:** illness a small share of deaths over a century (under 5% was
+  the first target; see question 44).
+- **Plague is rare: about 2 or 3 a century,** of different size and severity.
+  Not a Black Death, but enough to hurt a town or a region for some years. It
+  thins the town's population counts as well as killing named characters.
+- **Remedies are a new good,** made from herbs by its own recipe, so it does not
+  drain herbs from healing draughts. Some healers make better remedies and sell
+  them dearer. **Towns with better remedies and more wealth suffer far less**
+  from sickness and plague than poor ones.
+- **The sick** rest in town and avoid delves; one taken sick on the road heads
+  for the nearest town.
+- **A guard against death spirals** (sickness, fewer workers, dearer remedies,
+  more sickness) is part of the audit.
+
+**Curses**
+
+- **Which:** ill luck (worse rolls in fights, weeks), wasting (slowly lower
+  health, until lifted), weakness (lower might, weeks), the mark (months).
+- **The mark works on people, not towns:** friendships, parties and marriages
+  are harder to win. A town's standing stays purely about known crimes.
+- **Characters notice a curse after a while** (a run of bad luck), then seek a
+  priest or wise folk.
+- **Cursed items** are a small share of dungeon finds, worth less when sold.
+  They can be inherited; an heir who notices the curse throws or sells the
+  item, so a curse seldom outlasts a generation.
+- **The dying curse:** about 1 murder in 10, likelier from the faithful.
+
 ## 4. Open questions
 
 Grouped by release, each settled before its release's work begins. Each has a
-proposal to react to.
+proposal to react to. 0.4.0's first twenty are settled (§3); numbers 21–42
+stay as they were.
 
-### For 0.4.0: the update as a whole
+### Still open for 0.4.0
 
-1. **The name.** "Body and Soul" is a working name. Proposal: keep it, or "The
-   Living and the Dead".
-2. **Order of the steps.** Proposal: as in the roadmap (0.4.0: effects, faith,
-   illness, curses; 0.4.1: allies, forms, weather; 0.4.2: souls,
-   kidnapping), since each leans on the ones before it.
-3. **World settings.** Should new systems have dials at world creation, such
-   as illness off, mild or harsh? Proposal: one "hardship" dial (gentle,
-   normal, harsh) covering illness and curses, alongside the existing danger.
-4. **Named townsfolk.** Retired heroes and their children live in town. Can
-   they fall ill, be cursed, be kidnapped? Proposal: yes to illness (in their
-   daily round, cheaply), no to curses and kidnapping for now.
+Questions 1–20 are settled (§3). These came up in settling them.
 
-### For 0.4.0: lasting effects
-
-5. **Which effects at launch, and how strong.** Proposal: well rested (+10%
-   stamina for a day), good spirits (+nerve for an evening), weakened (−15%
-   health for days after a near death), exhausted (−attack and defense after
-   long marches), tonic of vigor (+stamina, hours), calming draught (+nerve,
-   hours).
-6. **Do today's dizziness and stat drains fold into the new system?**
-   Proposal: yes, so there is one way timed effects work.
-7. **How the card shows them.** Numbers, or words ("well rested, weakened")?
-   Proposal: words with the time left, numbers on hover.
-
-### For 0.4.0: faith
-
-8. **Who has faith, and where it starts.** Everyone, or only some? Proposal:
-   everyone, starting by culture and traits (honor, compassion), most low to
-   middling, a few devout.
-9. **What lowers it besides crime.** Proposal: despair (the death of a spouse
-   or child, a long run of bad luck), and time away from shrines.
-10. **How much it does before divine magic.** Proposal: a small steadying of
-    nerve in danger, and stronger shrine blessings; little else until 0.5.0.
-11. **Priests per town.** Proposal: a count by town size, more in towns with
-    a shrine to the local gods, tending the sick, lifting curses and laying
-    souls to rest, for a fee to the town.
-
-### For 0.4.0: illness
-
-12. **Which sicknesses.** Proposal: fever, infected wound, winter cough, and
-    one plague; more later.
-13. **Who catches it.** Named characters only, or the town counts too?
-    Proposal: named characters, and a plague also thins a town's population
-    counts.
-14. **How deadly, especially plague.** Proposal: under 5% of deaths from
-    illness over a century; plague rare (a few a century in a large world),
-    killing a small share of a town; the old and young more at risk.
-15. **Cures and the economy.** A new good ("remedies") made by herbalists from
-    herbs, or reuse the healing draught? Proposal: a new good, so illness
-    shows in the market.
-16. **How the sick behave.** Proposal: they rest in town (convalescing) and
-    avoid delves; someone sick on the road heads for the nearest town.
-
-### For 0.4.0: curses
-
-17. **Which curses, how long.** Proposal: ill luck (worse rolls in fights,
-    weeks), wasting (slowly lower health, until lifted), weakness (lower
-    might, weeks), the mark (people wary of you, months).
-18. **Do characters know they're cursed?** Proposal: they notice after a while
-    (a run of bad luck), then seek a priest or wise folk.
-19. **Cursed items.** Proposal: a small share of dungeon finds carry a curse
-    that comes with wearing them, lifted by getting rid of the item or by a
-    priest; worth less when sold.
-20. **The dying curse.** How often a murder victim curses their killer.
-    Proposal: rarely (about 1 in 10 murders), likelier for the faithful.
+43. **A home of one's own.** Nobody owns a house yet: townsfolk live in town,
+    adventurers at inns. Proposal: in 0.4.0, a married or retired character
+    counts as having a home in their home town (no buying or selling), and a
+    night at home gives the comfort. Buying and keeping houses waits for a
+    later update.
+44. **Illness's share of deaths.** About 1 in 5 to 1 in 7 retirees dying of
+    illness already makes up a few percent of all deaths, so the first target
+    (under 5% overall) would leave almost nothing for anyone else. Proposal:
+    illness about 5–10% of all deaths in ordinary times, more in a plague
+    decade.
+45. **Faith from fighting.** Adventurers kill something most days, so faith
+    rising with every win would make them all devout. Proposal: only
+    memorable deeds count (a strong foe, a dread master, surviving a near
+    death, a windfall), each less than the last.
+46. **Can outlaws buy back faith?** Proposal: a priest restores faith only to
+    those not outlaws now (the reformed, those who served their sentence),
+    and never past what they had before their crimes; a murderer's faith
+    comes back only partly.
+47. **How a plague spreads.** Proposal: it starts in one town (likelier in
+    poor, crowded, wintry ones), travels the trade roads with merchants and
+    travelers to nearby towns over weeks, and towns recover over a few years
+    (population, then trade). A large one can touch a region; none reaches
+    the whole world.
+48. **Who is more prone to illness.** Proposal: a hidden hardiness each
+    person is born with (inherited a little, like the gift), plus toughness,
+    age, and the effects they carry (weakened, exhausted, cursed with
+    wasting).
 
 ### For 0.4.1: allies
 
