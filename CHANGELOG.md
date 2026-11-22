@@ -8,6 +8,10 @@ The public notes players see under "What's new" are kept in `src/ui/releases.ts`
 
 ## [Unreleased]
 
+### Added
+
+- `npm run audit:world`, a headless world audit over several worlds (`tools/world-audit.ts`): deaths by cause, by calling (the retired apart) and by stage of life; how often adventurers are hurt, weary or laid up; how fights and delves go; the living by people and calling and the towns' counts every ten years; healing draught and herb prices; and how long each world took. It measures what the Body and Soul releases change.
+
 ## [0.3.2] - 2026-11-22
 
 ### Added

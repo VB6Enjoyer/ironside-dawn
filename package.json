@@ -23,7 +23,8 @@
     "prepare": "husky",
     "lint:commits": "commitlint --from origin/main --to HEAD --verbose",
     "audit:crime": "tsx tools/crime-audit.ts",
-    "audit:magic": "tsx tools/magic-audit.ts"
+    "audit:magic": "tsx tools/magic-audit.ts",
+    "audit:world": "tsx tools/world-audit.ts"
   },
   "dependencies": {
     "@tanstack/react-virtual": "^3.14.23",
