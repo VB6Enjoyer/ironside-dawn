@@ -7,6 +7,7 @@ import { die } from './death';
 import { addEffect } from './effects';
 import { carries } from './effects-core';
 import { blessing } from './faith-core';
+import { hardshipOf } from './hardship';
 import { buyFromHouse, payHouse, priceToBuy } from './market';
 
 /**
@@ -186,7 +187,9 @@ export function fallIll(ctx: SimContext, c: Character, sickness: SicknessId, at:
 
 /** A near death's wound may fester, untreated in the wilds. */
 export function woundMayFester(ctx: SimContext, c: Character, at: Location): void {
-  if (at.kind !== 'town' && ctx.rng.people.chance(WOUND_ROT)) fallIll(ctx, c, 'rot', at.id);
+  if (at.kind !== 'town' && ctx.rng.people.chance(WOUND_ROT * hardshipOf(ctx.world))) {
+    fallIll(ctx, c, 'rot', at.id);
+  }
 }
 
 /**
@@ -232,7 +235,8 @@ export function illnessDay(
     return;
   }
   const level = c.locationId ? (levels.get(c.locationId) ?? 0) : BASE_SICKNESS * WILD_SICKNESS;
-  const chance = level * frailty(c, now) + (companionSick ? PARTY_CONTAGION : 0);
+  const chance =
+    (level * frailty(c, now) + (companionSick ? PARTY_CONTAGION : 0)) * hardshipOf(ctx.world);
   if (!rng.chance(chance)) return;
   // Where plague rages it is most often the plague; in winter a cough; otherwise a fever.
   const plague = c.locationId ? (plagued.get(c.locationId) ?? 0) : 0;

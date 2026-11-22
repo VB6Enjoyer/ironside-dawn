@@ -4,6 +4,7 @@ import type { SimContext } from '../context';
 import type { Character, Effect, Item, LocationId } from '../model';
 import { addEffect } from './effects';
 import { priestsIn } from './faith-core';
+import { hardshipOf } from './hardship';
 import { payHouse } from './market';
 
 /**
@@ -60,6 +61,8 @@ export function layCurse(
   item?: Item,
 ): void {
   if (c.calling === 'dread') return;
+  // A gentle world spares some, a harsh one none (item curses always come with the item).
+  if (!item && !ctx.rng.people.chance(Math.min(1, hardshipOf(ctx.world)))) return;
   const now = ctx.world.time;
   const def: EffectDef = EFFECTS[curse];
   const [least, most] = DAYS[curse];

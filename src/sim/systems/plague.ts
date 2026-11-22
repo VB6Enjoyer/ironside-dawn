@@ -1,6 +1,7 @@
 import { DAY, toCalendar, YEAR } from '../core/time';
 import type { SimContext } from '../context';
 import type { Location, LocationId, Plague } from '../model';
+import { hardshipOf } from './hardship';
 import { careIn } from './illness';
 import { findPath } from './roads';
 
@@ -79,7 +80,7 @@ export function plagueDay(ctx: SimContext): void {
 
   // A new outbreak, now and then: likelier in winter, in poor and crowded towns.
   const winter = toCalendar(now).season === 3;
-  if (rng.chance((PER_CENTURY / (100 * 360)) * (winter ? 2 : 0.67))) {
+  if (rng.chance((PER_CENTURY / (100 * 360)) * (winter ? 2 : 0.67) * hardshipOf(world))) {
     const candidates = towns.filter((t) => !raging(ctx, t.id) && !spared(ctx, t.id));
     if (candidates.length > 0) {
       const town = rng.weighted(

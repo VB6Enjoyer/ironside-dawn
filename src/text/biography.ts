@@ -103,6 +103,14 @@ export function deathLine(
   return [{ text: capitalize(first!.text) }, ...rest, { text: ' in ' }, place(locationId, names)];
 }
 
+/** Curses as a life story names them (0.4.0). */
+const CURSE_NAMES: Partial<Record<string, string>> = {
+  'ill-luck': 'ill luck',
+  wasting: 'a wasting',
+  weakness: 'weakness',
+  marked: 'the mark',
+};
+
 /** A life's faith, as its story tells it (0.4.0). */
 const FAITH_PHRASES: Record<FaithWord, (alive: boolean) => string> = {
   devout: (alive) => (alive ? 'They are devout.' : 'They were devout to the end.'),
@@ -138,7 +146,16 @@ export function biography(
   // Faith, in a word (0.4.0): never a number.
   const faith = faithWord(c);
   const believed = faith ? ` ${FAITH_PHRASES[faith](alive)}` : '';
-  const calledThem = `${character ? ` Those who knew them called them ${character}.` : ''}${believed}`;
+  // Sick or cursed now, for the living (0.4.0).
+  const ails =
+    alive && c.illness ? ` They are sick with ${SICKNESSES[c.illness.sickness].caught}.` : '';
+  const curses = alive
+    ? c.effects
+        .filter((e) => CURSE_NAMES[e.kind] !== undefined && e.until > (now ?? 0))
+        .map((e) => CURSE_NAMES[e.kind]!)
+    : [];
+  const cursed = curses.length > 0 ? ` They bear a curse: ${listOf(curses)}.` : '';
+  const calledThem = `${character ? ` Those who knew them called them ${character}.` : ''}${believed}${ails}${cursed}`;
   if (c.parents.length > 0) {
     const legendary = c.parents.filter((p) => heroes.has(p));
     paragraphs.push([

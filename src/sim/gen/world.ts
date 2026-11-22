@@ -30,6 +30,7 @@ export function defaultSettings(adventurers = 20): WorldSettings {
     size: sizeFor(adventurers),
     danger: 'normal',
     magic: 'normal',
+    hardship: 'normal',
     peoples: PEOPLES,
     populationCap: null,
   };

@@ -12,7 +12,7 @@ import { Prose, type ProseLinks } from '../components/Prose';
 import { useQuery } from '../useHost';
 import type { CharacterId } from '../../sim';
 
-/** Hall of Heroes, the Dread, Legends, Great Houses, Most Wanted, Behind Bars, the Gallows, and the Graveyard. */
+/** Hall of Heroes, the Dread, Legends, Great Houses, Most Wanted, Behind Bars, the Gallows, the Plagues, and the Graveyard. */
 export function HallsPage({
   host,
   names,
@@ -296,6 +296,35 @@ export function HallsPage({
                 <div className="epitaph">
                   <Prose segments={deathLine(f.cause, f.diedIn, names)} {...links} />
                   <span className="muted"> · {formatTimestamp(f.diedAt)}</span>
+                </div>
+              </li>
+            ))}
+          </ol>
+        )}
+      </section>
+
+      <section className="hall">
+        <h2>The Plagues</h2>
+        <p className="muted">Plagues that have swept the towns, the latest first.</p>
+        {halls.plagues.length === 0 ? (
+          <p className="muted">No plague has come yet.</p>
+        ) : (
+          <ol className="graveyard">
+            {halls.plagues.map((p) => (
+              <li key={`${p.townId}-${p.startedAt}`}>
+                <div>
+                  {p.severity >= 0.7 ? 'A great plague' : 'Plague'} in {place(p.townId)}
+                  {p.fromId && <span className="muted"> (from {place(p.fromId)})</span>}
+                </div>
+                <div className="epitaph">
+                  <span className={p.raging ? 'mark mark-death' : undefined}>
+                    {p.raging ? 'Raging' : 'Over'}
+                  </span>
+                  <span className="muted">
+                    {' '}
+                    · {formatCount(p.dead)} townsfolk lost · from {formatTimestamp(p.startedAt)}
+                    {!p.raging && ` to ${formatTimestamp(p.until)}`}
+                  </span>
                 </div>
               </li>
             ))}
