@@ -72,6 +72,9 @@ export type Segment =
 
 type Part = string | Segment;
 
+/** Being born with the gift for magic, marked wherever it is told (0.3.2). */
+export const GIFT_BORN: Segment = { text: 'born with the gift for magic', mark: 'magic' };
+
 /** How someone turning outlaw reads, by what drove them to it: two phrasings each. */
 const TURNED: Record<OutlawReason, readonly [string, string]> = {
   want: [', broke and bitter, turns to banditry.', ' takes to the roads as an outlaw.'],
@@ -350,6 +353,19 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
     (e, h) => {
       const c = h.c(e.data.characterId);
       const home = h.l(e.data.homeId);
+      // The gifted are known for it from the first (0.3.2).
+      if (e.data.gifted) {
+        return e.data.newcomer
+          ? [c, `, ${h.aSpecies(e.data.characterId)} `, GIFT_BORN, ', arrives in ', home, '.']
+          : [
+              c,
+              `, ${h.aSpecies(e.data.characterId)} of `,
+              home,
+              ', ',
+              GIFT_BORN,
+              ', takes up the adventuring life.',
+            ];
+      }
       if (e.data.newcomer) {
         return [c, `, ${h.aSpecies(e.data.characterId)}, arrives in `, home, ' seeking fortune.'];
       }
@@ -1429,6 +1445,7 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
       h.l(e.data.locationId),
       ' to ',
       ...h.group(e.data.parentIds),
+      ...(e.data.gifted ? [', ', GIFT_BORN] : []),
       '.',
     ],
   ],

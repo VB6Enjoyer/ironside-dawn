@@ -13,11 +13,13 @@ The public notes players see under "What's new" are kept in `src/ui/releases.ts`
 ### Added
 
 - Spell kills get their own line (`src/sim/systems/combat.ts`, `src/text/describe.ts`): the log says when a spell deals the killing blow, and felling a strong creature (a troll, a jotunn, an oni) with one is now _Notable_, so it shows at Day speed and up and reaches the chronicle. Someone killed by a spell is "struck down … with an Ember Bolt" in the log, and their life story names the spell (`src/text/biography.ts`).
+- The gift for magic is told and marked (`src/text/describe.ts`, `src/text/biography.ts`, `src/ui/components/CharacterCard.tsx`): a birth or an arrival (`family.birth`, `character.introduced` in `src/sim/model/events.ts`) says when someone is born with the gift, and that phrase is set in the Magic colour in the live log, the chronicle, the life story and the card's "gifted". A gifted birth or arrival takes the Magic tint and symbol in the log (`src/text/categories.ts`), so the Magic filter shows it.
 - `npm run audit:magic`, a headless magic audit over several worlds (`tools/magic-audit.ts`): the gifted and casters by people, casters at once, fights with a cast, casts by spell and outcome and who knows each spell, the dread's casts, kills by spell, deaths by backlash, how much magic shows at Day speed and up, and the gift by generation (the share of the gifted among those born in each 25 years, by people). `--blessings human=7.5,elf=20` tries other chances of the gift.
 
 ### Changed
 
-- A spell that backlashes is its own event (`magic.backlash` in `src/sim/model/events.ts`), shown with the Magic tint, so it can be filtered and counted apart from ordinary casts.
+- A spell that backlashes is its own event (`magic.backlash` in `src/sim/model/events.ts`). It and a Notable spell kill take the Magic tint in the log (`src/text/categories.ts`), so they can be filtered and counted apart from ordinary casts.
+- The spells someone knows as they come into the world, an adventurer's or a dread master's, are no longer announced one by one at the start (`src/sim/systems/magic.ts`); their life story still lists them. Spells learned later are.
 - Learning a spell is now _Notable_, so it reaches the chronicle.
 - Mend Flesh is worth casting (`src/content/spells.ts`, `src/sim/systems/magic.ts`): it costs mostly stamina and a little health, where it cost the caster's own health before, and a caster near half health or lower weighs it higher. Casters now mend themselves when a fight turns against them, about two to three times as often as before, still rarely next to their attack spells.
 - Worlds turn out differently from their seed than in 0.3.1 (`src/host/version.ts`), so links from 0.3.1 open with a note that history differs.

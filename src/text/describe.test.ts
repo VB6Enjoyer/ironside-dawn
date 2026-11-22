@@ -328,6 +328,33 @@ describe('words', () => {
     expect(condition(5, 28)).toBe('badly wounded');
   });
 
+  it('tells of the gift for magic at a birth or an arrival, marked', () => {
+    const [a, b] = [...sim.world.characters.keys()] as [CharacterId, CharacterId];
+    const at = { id: 1, t: 0, importance: 0, actors: [a], locationId: null };
+    const born = {
+      ...at,
+      type: 'family.birth',
+      data: { characterId: a, locationId: where, parentIds: [a, b], gifted: true },
+    } as SimEvent;
+    const came = {
+      ...at,
+      type: 'character.introduced',
+      data: { characterId: a, homeId: where, newcomer: true, gifted: true },
+    } as SimEvent;
+    for (const event of [born, came]) {
+      const segments = describeEvent(event, names);
+      expect(
+        segments.some((s) => 'mark' in s && s.mark === 'magic' && /gift for magic/.test(s.text)),
+      ).toBe(true);
+      expect(toPlainText(segments)).toMatch(/^[A-Z][^]*[.]$/);
+    }
+    const plain = {
+      ...born,
+      data: { characterId: a, locationId: where, parentIds: [a, b] },
+    } as SimEvent;
+    expect(text(plain)).not.toMatch(/gift/);
+  });
+
   it('refers to characters by name in every fight line', () => {
     const someone = [...sim.world.characters.values()][0]!;
     const event = {

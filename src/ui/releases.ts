@@ -23,6 +23,7 @@ export const RELEASES: readonly Release[] = [
       'A small release ahead of the magic to come: the spells already in the world now show where they matter.',
     changes: [
       'Learning a spell, felling a troll or an oni with one, and dying by one now reach the chronicle and show at Day speed and up. The log says which spell dealt a killing blow, and life stories name the spell that killed someone.',
+      'Those born with the gift for magic are known for it: their birth or arrival says so in the live log and the chronicle, tinted as magic, and their life story and card mark it in the same colour.',
       'A spell that backlashes has its own line, tinted as magic.',
       'Mend Flesh is worth casting: it now draws mostly on stamina rather than the caster’s own blood, so a mage who is badly hurt in a fight mends their wounds.',
     ],

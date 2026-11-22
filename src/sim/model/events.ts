@@ -65,6 +65,8 @@ export type EventBody =
         readonly homeId: LocationId;
         /** True for adventurers who arrive after the world began. */
         readonly newcomer: boolean;
+        /** Born with the gift for magic (0.3.2; absent before). */
+        readonly gifted?: boolean;
       }
     >
   | Body<'character.pastime', CharacterAt & Decided & { readonly pastime: PastimeId }>
@@ -433,7 +435,14 @@ export type EventBody =
     >
   | Body<'family.marry', CharacterAt & WithOther>
   /** `characterId` is the child. */
-  | Body<'family.birth', CharacterAt & { readonly parentIds: readonly CharacterId[] }>
+  | Body<
+      'family.birth',
+      CharacterAt & {
+        readonly parentIds: readonly CharacterId[];
+        /** Born with the gift for magic (0.3.2; absent before). */
+        readonly gifted?: boolean;
+      }
+    >
   /** Two people fall in love and become lovers (0.3.0). */
   | Body<'social.love', CharacterAt & WithOther>
   /** A couple are expecting a child, due at `dueAt` (0.3.0). */

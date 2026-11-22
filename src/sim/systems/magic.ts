@@ -156,8 +156,17 @@ export function cast(
   return { outcome, amount, fatal };
 }
 
-/** Learns any spell the character's arcana now allows. Only the gifted or the studied learn. */
-export function learnSpells(ctx: SimContext, character: Character, locationId: LocationId): void {
+/**
+ * Learns any spell the character's arcana now allows. Only the gifted or the
+ * studied learn. Spells someone already knows as they enter the world are
+ * learned `quietly` (0.3.2): no news, though their life story lists them.
+ */
+export function learnSpells(
+  ctx: SimContext,
+  character: Character,
+  locationId: LocationId,
+  quietly = false,
+): void {
   for (const spell of SPELLS) {
     if (character.spells.includes(spell.id)) continue;
     // Common lore, or the tradition they were raised in.
@@ -165,6 +174,7 @@ export function learnSpells(ctx: SimContext, character: Character, locationId: L
     if (character.skills.arcana < spell.arcana) continue;
     character.spells.push(spell.id);
     addDeed(character, { kind: 'spell', at: ctx.world.time, spell: spell.id });
+    if (quietly) continue;
     ctx.emit(
       { type: 'magic.learn', data: { characterId: character.id, locationId, spell: spell.id } },
       [character.id],

@@ -150,7 +150,7 @@ function rise(ctx: SimContext, lair: Location): Character {
   master.skills.awareness = rng.int(40, 60);
   if (master.gifted) {
     master.skills.arcana = rng.int(60, 85);
-    learnSpells(ctx, master, lair.id);
+    learnSpells(ctx, master, lair.id, true);
   }
   master.equipment.weapon = generateItem(ctx, ctx.rng.items, {
     culture: def.culture,

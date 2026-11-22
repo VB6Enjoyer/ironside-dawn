@@ -11,7 +11,10 @@ import {
   type SimEvent,
 } from '../sim';
 import { seasonName } from './calendar';
-import type { Segment } from './describe';
+import { GIFT_BORN, type Segment } from './describe';
+
+/** The gift, for one born to it in the world (0.3.2). */
+const GIFT_FAMILY: Segment = { text: 'family gift for magic', mark: 'magic' };
 import { spellName } from './items';
 import { chargesPhrase, EXECUTED, SENTENCED_TO, withMeans } from './justice';
 import { personalitySummary } from './mind';
@@ -125,17 +128,18 @@ export function biography(
       ...(legendary.length > 0
         ? [{ text: ', of whom ' }, ...people(legendary, names), { text: ' is remembered in song' }]
         : []),
-      { text: `${c.gifted ? ', with the family gift for magic' : ''}.${calledThem}` },
+      ...(c.gifted ? [{ text: ', with the ' }, GIFT_FAMILY] : []),
+      { text: `.${calledThem}` },
     ]);
   } else {
     paragraphs.push([
       { text: `${name} ${was} ${article(species)} ${species} of ` },
       place(c.homeId, names),
       {
-        text: `, who took up the ${c.calling === 'merchant' ? "merchant's" : "adventurer's"} life in ${whenIn(c.arrivedAt)}${
-          c.gifted ? ', born with the gift for magic' : ''
-        }.${calledThem}`,
+        text: `, who took up the ${c.calling === 'merchant' ? "merchant's" : "adventurer's"} life in ${whenIn(c.arrivedAt)}`,
       },
+      ...(c.gifted ? [{ text: ', ' }, GIFT_BORN] : []),
+      { text: `.${calledThem}` },
     ]);
   }
 

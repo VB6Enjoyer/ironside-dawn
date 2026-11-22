@@ -57,8 +57,10 @@ export function eventTone(event: SimEvent): Mark | null {
     case 'raid.sack':
     case 'dread.fall':
       return 'death';
-    case 'family.marry':
     case 'family.birth':
+      // A child born with the gift is a matter for magic as much as for family.
+      return event.data.gifted ? 'magic' : 'love';
+    case 'family.marry':
     case 'social.love':
     case 'family.expecting':
       return 'love';
@@ -85,7 +87,11 @@ export function eventTone(event: SimEvent): Mark | null {
       return 'wealth';
     case 'dread.rise':
       return 'delve';
+    case 'character.introduced':
+      return event.data.gifted ? 'magic' : null;
     case 'magic.learn':
+    case 'magic.kill':
+    case 'magic.backlash':
       return 'magic';
     default:
       return null;
