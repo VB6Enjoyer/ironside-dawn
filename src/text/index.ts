@@ -37,3 +37,5 @@ export { chargesPhrase } from './justice';
 export { EVENT_CATEGORIES, EVENT_TONES, eventCategory, eventTone } from './categories';
 export type { EventCategory } from './categories';
 export { goodsAmount, goodsList, SHOCK_NAMES } from './goods';
+export { describeMods, effectLines } from './effects';
+export type { EffectLine } from './effects';
