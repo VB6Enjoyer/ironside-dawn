@@ -13,6 +13,8 @@ export type {
   RouteDef,
 } from './locations';
 export { DIZZY_PENALTY, EFFECTS } from './effects';
+export { SICKNESSES } from './illness';
+export type { SicknessDef, SicknessId } from './illness';
 export type { Aspect, EffectDef, EffectId, EffectSource } from './effects';
 export { LOOT, lootDef } from './loot';
 export type { LootDef, LootId } from './loot';

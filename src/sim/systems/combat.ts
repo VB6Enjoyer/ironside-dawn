@@ -28,6 +28,7 @@ import { die } from './death';
 import { dreadFell, dreadKilled } from './dread';
 import { grant } from './effects';
 import { blessing, shiftFaith } from './faith-core';
+import { woundMayFester } from './illness';
 import { exitDelve, resumeDelve } from './delve';
 import { weaponSkillOf } from './items';
 import { mint } from './ledger';
@@ -873,6 +874,9 @@ function rememberFight(
     // Barely surviving can make a believer of anyone, the first time most of all.
     const escapes = character.memories.filter((m) => m.kind === 'near-death').length;
     blessing(character, 0.15, escapes - 1);
+    // A wound taken out in the wilds may fester (0.4.0).
+    const place = ctx.world.locations.get(locationId);
+    if (place) woundMayFester(ctx, character, place);
   }
   // A run of bad luck wears faith down.
   if (outcome === 'fled') shiftFaith(character, -0.01);

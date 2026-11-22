@@ -9,6 +9,7 @@ import type {
   PastimeId,
   SkillId,
   SpeciesId,
+  SicknessId,
   SpellId,
   Stats,
   TrapId,
@@ -148,6 +149,15 @@ export interface Character {
    */
   faith: number;
   faithPeak: number;
+  /** How well they shake off sickness, 0 to 1, born with and passed on a little (0.4.0). */
+  readonly hardiness: number;
+  /** The sickness they have now, its course, and whether a remedy is helping (0.4.0). */
+  illness: {
+    readonly sickness: SicknessId;
+    readonly since: number;
+    until: number;
+    treated: boolean;
+  } | null;
   sins: number;
   lastPrayer: number;
   /** Alchemists' tonics of vigor and calming draughts carried, drunk going into a delve (0.4.0). */
@@ -233,6 +243,8 @@ export type DeathCause =
   | { readonly kind: 'trap'; readonly trap: TrapId }
   | { readonly kind: 'magic'; readonly spell: SpellId }
   | { readonly kind: 'age'; readonly age: number }
+  /** Died of a sickness (0.4.0). */
+  | { readonly kind: 'illness'; readonly sickness: SicknessId }
   /** Put to death for murder, by the town's way of it (0.3.0). */
   | { readonly kind: 'executed'; readonly method?: ExecutionMethod }
   /** Died behind bars (0.3.0). */

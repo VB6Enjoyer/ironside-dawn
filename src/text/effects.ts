@@ -1,4 +1,4 @@
-import { EFFECTS, STATS, type Aspect, type EffectDef, type EffectId } from '../content';
+import { EFFECTS, SICKNESSES, STATS, type Aspect, type EffectDef, type EffectId } from '../content';
 import type { Character } from '../sim';
 import { describeDuration } from './calendar';
 
@@ -69,7 +69,11 @@ export function effectLines(character: Character, now: number): EffectLine[] {
     const total = Object.values(mods).reduce<number>((sum, n) => sum + (n ?? 0), 0);
     return {
       kind,
-      name: EFFECTS[kind].name,
+      // Sickness is named for what it is (0.4.0).
+      name:
+        kind === 'sick' && character.illness
+          ? SICKNESSES[character.illness.sickness].name
+          : EFFECTS[kind].name,
       good: total > 0,
       left: `${describeDuration(until - now)} left`,
       detail: describeMods(mods),

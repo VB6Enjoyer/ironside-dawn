@@ -165,6 +165,11 @@ function toLastingEffects(save: SaveData): Record<string, unknown> {
     c.faithPeak = faith;
     c.sins = 0;
     c.lastPrayer = world.time;
+    // Hardiness from who they are, stable; nobody is sick yet.
+    let h = 2166136261;
+    for (const ch of String(c.id)) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+    c.hardiness = ((h >>> 0) % 1000) / 1000;
+    c.illness = null;
   }
   const markets = (world.markets as { $map: [unknown, Encoded][] }).$map;
   for (const [, market] of markets) {

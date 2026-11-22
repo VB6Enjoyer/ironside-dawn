@@ -215,6 +215,17 @@ export function createCharacter(ctx: SimContext, home: Location, arrival: Arriva
     potions: 0,
     faith: 0,
     faithPeak: 0,
+    // Hardiness is born with, and runs a little in families (0.4.0).
+    hardiness: parents
+      ? Math.max(
+          0,
+          Math.min(
+            1,
+            parents.reduce((s, p) => s + p.hardiness, 0) / parents.length + rng.gaussian(0, 0.2),
+          ),
+        )
+      : rng.next(),
+    illness: null,
     sins: 0,
     lastPrayer: world.time,
     draughts: { vigor: 0, calm: 0 },

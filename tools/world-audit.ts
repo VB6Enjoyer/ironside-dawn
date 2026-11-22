@@ -48,6 +48,7 @@ const CAUSES = [
   'trap',
   'backlash',
   'age',
+  'illness',
   'executed',
   'prison',
 ] as const;
@@ -116,6 +117,8 @@ function causeOf(cause: DeathCause): Cause | 'departed' {
       return 'backlash';
     case 'age':
       return 'age';
+    case 'illness':
+      return 'illness';
     case 'executed':
       return 'executed';
     case 'prison':

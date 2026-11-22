@@ -1,4 +1,4 @@
-import { creatureDef, LANGUAGES, type CreatureId, type LanguageId } from '../content';
+import { creatureDef, LANGUAGES, SICKNESSES, type CreatureId, type LanguageId } from '../content';
 import {
   toCalendar,
   type Character,
@@ -82,6 +82,8 @@ export function causeOfDeath(cause: DeathCause, names: NameResolver): Segment[] 
       return [{ text: `killed by their own backfiring ${spellName(cause.spell)}` }];
     case 'age':
       return [{ text: `of old age, ${cause.age} years old` }];
+    case 'illness':
+      return [{ text: `of ${SICKNESSES[cause.sickness].caught}` }];
     case 'executed':
       return [{ text: `${EXECUTED[cause.method ?? 'hanging']} for murder` }];
     case 'prison':

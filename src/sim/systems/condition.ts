@@ -52,17 +52,26 @@ export function isDrained(character: Character, now: number): boolean {
   return carries(character, 'drained', now);
 }
 
-/** Healthy enough to go into a dungeon. */
+/** Healthy enough to go into a dungeon: not sick (0.4.0), nor hurt, spent or reeling. */
 export function isFitToDelve(character: Character, now: number): boolean {
   return (
+    !character.illness &&
     character.hp >= character.maxHp * 0.85 &&
     character.stamina >= character.maxStamina * 0.6 &&
     !isDizzy(character, now)
   );
 }
 
-/** Should rest in town before setting out again. A little above "fit", so a rested character arrives fit. */
+/** Gold a sick adventurer needs in hand to lie up until they are well, rather than push on (0.4.0). */
+const SICK_REST_GOLD = 20;
+
+/**
+ * Should rest in town before setting out again. A little above "fit", so a
+ * rested character arrives fit. The sick rest until they are well, if they
+ * can afford to (0.4.0).
+ */
 export function needsRecovery(character: Character): boolean {
+  if (character.illness && character.gold >= SICK_REST_GOLD) return true;
   return character.hp < character.maxHp * 0.9 || character.stamina < character.maxStamina * 0.7;
 }
 

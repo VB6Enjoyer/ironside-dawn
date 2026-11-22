@@ -55,7 +55,8 @@ describe('ages', () => {
     elder.activity = { kind: 'living' };
     ageTo(elder, ctx.world.time, SPECIES[elder.species].lifespan * 1.2);
     days(ctx, 3 * 360);
-    expect(elder.death?.cause.kind).toBe('age');
+    // Or a sickness takes them first, as it takes many of the very old (0.4.0).
+    expect(['age', 'illness']).toContain(elder.death?.cause.kind);
   });
 });
 
@@ -140,8 +141,11 @@ describe('families', () => {
     expect(isKin(child, a)).toBe(true);
 
     days(ctx, (SPECIES.human.adultAge + 1) * 360);
-    expect(['adventurer', 'townsfolk']).toContain(child.calling);
-    expect(ctx.events.some((e) => e.type === 'family.comeOfAge')).toBe(true);
+    // Unless a sickness carried them off first (0.4.0).
+    if (child.death?.cause.kind !== 'illness') {
+      expect(['adventurer', 'townsfolk']).toContain(child.calling);
+      expect(ctx.events.some((e) => e.type === 'family.comeOfAge')).toBe(true);
+    }
   });
 
   it('leave gold and gear to the heir when someone dies at home', () => {
@@ -177,7 +181,11 @@ describe('families', () => {
     days(ctx, 10 * 360, 2);
     const gone = loners.filter((c) => c.death?.cause.kind === 'departed');
     expect(gone.length).toBeGreaterThan(0);
-    expect(ctx.events.some((e) => e.type === 'social.mourn')).toBe(false);
+    // Those who moved on are not mourned (those who died of sickness may be).
+    const departed = new Set(gone.map((c) => c.id));
+    expect(
+      ctx.events.some((e) => e.type === 'social.mourn' && departed.has(e.data.deceasedId)),
+    ).toBe(false);
   });
 
   it('let married townsfolk of a crowded people move on together', () => {
@@ -202,7 +210,7 @@ describe('families', () => {
     for (const [a, b] of gone) {
       // Whoever went first, the other followed the same day, unless age took them before.
       const kinds = [a.death?.cause.kind, b.death?.cause.kind];
-      if (kinds.includes('age')) continue;
+      if (kinds.includes('age') || kinds.includes('illness')) continue;
       expect(kinds).toEqual(['departed', 'departed']);
       expect(a.death!.at).toBe(b.death!.at);
     }

@@ -6,6 +6,7 @@ import type {
   LanguageId,
   PastimeId,
   ShockId,
+  SicknessId,
   SkillId,
   SpellId,
   StatId,
@@ -80,6 +81,9 @@ export type EventBody =
         readonly comfort?: 'inn' | 'home';
       }
     >
+  /** Someone falls ill (0.4.0); `recovered` when they are well again. */
+  | Body<'character.sick', CharacterAt & { readonly sickness: SicknessId }>
+  | Body<'character.recover', CharacterAt & { readonly sickness: SicknessId }>
   /** A lasting effect taken on, and where from (0.4.0). */
   | Body<
       'character.effect',
@@ -626,6 +630,8 @@ export const EVENT_IMPORTANCE: Record<EventType, Importance> = {
   'character.pastime': Importance.Trivial,
   'character.rest': Importance.Trivial,
   'character.effect': Importance.Trivial,
+  'character.sick': Importance.Trivial,
+  'character.recover': Importance.Trivial,
   'character.convalesce': Importance.Trivial,
   'character.levelup': Importance.Normal,
   'character.skill': Importance.Normal,

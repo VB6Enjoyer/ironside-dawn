@@ -3,6 +3,7 @@ import {
   itemBase,
   LANGUAGES,
   packOf,
+  SICKNESSES,
   spellDef,
   type CreatureId,
   type ItemBaseId,
@@ -393,6 +394,12 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
       );
     },
   ],
+  'character.sick': [
+    (e, h) => [h.c(e.data.characterId), ` falls ill with ${SICKNESSES[e.data.sickness].caught}.`],
+  ],
+  'character.recover': [
+    (e, h) => [h.c(e.data.characterId), ` is over ${SICKNESSES[e.data.sickness].caught}.`],
+  ],
   'character.effect': [
     (e, h) => {
       const c = h.c(e.data.characterId);
@@ -524,6 +531,13 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
       }
       if (cause.kind === 'prison') {
         return [c, ' dies in the jail of ', h.place(e.data.locationId), ', their time unserved.'];
+      }
+      if (cause.kind === 'illness') {
+        const sickness = SICKNESSES[cause.sickness].caught;
+        return h.pick<Part[]>([
+          [c, ` dies of ${sickness} in `, l, '.'],
+          [c, ` is carried off by ${sickness} in `, l, '.'],
+        ]);
       }
       if (cause.kind === 'age') {
         return h.pick<Part[]>([

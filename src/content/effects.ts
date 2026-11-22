@@ -51,6 +51,8 @@ export const EFFECTS = {
   calm: { name: 'calm', cost: false, mods: { nerve: 0.2 }, hours: [4, 2] },
   /** A shrine's blessing, stronger for the faithful (`grant` scales it). */
   blessed: { name: 'blessed', cost: false, mods: { nerve: 0.1, recovery: 0.15 }, hours: [8, 8] },
+  /** Sick (0.4.0): what each sickness does is in `illness.ts`; its course is the sickness's. */
+  sick: { name: 'sick', cost: false },
   /** Slow to mend after a brush with death: less health, and slower to heal, for days. */
   weakened: { name: 'weakened', cost: false, mods: { health: -0.15, recovery: -0.25 }, hours: [72, 48] },
   /** Worn out by a long march: slower in a fight, and slow to recover. */
