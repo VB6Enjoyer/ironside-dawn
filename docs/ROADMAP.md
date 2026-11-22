@@ -1349,7 +1349,12 @@ Ten steps, each small enough to be looked over before the next begins.
    lair, slip past a foe, take a delve or a hunt, or weigh a spell's risk.
    Effects are read when they matter and dropped once over, never ticked.
    Saves move to version 8 (statuses become effects); a 0.3.2 save is kept as
-   a fixture. The first month of a seed's history is unchanged.
+   a fixture. Checked against 0.3.2 event by event, the one change in play is
+   the cap on stacked costs: without it, ten years of a world are identical.
+   It binds only when a caster's drains pass −9 (repeated Quickening
+   backlashes in one fight, which before could cripple them), and from such a
+   moment two worlds part ways; over eight worlds and a century the totals
+   agree (1,054 and 1,064 deaths).
 
 3. **Lasting effects: where they come from.** Good effects come from what is
    rare, costly or lucky: a good inn (dearer than the common one), a feast, a
