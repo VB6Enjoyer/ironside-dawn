@@ -59,7 +59,9 @@ describe('casting', () => {
       const before = c.hp;
       const { outcome, amount } = cast(ctx, c, 'mend-flesh', c.homeId, null);
       const event = ctx.events.at(-1)!;
-      if (event.type !== 'magic.cast') throw new Error('expected a cast event');
+      if (event.type !== 'magic.cast' && event.type !== 'magic.backlash') {
+        throw new Error('expected a cast event');
+      }
       const health = event.data.paid.health;
       if (outcome === 'backlash') expect(health).toBeGreaterThan(costs.health * 2);
       else expect(health).toBe(costs.health);

@@ -203,6 +203,8 @@ export type DeathCause =
       readonly characterId: CharacterId;
       /** The killer's weapon, by base (0.3.0). */
       readonly weapon?: string;
+      /** The spell that killed them, if it was one (0.3.2). */
+      readonly spell?: SpellId;
       /** Killed by an outlaw: murder (0.3.0). */
       readonly murder?: boolean;
     }

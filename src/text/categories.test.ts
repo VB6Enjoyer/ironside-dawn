@@ -14,6 +14,15 @@ describe('event tones', () => {
     expect(eventTone(ev('item.legend'))).toBe('wealth');
   });
 
+  it('mark magic: the gifted born or arriving, spell kills and backlashes', () => {
+    expect(eventTone(ev('family.birth', { gifted: true }))).toBe('magic');
+    expect(eventTone(ev('family.birth', {}))).toBe('love');
+    expect(eventTone(ev('character.introduced', { gifted: true }))).toBe('magic');
+    expect(eventTone(ev('character.introduced', {}))).toBeNull();
+    expect(eventTone(ev('magic.kill'))).toBe('magic');
+    expect(eventTone(ev('magic.backlash'))).toBe('magic');
+  });
+
   it('do not mourn those who only moved away', () => {
     expect(eventTone(ev('character.death', { cause: { kind: 'departed' } }))).toBeNull();
   });

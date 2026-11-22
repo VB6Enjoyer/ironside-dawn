@@ -233,6 +233,7 @@ export function createCharacter(ctx: SimContext, home: Location, arrival: Arriva
           characterId: character.id,
           locationId: home.id,
           parentIds: parents.map((p) => p.id),
+          ...(gifted ? { gifted } : {}),
         },
       },
       [character.id, ...parents.map((p) => p.id)],
@@ -245,13 +246,18 @@ export function createCharacter(ctx: SimContext, home: Location, arrival: Arriva
   ctx.emit(
     {
       type: 'character.introduced',
-      data: { characterId: character.id, homeId: home.id, newcomer: arrival.newcomer },
+      data: {
+        characterId: character.id,
+        homeId: home.id,
+        newcomer: arrival.newcomer,
+        ...(gifted ? { gifted } : {}),
+      },
     },
     [character.id],
     home.id,
   );
   // The gifted arrive already knowing a spell or two.
-  if (gifted) learnSpells(ctx, character, home.id);
+  if (gifted) learnSpells(ctx, character, home.id, true);
   wakeAt(ctx, character, world.time + rng.int(0, arrival.firstWakeWithin));
   return character;
 }

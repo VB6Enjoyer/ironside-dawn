@@ -11,9 +11,12 @@ import {
   type SimEvent,
 } from '../sim';
 import { seasonName } from './calendar';
-import type { Segment } from './describe';
+import { GIFT_BORN, type Segment } from './describe';
+
+/** The gift, for one born to it in the world (0.3.2). */
+const GIFT_FAMILY: Segment = { text: 'family gift for magic', mark: 'magic' };
 import { spellName } from './items';
-import { chargesPhrase, EXECUTED, SENTENCED_TO, withWeapon } from './justice';
+import { chargesPhrase, EXECUTED, SENTENCED_TO, withMeans } from './justice';
 import { personalitySummary } from './mind';
 import { SPECIES_NAMES, type NameResolver } from './names';
 import { aCreature, article, capitalize, countWord, listOf, TRAP_NAMES } from './words';
@@ -70,7 +73,7 @@ export function causeOfDeath(cause: DeathCause, names: NameResolver): Segment[] 
       return [
         { text: cause.murder ? 'murdered by ' : 'killed by ' },
         person(cause.characterId, names),
-        { text: withWeapon(cause.weapon) },
+        { text: withMeans(cause) },
       ];
     case 'trap':
       return [{ text: `killed by ${article(TRAP_NAMES[cause.trap])} ${TRAP_NAMES[cause.trap]}` }];
@@ -125,17 +128,18 @@ export function biography(
       ...(legendary.length > 0
         ? [{ text: ', of whom ' }, ...people(legendary, names), { text: ' is remembered in song' }]
         : []),
-      { text: `${c.gifted ? ', with the family gift for magic' : ''}.${calledThem}` },
+      ...(c.gifted ? [{ text: ', with the ' }, GIFT_FAMILY] : []),
+      { text: `.${calledThem}` },
     ]);
   } else {
     paragraphs.push([
       { text: `${name} ${was} ${article(species)} ${species} of ` },
       place(c.homeId, names),
       {
-        text: `, who took up the ${c.calling === 'merchant' ? "merchant's" : "adventurer's"} life in ${whenIn(c.arrivedAt)}${
-          c.gifted ? ', born with the gift for magic' : ''
-        }.${calledThem}`,
+        text: `, who took up the ${c.calling === 'merchant' ? "merchant's" : "adventurer's"} life in ${whenIn(c.arrivedAt)}`,
       },
+      ...(c.gifted ? [{ text: ', ' }, GIFT_BORN] : []),
+      { text: `.${calledThem}` },
     ]);
   }
 

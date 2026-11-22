@@ -267,7 +267,7 @@ describe('a year of danger', () => {
   it('counts kills on the slayer', () => {
     const kills = new Map<string, number>();
     for (const e of events) {
-      if (e.type === 'combat.kill')
+      if (e.type === 'combat.kill' || e.type === 'magic.kill')
         kills.set(e.data.characterId, (kills.get(e.data.characterId) ?? 0) + 1);
     }
     for (const c of characters) {

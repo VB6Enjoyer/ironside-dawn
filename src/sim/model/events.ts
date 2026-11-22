@@ -65,6 +65,8 @@ export type EventBody =
         readonly homeId: LocationId;
         /** True for adventurers who arrive after the world began. */
         readonly newcomer: boolean;
+        /** Born with the gift for magic (0.3.2; absent before). */
+        readonly gifted?: boolean;
       }
     >
   | Body<'character.pastime', CharacterAt & Decided & { readonly pastime: PastimeId }>
@@ -154,7 +156,14 @@ export type EventBody =
         readonly targetMaxHp: number;
       }
     >
-  | Body<'combat.kill', CharacterAt & { readonly foe: CreatureRef }>
+  | Body<
+      'combat.kill',
+      CharacterAt & {
+        readonly foe: CreatureRef;
+        /** The spell that dealt the killing blow (0.3.2). */
+        readonly spell?: SpellId;
+      }
+    >
   | Body<'combat.flee', { readonly who: Combatant; readonly success: boolean }>
   | Body<
       'combat.victory',
@@ -196,6 +205,32 @@ export type EventBody =
         };
       }
     >
+  /**
+   * A spell that went badly wrong (0.3.2): no effect, the costs doubled and a
+   * burn on top. Before 0.3.2 a backlash was a `magic.cast` with that outcome.
+   */
+  | Body<
+      'magic.backlash',
+      CharacterAt & {
+        readonly spell: SpellId;
+        readonly outcome: 'success' | 'partial' | 'failure' | 'backlash';
+        readonly target: Combatant | null;
+        /** Damage dealt, hit points healed, or ward strength. 0 if nothing happened. */
+        readonly amount: number;
+        readonly paid: {
+          readonly stamina: number;
+          readonly health: number;
+          readonly drained: StatId | null;
+          readonly dizzy: boolean;
+        };
+      }
+    >
+  /**
+   * A spell fells a strong creature (0.3.2), one of level 4 or more. Lesser
+   * foes felled by a spell are a `combat.kill` with the spell; a character
+   * killed by one dies of it in `character.death`.
+   */
+  | Body<'magic.kill', CharacterAt & { readonly spell: SpellId; readonly foe: CreatureRef }>
   // Bonds
   | Body<'social.meet', CharacterAt & WithOther & { readonly understood: boolean }>
   | Body<'social.friend', CharacterAt & WithOther>
@@ -400,7 +435,14 @@ export type EventBody =
     >
   | Body<'family.marry', CharacterAt & WithOther>
   /** `characterId` is the child. */
-  | Body<'family.birth', CharacterAt & { readonly parentIds: readonly CharacterId[] }>
+  | Body<
+      'family.birth',
+      CharacterAt & {
+        readonly parentIds: readonly CharacterId[];
+        /** Born with the gift for magic (0.3.2; absent before). */
+        readonly gifted?: boolean;
+      }
+    >
   /** Two people fall in love and become lovers (0.3.0). */
   | Body<'social.love', CharacterAt & WithOther>
   /** A couple are expecting a child, due at `dueAt` (0.3.0). */
@@ -579,8 +621,10 @@ export const EVENT_IMPORTANCE: Record<EventType, Importance> = {
   'combat.escape': Importance.Normal,
   'item.equip': Importance.Normal,
   'item.legend': Importance.Notable,
-  'magic.learn': Importance.Normal,
+  'magic.learn': Importance.Notable,
   'magic.cast': Importance.Normal,
+  'magic.backlash': Importance.Normal,
+  'magic.kill': Importance.Notable,
   'social.meet': Importance.Trivial,
   'social.friend': Importance.Normal,
   'social.rival': Importance.Normal,

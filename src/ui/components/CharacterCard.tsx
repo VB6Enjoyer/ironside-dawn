@@ -123,7 +123,12 @@ export function CharacterCard({
           <p className="card-subtitle">
             {callingTitle(character)} · {species} of {home?.name ?? 'nowhere'} · aged{' '}
             {ageOf(character, character.death?.at ?? world.time)}
-            {character.gifted && ' · gifted'}
+            {character.gifted && (
+              <>
+                {' · '}
+                <span className="mark mark-magic">gifted</span>
+              </>
+            )}
           </p>
         </div>
         <button type="button" className="card-close" onClick={onClose} aria-label="Close">

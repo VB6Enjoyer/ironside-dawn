@@ -39,7 +39,7 @@ export interface SpellDef {
 // prettier-ignore
 export const SPELLS = [
   { id: 'ember-bolt', culture: 'generic', name: 'Ember Bolt', effect: { kind: 'damage', dice: '2d6' }, difficulty: 12, costs: { stamina: 3, dizzy: 15 }, arcana: 15 },
-  { id: 'mend-flesh', culture: 'generic', name: 'Mend Flesh', effect: { kind: 'heal', dice: '2d6+3' }, difficulty: 11, costs: { health: 4 }, arcana: 25 },
+  { id: 'mend-flesh', culture: 'generic', name: 'Mend Flesh', effect: { kind: 'heal', dice: '2d6+3' }, difficulty: 11, costs: { stamina: 4, health: 1 }, arcana: 25 },
   { id: 'quickening', culture: 'generic', name: 'Quickening', effect: { kind: 'quicken', attack: 2, defense: 2 }, difficulty: 13, costs: { stamina: 1, drain: { stat: 'agility', amount: 3, hours: 3 } }, arcana: 35 },
   { id: 'ward-of-ash', culture: 'generic', name: 'Ward of Ash', effect: { kind: 'ward', dice: '2d6+2' }, difficulty: 12, costs: { stamina: 6 }, arcana: 45 },
   // Japonic: talismans and spirit-fire

@@ -23,7 +23,7 @@ import type {
 import { describeDuration, seasonName } from './calendar';
 import { anItem, itemName, legendTitle, SKILL_PHRASES, spellName } from './items';
 import { goodsList } from './goods';
-import { chargesPhrase, EXECUTED, withWeapon } from './justice';
+import { chargesPhrase, EXECUTED, withMeans } from './justice';
 import { describeWhy } from './mind';
 import { peopleName, roleTitle, type NameResolver } from './names';
 import {
@@ -71,6 +71,9 @@ export type Segment =
     };
 
 type Part = string | Segment;
+
+/** Being born with the gift for magic, marked wherever it is told (0.3.2). */
+export const GIFT_BORN: Segment = { text: 'born with the gift for magic', mark: 'magic' };
 
 /** How someone turning outlaw reads, by what drove them to it: two phrasings each. */
 const TURNED: Record<OutlawReason, readonly [string, string]> = {
@@ -305,6 +308,10 @@ function describeCrime(e: EventOfType<'crime.commit'>, h: Helpers): Part[] {
 }
 
 /** A prison term in whole years: "a year", "seven years". */
+function backlash(c: Part, spell: string, health: number): Part[] {
+  return [`The ${spell} backlashes on `, c, `, who loses ${health} health and reels.`];
+}
+
 function prisonTerm(seconds: number): string {
   const years = Math.max(1, Math.round(seconds / (360 * 86_400)));
   return years === 1 ? 'a year' : `${countWord(years)} years`;
@@ -346,6 +353,19 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
     (e, h) => {
       const c = h.c(e.data.characterId);
       const home = h.l(e.data.homeId);
+      // The gifted are known for it from the first (0.3.2).
+      if (e.data.gifted) {
+        return e.data.newcomer
+          ? [c, `, ${h.aSpecies(e.data.characterId)} `, GIFT_BORN, ', arrives in ', home, '.']
+          : [
+              c,
+              `, ${h.aSpecies(e.data.characterId)} of `,
+              home,
+              ', ',
+              GIFT_BORN,
+              ', takes up the adventuring life.',
+            ];
+      }
       if (e.data.newcomer) {
         return [c, `, ${h.aSpecies(e.data.characterId)}, arrives in `, home, ' seeking fortune.'];
       }
@@ -429,7 +449,20 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
         return [c, ` is consumed by a backfiring ${spellName(cause.spell)} in `, l, `${legacy}.`];
       }
       if (cause.kind === 'character') {
-        const weapon = withWeapon(cause.weapon);
+        const weapon = withMeans(cause);
+        if (cause.spell && !cause.murder) {
+          return h.pick<Part[]>([
+            [c, ' is struck down by ', h.c(cause.characterId), `${weapon} in `, l, `${legacy}.`],
+            [
+              c,
+              ' falls to ',
+              h.c(cause.characterId),
+              `'s ${spellName(cause.spell)} in `,
+              l,
+              `${legacy}.`,
+            ],
+          ]);
+        }
         if (cause.murder) {
           return [c, ' is murdered by ', h.c(cause.characterId), `${weapon} in `, l, `${legacy}.`];
         }
@@ -741,7 +774,13 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
     },
   ],
   'combat.kill': [
-    (e, h) => [h.c(e.data.characterId), ` slays ${theCreature(e.data.foe)}.`],
+    (e, h) =>
+      e.data.spell
+        ? [
+            h.c(e.data.characterId),
+            `'s ${spellName(e.data.spell)} kills ${theCreature(e.data.foe)}.`,
+          ]
+        : [h.c(e.data.characterId), ` slays ${theCreature(e.data.foe)}.`],
     (e, h) => [h.c(e.data.characterId), ` cuts down ${theCreature(e.data.foe)}.`],
     (e, h) => [`${theCreature(e.data.foe)} falls before `, h.c(e.data.characterId), '.'],
   ],
@@ -835,6 +874,21 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
     (e, h) => [h.c(e.data.characterId), ` learns to cast ${spellName(e.data.spell)}.`],
     (e, h) => [h.c(e.data.characterId), ` masters the ${spellName(e.data.spell)}.`],
   ],
+  'magic.backlash': [
+    (e, h) => backlash(h.c(e.data.characterId), spellName(e.data.spell), e.data.paid.health),
+  ],
+  'magic.kill': [
+    (e, h) => [
+      h.c(e.data.characterId),
+      `'s ${spellName(e.data.spell)} fells ${theCreature(e.data.foe)}.`,
+    ],
+    (e, h) => [
+      capitalize(theCreature(e.data.foe)),
+      ' falls to ',
+      h.c(e.data.characterId),
+      `'s ${spellName(e.data.spell)}.`,
+    ],
+  ],
   'magic.cast': [
     (e, h) => {
       const c = h.c(e.data.characterId);
@@ -842,9 +896,8 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
       const target: Part = e.data.target ? h.who(e.data.target) : 'the foe';
       const { outcome, amount, paid } = e.data;
       if (outcome === 'failure') return [c, `'s ${spell} fizzles out.`];
-      if (outcome === 'backlash') {
-        return [`The ${spell} backlashes on `, c, `, who loses ${paid.health} health and reels.`];
-      }
+      // Before 0.3.2 a backlash was a cast with this outcome.
+      if (outcome === 'backlash') return backlash(c, spell, paid.health);
       const weak = outcome === 'partial';
       switch (e.data.spell) {
         case 'ember-bolt':
@@ -852,7 +905,7 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
             ? [c, "'s Ember Bolt sputters, singeing ", target, ` for ${amount} damage.`]
             : [c, ' hurls an Ember Bolt at ', target, ` for ${amount} damage.`];
         case 'mend-flesh':
-          return [c, ` casts Mend Flesh, paying in blood, and heals ${amount}.`];
+          return [c, ` casts Mend Flesh and heals ${amount}.`];
         case 'quickening':
           return weak
             ? [c, ' casts Quickening, and moves a little faster.']
@@ -1392,6 +1445,7 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
       h.l(e.data.locationId),
       ' to ',
       ...h.group(e.data.parentIds),
+      ...(e.data.gifted ? [', ', GIFT_BORN] : []),
       '.',
     ],
   ],

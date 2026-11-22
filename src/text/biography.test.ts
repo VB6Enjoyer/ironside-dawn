@@ -116,6 +116,22 @@ describe('biography', () => {
     });
   });
 
+  it('marks the gift for magic, so it catches the eye', () => {
+    const gifted = [...sim.world.characters.values()].filter((c) => c.gifted);
+    expect(gifted.length).toBeGreaterThan(0);
+    for (const c of gifted) {
+      const origins = biography(c, [], names)[0]!;
+      expect(origins.some((s) => 'mark' in s && s.mark === 'magic' && /gift/.test(s.text))).toBe(
+        true,
+      );
+    }
+    for (const c of sim.world.characters.values()) {
+      if (c.gifted) continue;
+      const origins = biography(c, [], names)[0]!;
+      expect(origins.some((s) => 'mark' in s && s.mark === 'magic')).toBe(false);
+    }
+  });
+
   it('ends with how the dead died', () => {
     const fallen = [...sim.world.characters.values()].find((c) => c.death)!;
     expect(story(fallen).at(-1)).toMatch(new RegExp(`^${fallen.givenName} died in the`));

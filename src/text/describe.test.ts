@@ -41,6 +41,12 @@ const text = (e: SimEvent) => toPlainText(describeEvent(e, names));
 /** Event types too rare to count on in one year of one world, with sample data. */
 const where = 'witherwood' as LocationId;
 const RARE: Record<string, (a: CharacterId, b: CharacterId) => object> = {
+  'magic.kill': (a) => ({
+    characterId: a,
+    locationId: where,
+    spell: 'ember-bolt',
+    foe: { species: 'troll', affix: null, ordinal: 0 },
+  }),
   'social.rival': (a, b) => ({ characterId: a, locationId: where, otherId: b }),
   'party.leave': (a, b) => ({ characterId: a, locationId: where, leaderId: b, reason: 'quarrel' }),
   'party.disband': (a) => ({ characterId: a, locationId: where, reason: 'outlaw' }),
@@ -320,6 +326,33 @@ describe('words', () => {
     expect(article('dwarf')).toBe('a');
     expect(condition(28, 28)).toBe('barely scratched');
     expect(condition(5, 28)).toBe('badly wounded');
+  });
+
+  it('tells of the gift for magic at a birth or an arrival, marked', () => {
+    const [a, b] = [...sim.world.characters.keys()] as [CharacterId, CharacterId];
+    const at = { id: 1, t: 0, importance: 0, actors: [a], locationId: null };
+    const born = {
+      ...at,
+      type: 'family.birth',
+      data: { characterId: a, locationId: where, parentIds: [a, b], gifted: true },
+    } as SimEvent;
+    const came = {
+      ...at,
+      type: 'character.introduced',
+      data: { characterId: a, homeId: where, newcomer: true, gifted: true },
+    } as SimEvent;
+    for (const event of [born, came]) {
+      const segments = describeEvent(event, names);
+      expect(
+        segments.some((s) => 'mark' in s && s.mark === 'magic' && /gift for magic/.test(s.text)),
+      ).toBe(true);
+      expect(toPlainText(segments)).toMatch(/^[A-Z][^]*[.]$/);
+    }
+    const plain = {
+      ...born,
+      data: { characterId: a, locationId: where, parentIds: [a, b] },
+    } as SimEvent;
+    expect(text(plain)).not.toMatch(/gift/);
   });
 
   it('refers to characters by name in every fight line', () => {
