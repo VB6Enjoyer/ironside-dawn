@@ -399,6 +399,12 @@ function Bonds({
   const children = living(character.children);
   const bonds = Object.entries(character.opinions) as [CharacterId, Opinion][];
   const friends = bonds.filter(([, o]) => o.bond === 'friend').map(([id]) => id);
+  // A lover not (yet) wed; the latest, if more than one over the years.
+  const beloved = bonds
+    .filter(
+      ([id, o]) => o.lovers !== undefined && id !== character.spouseId && world.characters.has(id),
+    )
+    .sort((a, b) => b[1].lovers! - a[1].lovers!)[0]?.[0];
   const rivals = bonds.filter(([, o]) => o.bond === 'rival').map(([id]) => id);
   const languages = (Object.entries(character.languages) as [LanguageId, number][])
     .filter(([, level]) => level >= 5)
@@ -440,6 +446,21 @@ function Bonds({
           <>
             <dt>Spouse</dt>
             <dd>{link(character.spouseId)}</dd>
+          </>
+        )}
+        {beloved && (
+          <>
+            <dt>Beloved</dt>
+            <dd>{link(beloved)}</dd>
+          </>
+        )}
+        {character.expecting && !character.death && (
+          <>
+            <dt>Expecting</dt>
+            <dd>
+              a child with {link(character.expecting.withId)}, due{' '}
+              {formatTimestamp(character.expecting.dueAt)}
+            </dd>
           </>
         )}
         {parents.length > 0 && (
@@ -484,10 +505,12 @@ function Bonds({
           <>
             <dt>Sentence</dt>
             <dd className="outlaw">
-              {character.activity.sentence === 'death'
-                ? `death, on ${formatTimestamp(character.activity.until)}`
-                : `prison, until ${formatTimestamp(character.activity.until)}`}
-              {charges && `, for ${charges}`}
+              {character.activity.sentence === 'trial'
+                ? `awaiting trial, on ${formatTimestamp(character.activity.until)}`
+                : character.activity.sentence === 'death'
+                  ? `death, on ${formatTimestamp(character.activity.until)}`
+                  : `prison, until ${formatTimestamp(character.activity.until)}`}
+              {character.activity.sentence !== 'trial' && charges && `, for ${charges}`}
             </dd>
           </>
         )}

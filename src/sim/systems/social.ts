@@ -47,7 +47,7 @@ export const CRUSADE_SIZE = 6;
 const LOVE = 0.8;
 const LOVE_FAMILIARITY = 0.6;
 /** Chance per meeting that such a pair marries. */
-const PROPOSAL = 0.006;
+const PROPOSAL = 0.01;
 /** Chance a match across peoples goes ahead. */
 const MIXED_MARRIAGE = 0.1;
 /** Chance per meeting of a tale about a dead hero. */
@@ -405,24 +405,65 @@ function checkBonds(ctx: SimContext, a: Character, b: Character, location: Locat
   if (ab.bond === 'friend' && ab.trust >= PARTY_TRUST && ba.trust >= PARTY_TRUST) {
     joinUp(ctx, a, b, location.id);
   }
-  if (ab.affinity >= LOVE && ba.affinity >= LOVE) considerMarriage(ctx, a, b, location);
+  if (ab.affinity >= LOVE && ba.affinity >= LOVE) {
+    if (ab.lovers === undefined) considerLove(ctx, a, b, location);
+    else considerMarriage(ctx, a, b, location);
+  }
 }
 
 /**
  * Close friends who love each other may marry: unwed grown-ups, not close
  * kin, nearly always of the same people.
  */
-function considerMarriage(ctx: SimContext, a: Character, b: Character, location: Location): void {
-  const world = ctx.world;
-  const unwed = (c: Character) => {
-    const spouse = c.spouseId ? world.characters.get(c.spouseId) : undefined;
-    return !spouse || spouse.death !== null;
-  };
-  if (a.calling === 'child' || b.calling === 'child' || !unwed(a) || !unwed(b)) return;
+/** Whether someone is free to love: not a child, and not wed to anyone living. */
+function unwed(ctx: SimContext, c: Character): boolean {
+  if (c.calling === 'child') return false;
+  const spouse = c.spouseId ? ctx.world.characters.get(c.spouseId) : undefined;
+  return !spouse || spouse.death !== null;
+}
+
+/** Chance, each time two who love each other meet, that they become lovers. */
+const ROMANCE = 0.1;
+
+/**
+ * Two who love each other, know each other well and are free become lovers
+ * (0.3.0): a step before marriage, and what children come of.
+ */
+function considerLove(ctx: SimContext, a: Character, b: Character, location: Location): void {
+  if (!unwed(ctx, a) || !unwed(ctx, b)) return;
   if ((a.opinions[b.id]?.familiarity ?? 0) < LOVE_FAMILIARITY) return;
+  if ((b.opinions[a.id]?.familiarity ?? 0) < LOVE_FAMILIARITY) return;
   if (Boolean(a.outlaw) !== Boolean(b.outlaw) || isKin(a, b)) return;
+  // Someone already with a lover stays true to them, for now.
+  if (loverOf(ctx, a) || loverOf(ctx, b)) return;
   const rng = ctx.rng.social;
   if (a.species !== b.species && !rng.chance(MIXED_MARRIAGE)) return;
+  if (!rng.chance(ROMANCE)) return;
+  const now = ctx.world.time;
+  a.opinions[b.id]!.lovers = now;
+  b.opinions[a.id]!.lovers = now;
+  ctx.emit(
+    { type: 'social.love', data: { characterId: a.id, otherId: b.id, locationId: location.id } },
+    [a.id, b.id],
+    location.id,
+  );
+}
+
+/** Someone's living lover (their spouse, for a couple who married as lovers), if any. */
+export function loverOf(ctx: SimContext, c: Character): Character | null {
+  for (const id in c.opinions) {
+    if (c.opinions[id as CharacterId]?.lovers === undefined) continue;
+    const other = ctx.world.characters.get(id as CharacterId);
+    if (other && isAlive(other) && other.opinions[c.id]?.lovers !== undefined) return other;
+  }
+  return null;
+}
+
+/** Lovers who have been so a while may marry. */
+function considerMarriage(ctx: SimContext, a: Character, b: Character, location: Location): void {
+  if (!unwed(ctx, a) || !unwed(ctx, b)) return;
+  if (Boolean(a.outlaw) !== Boolean(b.outlaw) || isKin(a, b)) return;
+  const rng = ctx.rng.social;
   if (!rng.chance(PROPOSAL)) return;
   a.spouseId = b.id;
   b.spouseId = a.id;

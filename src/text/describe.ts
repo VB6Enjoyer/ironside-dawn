@@ -1226,6 +1226,14 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
             '.',
           ],
   ],
+  'outlaw.held': [
+    (e, h) => [
+      h.c(e.data.characterId),
+      ' is locked up in the jail of ',
+      h.place(e.data.locationId),
+      ` to await trial, ${describeDuration(e.data.trialAt - e.t)} hence.`,
+    ],
+  ],
   'outlaw.freed': [
     (e, h) => [
       h.c(e.data.characterId),
@@ -1332,6 +1340,32 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
         e.data.occupation ? ` as ${OCCUPATION_NAMES[e.data.occupation]}.` : '.',
       ];
     },
+  ],
+  'social.love': [
+    (e, h) => [
+      h.c(e.data.characterId),
+      ' and ',
+      h.c(e.data.otherId),
+      ' fall in love in ',
+      h.l(e.data.locationId),
+      '.',
+    ],
+    (e, h) => [
+      h.c(e.data.characterId),
+      ' and ',
+      h.c(e.data.otherId),
+      ' become lovers in ',
+      h.l(e.data.locationId),
+      '.',
+    ],
+  ],
+  'family.expecting': [
+    (e, h) => [
+      h.c(e.data.characterId),
+      ' and ',
+      h.c(e.data.otherId),
+      ` are expecting a child, due ${describeDuration(e.data.dueAt - e.t)} hence.`,
+    ],
   ],
   'family.marry': [
     (e, h) => [

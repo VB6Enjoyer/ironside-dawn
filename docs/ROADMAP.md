@@ -1241,6 +1241,14 @@ site), and is checked against the targets below with the crime audit.
      fixture (its standing carried over as what the towns have heard).
      (`SAME_HISTORY_SINCE` moved to 0.3.0 with step 2.)
 
+**0.3.1, fixes after release:** a captive is no longer handed over and
+sentenced in the same minute; the hand-over takes a few hours and the
+prisoner waits three to ten days in jail for the court. And births follow
+from conception: couples fall in love and become lovers before marrying,
+conceive only on days together, and are expecting for a gestation by their
+people (270 days for humans, up to 360 for elves) before the child is born,
+with births and populations in the range they had.
+
 **Alongside (separately, as 0.2.1 if wanted):** magic is used thousands of
 times a century but hidden at most speeds, and no creature casts. Make casts
 that matter (killing blows, the dread's spells, a new spell's first use)

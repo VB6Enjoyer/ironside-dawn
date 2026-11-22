@@ -85,6 +85,8 @@ export interface Captivity {
   readonly captorId: CharacterId;
   readonly since: number;
   readonly gold: number;
+  /** When the hand-over at the watch-house will be done, once it has begun. */
+  deliverAt?: number;
 }
 
 /**

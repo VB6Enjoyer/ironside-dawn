@@ -15,7 +15,7 @@ export const FIRST_RELEASE = '0.1.0';
  * history here. Move it to the coming version whenever a change alters
  * history: `src/sim/history.test.ts` fails until it is moved.
  */
-export const SAME_HISTORY_SINCE = '0.3.0';
+export const SAME_HISTORY_SINCE = '0.3.1';
 
 const VERSION = /^(\d+)\.(\d+)\.(\d+)$/;
 

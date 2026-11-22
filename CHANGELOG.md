@@ -8,6 +8,20 @@ The public notes players see under "What's new" are kept in `src/ui/releases.ts`
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-11-22
+
+### Added
+
+- Love comes before marriage, and children after conception (`src/sim/systems/social.ts`, `src/sim/systems/lifecycle.ts`): two who love each other fall in love and become lovers, and lovers may later marry. A couple conceive only on days they are together, and the live feed says when they are expecting; the child is born a gestation later, by their people (nine months for humans, longer for dwarves, centaurs and elves). Unwed lovers can have children too, less often. Life stories tell whom someone fell in love with and whether they married, and the character card shows a beloved and a child on the way (`src/text/biography.ts`, `src/ui/components/CharacterCard.tsx`).
+
+### Changed
+
+- Worlds turn out differently from their seed than in 0.3.0 (`src/host/version.ts`), so links from 0.3.0 open with a note that history differs.
+
+### Fixed
+
+- A captive was handed over and sentenced within a minute of being caught in a town (`src/sim/systems/justice.ts`). The hand-over at the watch-house now takes a few hours, and the prisoner is locked up to await trial, which comes three to ten days later when the court sits mid-morning. The live feed tells of it, and Behind Bars, the character card and life stories show those awaiting trial.
+
 ## [0.3.0] - 2026-11-21
 
 ### Added
@@ -103,7 +117,8 @@ The public notes players see under "What's new" are kept in `src/ui/releases.ts`
 
 - The first release: procedural worlds with their people, markets, generations, cultures and myths; the observatory to watch them; world settings, content packs, saves and links; and the desktop app. How it was built is told phase by phase in `docs/ROADMAP.md`.
 
-[Unreleased]: https://github.com/VB6Enjoyer/ironside-dawn/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/VB6Enjoyer/ironside-dawn/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/VB6Enjoyer/ironside-dawn/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/VB6Enjoyer/ironside-dawn/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/VB6Enjoyer/ironside-dawn/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/VB6Enjoyer/ironside-dawn/compare/v0.1.0...v0.1.1

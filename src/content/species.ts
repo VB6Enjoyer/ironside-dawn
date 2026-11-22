@@ -18,6 +18,8 @@ export interface SpeciesDef {
   readonly startingAge: readonly [number, number];
   /** Yearly chance a couple in their fertile years has a child, before crowding. */
   readonly fertility: number;
+  /** Days from conception to birth (0.3.0). */
+  readonly gestationDays: number;
   /** Undead and demons don't age. */
   readonly ageless?: boolean;
   /**
@@ -63,6 +65,7 @@ export const SPECIES = {
     adultAge: 16,
     startingAge: [17, 34],
     fertility: 0.45,
+    gestationDays: 270,
     attitudes: { human: 0.3, elf: 0, dwarf: 0, centaur: 0, ...DREADED },
     weapons: { longsword: 3, shortsword: 2, spear: 2, mace: 2, axe: 1 },
     armor: { padded: 1, leather: 2, scale: 1 },
@@ -78,6 +81,7 @@ export const SPECIES = {
     adultAge: 50,
     startingAge: [55, 160],
     fertility: 0.05,
+    gestationDays: 360,
     attitudes: { elf: 0.5, human: -0.1, dwarf: -0.3, centaur: 0.1, ...DREADED },
     weapons: { leafblade: 4, longsword: 2, spear: 1 },
     armor: { padded: 1, leather: 3 },
@@ -93,6 +97,7 @@ export const SPECIES = {
     adultAge: 30,
     startingAge: [32, 80],
     fertility: 0.15,
+    gestationDays: 300,
     attitudes: { dwarf: 0.5, human: 0, elf: -0.3, centaur: -0.1, ...DREADED },
     weapons: { axe: 4, warhammer: 3, mace: 1 },
     armor: { leather: 1, scale: 2 },
@@ -113,6 +118,7 @@ export const SPECIES = {
     adultAge: 14,
     startingAge: [16, 40],
     fertility: 0.3,
+    gestationDays: 330,
     attitudes: { centaur: 0.5, human: 0, elf: 0.1, dwarf: -0.1, ...DREADED },
     weapons: { spear: 4, longsword: 1, axe: 1 },
     armor: { padded: 2, leather: 2 },
@@ -135,6 +141,7 @@ export const SPECIES = {
     adultAge: 0,
     startingAge: [150, 600],
     fertility: 0,
+    gestationDays: 0,
     ageless: true,
     dread: true,
     vitality: 3,
@@ -153,6 +160,7 @@ export const SPECIES = {
     adultAge: 0,
     startingAge: [80, 300],
     fertility: 0,
+    gestationDays: 0,
     ageless: true,
     dread: true,
     vitality: 3,
@@ -171,6 +179,7 @@ export const SPECIES = {
     adultAge: 0,
     startingAge: [300, 900],
     fertility: 0,
+    gestationDays: 0,
     ageless: true,
     dread: true,
     vitality: 3.5,

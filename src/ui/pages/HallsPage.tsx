@@ -263,7 +263,9 @@ export function HallsPage({
                   <td className={p.sentence === 'death' ? 'mark mark-death' : 'mark mark-crime'}>
                     {p.sentence === 'death'
                       ? 'death'
-                      : `${Math.max(1, Math.round((p.until - p.since) / (360 * DAY)))} years`}
+                      : p.sentence === 'trial'
+                        ? 'awaiting trial'
+                        : `${Math.max(1, Math.round((p.until - p.since) / (360 * DAY)))} years`}
                   </td>
                   <td className="muted">{chargesPhrase(p.charges) || '—'}</td>
                   <td>{formatTimestamp(p.until)}</td>

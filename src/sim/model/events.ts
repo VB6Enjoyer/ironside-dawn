@@ -345,6 +345,8 @@ export type EventBody =
         readonly method?: ExecutionMethod;
       }
     >
+  /** Handed over alive: locked up in the town's jail to await trial on `trialAt` (0.3.0). */
+  | Body<'outlaw.held', CharacterAt & { readonly trialAt: number }>
   | Body<'outlaw.freed', CharacterAt>
   /** A murderer hides their victim's body: as far as anyone knows, the victim vanished (0.3.0). */
   | Body<'crime.conceal', CharacterAt & { readonly victimId: CharacterId }>
@@ -399,6 +401,10 @@ export type EventBody =
   | Body<'family.marry', CharacterAt & WithOther>
   /** `characterId` is the child. */
   | Body<'family.birth', CharacterAt & { readonly parentIds: readonly CharacterId[] }>
+  /** Two people fall in love and become lovers (0.3.0). */
+  | Body<'social.love', CharacterAt & WithOther>
+  /** A couple are expecting a child, due at `dueAt` (0.3.0). */
+  | Body<'family.expecting', CharacterAt & WithOther & { readonly dueAt: number }>
   | Body<
       'family.comeOfAge',
       CharacterAt & {
@@ -601,6 +607,7 @@ export const EVENT_IMPORTANCE: Record<EventType, Importance> = {
   'outlaw.sentenced': Importance.Notable,
   'crime.conceal': Importance.Notable,
   'crime.pinned': Importance.Notable,
+  'outlaw.held': Importance.Normal,
   'outlaw.freed': Importance.Normal,
   'bounty.post': Importance.Normal,
   'bounty.claim': Importance.Notable,
@@ -614,6 +621,8 @@ export const EVENT_IMPORTANCE: Record<EventType, Importance> = {
   'character.retire': Importance.Notable,
   'family.marry': Importance.Notable,
   'family.birth': Importance.Notable,
+  'social.love': Importance.Notable,
+  'family.expecting': Importance.Notable,
   'family.comeOfAge': Importance.Notable,
   'family.inherit': Importance.Normal,
   'legend.hero': Importance.Legendary,

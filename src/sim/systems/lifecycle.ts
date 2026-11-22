@@ -9,7 +9,7 @@ import { die, LEGENDARY_RENOWN, renownOf } from './death';
 import { remember } from './mind';
 import { refreshMaxima, roleOf } from './progress';
 import { CLAIM_RENOWN, emptySeatNear, takeSeat } from './lords';
-import { adjustOpinion, leaveParty, socialize } from './social';
+import { adjustOpinion, leaveParty, loverOf, socialize } from './social';
 import { cancelWake, wakeAt } from './wake';
 
 /**
@@ -330,30 +330,85 @@ interface Fullness {
   readonly settled: Map<SpeciesId, number>;
 }
 
-/** A married couple in their fertile years may have a child, born at home. */
+/**
+ * Lovers spending their days together may conceive (0.3.0): a married couple
+ * or lovers in their fertile years, in the same place, on any day they are.
+ * Unwed lovers less often. Each couple is weighed once.
+ */
 function considerChildren(ctx: SimContext, c: Character, fullness: Map<SpeciesId, number>): void {
   const world = ctx.world;
-  if (!c.spouseId || c.id > c.spouseId) return; // each couple once
-  const spouse = world.characters.get(c.spouseId);
-  if (!spouse || !isAlive(spouse) || spouse.species !== c.species) return;
+  if (c.expecting) {
+    considerBirth(ctx, c);
+    return;
+  }
+  const spouse = c.spouseId ? world.characters.get(c.spouseId) : undefined;
+  const wed = spouse && isAlive(spouse) ? spouse : null;
+  const partner = wed ?? loverOf(ctx, c);
+  if (!partner || c.id > partner.id || partner.expecting) return;
+  if (!isAlive(partner) || partner.species !== c.species) return;
+  // Only together: on the road apart, or one in a dungeon, nothing comes of it.
+  if (!c.locationId || c.locationId !== partner.locationId) return;
   if (c.children.length >= MAX_CHILDREN) return;
   const def = SPECIES[c.species];
+  if (def.gestationDays <= 0) return;
   const fertile = (p: Character) => (world.time - p.born) / YEAR <= def.lifespan * FERTILE_UNTIL;
-  if (!fertile(c) || !fertile(spouse)) return;
+  if (!fertile(c) || !fertile(partner)) return;
   const room = Math.max(0, 1 - (fullness.get(c.species) ?? 0));
-  const chance = (def.fertility * room * (1 - 0.15 * c.children.length)) / 360;
+  const chance =
+    (def.fertility * TOGETHER * room * (1 - 0.15 * c.children.length) * (wed ? 1 : UNWED)) / 360;
   if (!ctx.rng.people.chance(chance)) return;
-  // The child is born where a parent is at home in town.
-  const home = [c, spouse]
+  const now = world.time;
+  const dueAt = now + Math.round(def.gestationDays * (0.95 + 0.1 * ctx.rng.people.next())) * DAY;
+  for (const [p, other] of [
+    [c, partner],
+    [partner, c],
+  ] as const) {
+    p.expecting = { withId: other.id, since: now, dueAt };
+  }
+  ctx.emit(
+    {
+      type: 'family.expecting',
+      data: { characterId: c.id, otherId: partner.id, locationId: c.locationId, dueAt },
+    },
+    [c.id, partner.id],
+    c.locationId,
+  );
+}
+
+/** Couples are apart much of the time; on days together, conception is likelier to make up for it. */
+const TOGETHER = 3.5;
+/** Unwed lovers have children less often than the married. */
+const UNWED = 0.3;
+/** Days past due a birth waits for a parent to reach a town, before it is lost. */
+const BIRTH_WAIT_DAYS = 30;
+
+/** The day comes: the child is born where a parent is in town, to both parents. */
+function considerBirth(ctx: SimContext, c: Character): void {
+  const world = ctx.world;
+  const expecting = c.expecting!;
+  const other = world.characters.get(expecting.withId);
+  if (!other) {
+    delete c.expecting;
+    return;
+  }
+  // Each couple once: whichever of them is weighed first and still lives.
+  if (isAlive(other) && other.expecting && c.id > other.id) return;
+  if (world.time < expecting.dueAt) return;
+  const parents = [c, other] as const;
+  const home = parents
+    .filter(isAlive)
     .map((p) => (p.locationId ? world.locations.get(p.locationId) : undefined))
     .find((l): l is Location => l?.kind === 'town' && townPopulation(l) > 0);
-  if (!home) return;
-  const child = createCharacter(ctx, home, {
-    newcomer: false,
-    firstWakeWithin: 0,
-    parents: [c, spouse],
-  });
-  for (const parent of [c, spouse]) {
+  const done = () => {
+    for (const p of parents) delete p.expecting;
+  };
+  if (!home) {
+    if (world.time > expecting.dueAt + BIRTH_WAIT_DAYS * DAY) done();
+    return;
+  }
+  done();
+  const child = createCharacter(ctx, home, { newcomer: false, firstWakeWithin: 0, parents });
+  for (const parent of parents) {
     adjustOpinion(child, parent.id, { affinity: 0.8, trust: 0.8, familiarity: 1 }, world.time);
     adjustOpinion(parent, child.id, { affinity: 0.9, trust: 0.8, familiarity: 1 }, world.time);
   }

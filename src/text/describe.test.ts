@@ -103,6 +103,7 @@ const RARE: Record<string, (a: CharacterId, b: CharacterId) => object> = {
     at: 0,
   }),
   'outlaw.freed': (a) => ({ characterId: a, locationId: 'saltmere' }),
+  'outlaw.held': (a) => ({ characterId: a, locationId: 'saltmere', trialAt: 8 * 86_400 }),
   'market.shock': () => ({ shock: 'blockade', locationId: where, otherId: 'saltmere', days: 20 }),
   'market.recover': () => ({ shock: 'failed-harvest', locationId: 'concordale', otherId: null }),
   'character.elder': (a) => ({ characterId: a, locationId: 'concordale', age: 43 }),
@@ -114,6 +115,13 @@ const RARE: Record<string, (a: CharacterId, b: CharacterId) => object> = {
     merchant: false,
   }),
   'family.marry': (a, b) => ({ characterId: a, otherId: b, locationId: 'saltmere' }),
+  'social.love': (a, b) => ({ characterId: a, otherId: b, locationId: 'saltmere' }),
+  'family.expecting': (a, b) => ({
+    characterId: a,
+    otherId: b,
+    locationId: 'saltmere',
+    dueAt: 270 * 86_400,
+  }),
   'family.birth': (a, b) => ({ characterId: a, locationId: 'saltmere', parentIds: [a, b] }),
   'family.comeOfAge': (a) => ({
     characterId: a,

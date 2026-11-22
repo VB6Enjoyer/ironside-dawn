@@ -16,6 +16,16 @@ export interface Release {
 
 export const RELEASES: readonly Release[] = [
   {
+    version: '0.3.1',
+    date: '2026-11-22',
+    title: 'Courts and courtships',
+    intro: 'Two fixes after the Outlaws Update: justice takes its time, and so does family life.',
+    changes: [
+      'An outlaw brought in alive is no longer tried the minute they arrive. Handing them over takes a few hours, and they wait in jail for three to ten days before the court sits.',
+      'Love before marriage, and children after: people fall in love and become lovers, may marry later, and a couple are expecting for nine months or so (longer for dwarves, centaurs and elves) before a child is born. Only couples who spend time together have children.',
+    ],
+  },
+  {
     version: '0.3.0',
     date: '2026-11-21',
     title: 'The Outlaws Update',

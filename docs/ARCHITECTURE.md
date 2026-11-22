@@ -511,11 +511,16 @@ Built in Phase 8 (`src/sim/systems/lifecycle.ts`, `death.ts`, `social.ts`).
   in town (innkeeper, smith, weapons master, farmer, clerk) or to the merchant's
   life; they keep their memories and friends. Lone townsfolk of a crowded
   people may move on, which takes them out of the world without a death.
-- **Families.** Two characters who love each other (high mutual affinity and
-  familiarity, a friend bond) may marry; across peoples only rarely, never
-  close kin. A married couple in its fertile years has children at its people's
-  fertility, less the fuller the people's settled young already are (that
-  density dependence is what keeps each people's numbers level). Children
+- **Families.** Two free characters who love each other (high mutual affinity
+  and familiarity, a friend bond) may become lovers (`Opinion.lovers`, since
+  0.3.1), and lovers may later marry; across peoples only rarely, never close
+  kin. A couple in its fertile years conceives only on days the two are in the
+  same place, at its people's fertility (scaled up for those days, and down for
+  unwed lovers), less the fuller the people's settled young already are (that
+  density dependence is what keeps each people's numbers level). Both carry
+  `expecting` until the child is born, a gestation later (`gestationDays` by
+  people: 270 for humans, 300 dwarves, 330 centaurs, 360 elves), where a parent
+  is in town. Children
   blend their parents' stats and traits with a mutation, take a parent's family
   name and weapon, are likelier to have the gift if a parent did, and come of
   age as adventurers (while the world needs them; with a parent's grudges, and
@@ -664,7 +669,10 @@ Built for 0.3.0 (`src/sim/systems/crime.ts`, `notoriety.ts`, `outlaws.ts`).
   captor (`Character.escorting`), who heads for the nearest town that would
   pay. Each leg of road they may escape (level and agility against the
   escort's size and level). Delivered, the bounty pays two and a half times
-  over, the seized gold goes to the town, and the captive stands trial.
+  over, the seized gold goes to the town, and the captive stands trial. Since 0.3.1 the hand-over
+  takes one to three hours, the escort waiting on it (`Captivity.deliverAt`);
+  then the captive is `jailed` with sentence `trial` until the court sits, three
+  to ten days later at ten in the morning.
 - **Justice.** The court tries a prisoner on what is known of them: the most
   any town has heard (`knownRecord`), never crimes nobody pinned on them. A
   known murderer is `jailed` with sentence `death` and put to death three to

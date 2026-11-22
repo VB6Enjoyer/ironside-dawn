@@ -59,6 +59,8 @@ export function eventTone(event: SimEvent): Mark | null {
       return 'death';
     case 'family.marry':
     case 'family.birth':
+    case 'social.love':
+    case 'family.expecting':
       return 'love';
     case 'crime.robbery':
     case 'crime.commit':
@@ -68,6 +70,7 @@ export function eventTone(event: SimEvent): Mark | null {
     case 'capture.attempt':
     case 'capture.escape':
     case 'outlaw.sentenced':
+    case 'outlaw.held':
     case 'crime.conceal':
     case 'crime.pinned':
     case 'outlaw.turn':
