@@ -889,7 +889,7 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
             ? [c, "'s Ember Bolt sputters, singeing ", target, ` for ${amount} damage.`]
             : [c, ' hurls an Ember Bolt at ', target, ` for ${amount} damage.`];
         case 'mend-flesh':
-          return [c, ` casts Mend Flesh, paying in blood, and heals ${amount}.`];
+          return [c, ` casts Mend Flesh and heals ${amount}.`];
         case 'quickening':
           return weak
             ? [c, ' casts Quickening, and moves a little faster.']

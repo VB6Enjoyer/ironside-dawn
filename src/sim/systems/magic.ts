@@ -221,7 +221,7 @@ export function chooseSpell(
     let target: Combatant | null = null;
     switch (spell.effect.kind) {
       case 'heal':
-        benefit = 2 * (1 - hpFraction) ** 2;
+        benefit = 3 * (1 - hpFraction) ** 1.25;
         break;
       case 'damage':
         benefit = Math.min(1, averageRoll(spell.effect.dice) / Math.max(1, weakest.hp));

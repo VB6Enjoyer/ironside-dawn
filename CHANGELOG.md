@@ -17,6 +17,7 @@ The public notes players see under "What's new" are kept in `src/ui/releases.ts`
 
 - A spell that backlashes is its own event (`magic.backlash` in `src/sim/model/events.ts`), shown with the Magic tint, so it can be filtered and counted apart from ordinary casts.
 - Learning a spell is now _Notable_, so it reaches the chronicle.
+- Mend Flesh is worth casting (`src/content/spells.ts`, `src/sim/systems/magic.ts`): it costs mostly stamina and a little health, where it cost the caster's own health before, and a caster near half health or lower weighs it higher. Casters now mend themselves when a fight turns against them, about two to three times as often as before, still rarely next to their attack spells.
 - Worlds turn out differently from their seed than in 0.3.1 (`src/host/version.ts`), so links from 0.3.1 open with a note that history differs.
 
 ## [0.3.1] - 2026-11-22

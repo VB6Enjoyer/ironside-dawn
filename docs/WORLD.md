@@ -165,7 +165,7 @@ where the gamble gets interesting.
 | Spell       | Effect                              | Cost                      |
 | ----------- | ----------------------------------- | ------------------------- |
 | Ember Bolt  | Fire damage to one foe              | Stamina + Dizziness       |
-| Mend Flesh  | Heals a target                      | The caster's own Health   |
+| Mend Flesh  | Heals a target                      | Stamina, a little Health  |
 | Quickening  | Big speed/agility boost for a fight | Dexterity drain afterward |
 | Ward of Ash | Absorbs incoming damage             | Stamina, heavy            |
 
