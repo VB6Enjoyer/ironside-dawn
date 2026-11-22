@@ -95,6 +95,9 @@ interface WorldReport {
     readonly townsfolk: number;
     readonly draught: number;
     readonly herbs: number;
+    /** Tonics of vigor and calming draughts (0.4.0). */
+    readonly vigor: number;
+    readonly calm: number;
   }[];
 }
 
@@ -209,7 +212,7 @@ function runWorld(seed: string, adventurers: number, years: number): WorldReport
       if (l.kind !== 'town') continue;
       for (const n of Object.values(l.population)) townsfolk += n ?? 0;
     }
-    const prices = (good: 'potions' | 'herbs') => {
+    const prices = (good: 'potions' | 'herbs' | 'vigor' | 'calm') => {
       const all = [...world.markets.values()].map((m) => goingPrice(m, good));
       return all.reduce((s, p) => s + p, 0) / Math.max(1, all.length);
     };
@@ -220,6 +223,8 @@ function runWorld(seed: string, adventurers: number, years: number): WorldReport
       townsfolk: Math.round(townsfolk),
       draught: prices('potions'),
       herbs: prices('herbs'),
+      vigor: prices('vigor'),
+      calm: prices('calm'),
     });
   };
 
@@ -409,7 +414,9 @@ function report(reports: readonly WorldReport[], adventurers: number, years: num
   console.log(
     `  ${'year'.padEnd(6)}${PEOPLES.map((p) => p.padStart(8)).join('')}  |${columns
       .map((c) => c.slice(0, 9).padStart(11))
-      .join('')}  |${'town counts'.padStart(12)}${'draught'.padStart(9)}${'herbs'.padStart(7)}`,
+      .join(
+        '',
+      )}  |${'town counts'.padStart(12)}${'draught'.padStart(9)}${'herbs'.padStart(7)}${'vigor'.padStart(7)}${'calm'.padStart(6)}`,
   );
   const eraCount = Math.min(...reports.map((r) => r.eras.length));
   for (let i = 0; i < eraCount; i++) {
@@ -431,6 +438,12 @@ function report(reports: readonly WorldReport[], adventurers: number, years: num
         avg(eras.map((e) => e.herbs))
           .toFixed(1)
           .padStart(7),
+        avg(eras.map((e) => e.vigor))
+          .toFixed(1)
+          .padStart(7),
+        avg(eras.map((e) => e.calm))
+          .toFixed(1)
+          .padStart(6),
       ].join(''),
     );
   }
