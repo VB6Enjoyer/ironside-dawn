@@ -1300,7 +1300,12 @@ playable on its own and balanced before the next begins:
 - **0.4.2, the dead and the taken:** souls and the restless dead, and
   kidnapping: what death and crime leave behind.
 
-Each step is its own pull request and keeps saves loading. Each release adds
+**How it is built.** `main` deploys live, so each release is built on one
+branch and reaches `main` in one release pull request, as 0.3.0 was. Each step
+is one or more commits, keeps saves loading, and is reported when done; the
+next step starts once that one has been looked over. The save version rises
+once per release, and its migration grows with each step that adds state.
+Each release adds
 to one world audit (`tools/world-audit.ts`), keeps a save from the release
 before as a fixture, and holds large worlds to no more than about 10% slower
 than 0.3.2.
@@ -1315,66 +1320,84 @@ begins.
 **Goal:** Characters carry lasting effects, good and bad, keep a faith, fall
 ill and are cursed, and all of it is seen.
 
+Ten steps, each small enough to be looked over before the next begins.
+
 ### Steps
 
-1. **Measure first.** A world audit (`tools/world-audit.ts`) for what 0.4
-   touches: deaths by cause and age, time spent hurt or weary, survival in
-   delves and fights, population by people, prices of healing goods. It
-   records the 0.3.2 baseline, and grows with each step (effects carried,
-   illness, curses).
+1. **Measure first.** A world audit (`tools/world-audit.ts`, `npm run
+audit:world`) for what 0.4 touches: deaths by cause and age, time spent
+   hurt or weary, survival in delves and fights, population by people, prices
+   of healing goods. It records the 0.3.2 baseline, and grows with each step
+   (effects carried, faith, illness, plague, curses).
 
-2. **Lasting effects on anyone.** One system of timed effects any character
+2. **Lasting effects: the system.** One system of timed effects any character
    can carry, good or bad: on health, stamina, a stat, attack and defense,
    fatigue, nerve. Each has a strength, an end, and a moment from which it
    fades, losing strength bit by bit (as 0.5.0's buffs will). One of each type
    at a time; benefits don't stack, the stronger wins; costs do stack, up to a
-   cap. Today's dizziness and stat drains (spell costs) fold into it. A cost
-   can be bound to an effect for as long as it lasts. Nerve becomes a modifier
-   on when someone flees a fight and how much risk they take in choosing to
-   delve, fight or cast. Good effects come from what is rare, costly or lucky:
-   a good inn (dearer than the common one), a feast, a night in a home of
-   one's own (for now, a married or retired character's home in their home
-   town), a particularly good meal, a stroke of luck, and alchemists'
-   draughts beyond healing (a tonic of vigor, a calming draught); bad ones
-   from a near death (weakened for days) and long marches (exhausted). The
-   character card shows them in words, with the time left. Saves move to a new
-   version.
+   cap. A cost can be bound to an effect for as long as it lasts. Today's
+   dizziness and stat drains (spell costs) fold into it, keeping casting as
+   costly as now. Nerve becomes a modifier on when someone flees a fight and
+   how much risk they take in choosing to delve, fight or cast. Effects are
+   checked lazily, never ticked one by one. Saves move to a new version.
 
-3. **Faith.** Everyone has a faith level, from skeptic to devout, set at the
+3. **Lasting effects: where they come from.** Good effects come from what is
+   rare, costly or lucky: a good inn (dearer than the common one), a feast, a
+   night in a home of one's own (for now, a married or retired character's
+   home in their home town), a particularly good meal, a stroke of luck, and
+   alchemists' draughts beyond healing (a tonic of vigor, a calming draught,
+   new goods). Bad ones come from a near death (weakened for days) and long
+   marches (exhausted). The character card shows what someone carries, in
+   words with the time left.
+
+4. **Faith.** Everyone has a faith level, from skeptic to devout, set at the
    start by culture, people and traits, and in some towns more than others;
    children take their parents' faith, give or take a little. The grave,
    infernal and dread have none. It grows with prayer at shrines (an existing
    pastime) to the gods of their culture (already in the content), surviving
    an illness, memorable deeds (each worth less than the last; barely
    surviving one can raise it a great deal) and good fortune, by how much
-   depending on the person; it falls with crimes (graver ones more), despair
-   and years away from shrines; a priest can restore it, though not for an
-   outlaw still on the run. Now it steadies nerve in danger and
-   makes a shrine's blessing (a small lasting effect, from step 2) stronger.
+   depending on the person. It falls with crimes (graver ones more), the death
+   of a loved one, a companion or a friend, long runs of bad luck, long
+   stretches in poverty, and years away from shrines. Now it steadies nerve in
+   danger and makes a shrine's blessing (a small lasting effect) stronger.
    Priests are a town-level count (as the trades are) who, for a fee, tend the
-   sick, lift curses and restore faith. Faith is never shown as a number: life
-   stories name it ("devout", "believer", "skeptic", "corrupted"), and deeds
-   hint at it. It is the foundation for divine magic (0.5.0) and a later
-   "Religion and Cults" update.
+   sick, lift curses and restore faith (never for an outlaw still on the run).
+   Faith is never shown as a number: life stories name it (devout, believer,
+   doubter, skeptic, faithless, corrupted), and deeds hint at it. It is the
+   foundation for divine magic (0.5.0) and a later "Religion and Cults"
+   update.
 
-4. **Illness.** A few sicknesses, each a condition with a course: a fever, an
-   infected wound (from fighting hurt and untreated), a winter cough, and
-   plague. Sickness is commoner in winter. Each town keeps a sickness level
-   (raised by the sick, the season and plague, lowered by good remedies and
-   wealth); a character rolls to catch it for each day in such a town or in a
-   party with someone sick. Some are born hardier than others (a hidden
-   hardiness, passed on a little in families), and toughness, age and the
-   effects someone carries count too; the old and children resist least. Illness weakens (a lasting effect), lays people up,
-   and can kill: about 5–10% of all deaths in ordinary times, and about 1 in
-   5 to 1 in 7 retired adventurers. It is cured by rest, by remedies (a new good, made from
-   herbs by its own recipe; some healers make better ones and sell them
-   dearer), by priests, and in 0.5.0 by magic. Plague comes 2 or 3 times a
-   century, of different size and severity: it starts in one town, likelier a
-   poor and crowded one, travels the trade roads to nearby towns over weeks, thins the townsfolk counts as well
-   as killing named characters, and leaves a town or a region hurt for some
-   years. Wealthy towns with good remedies suffer far less than poor ones.
+5. **Illness: the sick.** A few sicknesses, each a condition with a course: a
+   fever, an infected wound (from fighting hurt and untreated), a winter
+   cough. Each town keeps a sickness level (raised by the sick and by winter);
+   a character rolls to catch it for each day in such a town or in a party
+   with someone sick. Some are born hardier than others (a hidden hardiness,
+   passed on a little in families), and toughness, age and the effects
+   someone carries count too; the old and children resist least. Sickness
+   lowers attributes while it lasts (a lasting effect); the sick are less
+   willing to adventure and rest until cured if they can afford to; sick
+   outlaws are easier to capture, and one who fears dying of it is likelier to
+   pay restitution. Illness can kill: about 5–10% of all deaths in ordinary
+   times, and about 1 in 5 to 1 in 7 retired adventurers. Rest and priests
+   cure it.
 
-5. **Curses.** A curse is a condition with an effect (ill luck in fights, a
+6. **Illness: remedies and healers.** Remedies, a new good made from herbs by
+   its own recipe (so healing draughts keep their herbs); some healers make
+   better remedies and sell them dearer. Remedies cure faster and lower a
+   town's sickness level; wealthy towns with good remedies suffer far less
+   than poor ones. In 0.5.0, magic cures too.
+
+7. **Illness: plague.** Plague comes 2 or 3 times a century, of different size
+   and severity. It starts in one town, likelier a poor and crowded one in
+   winter, travels the trade roads with merchants and travelers to nearby
+   towns over weeks, thins the townsfolk counts as well as killing named
+   characters, and leaves a town or a region hurt for some years (population,
+   then trade). It never reaches the whole world, and rich towns weather it
+   far better. The audit guards against death spirals (sickness, fewer
+   workers, dearer remedies, more sickness).
+
+8. **Curses.** A curse is a condition with an effect (ill luck in fights, a
    wasting, a weakness, or the mark, which makes people wary: harder to win
    friends, a party or a spouse; a town's standing stays about known crimes)
    and a way to be lifted. Laid by cursed items found in dungeons, by haunted
@@ -1388,19 +1411,19 @@ ill and are cursed, and all of it is seen.
    the item. (Lycanthropy, a curse passed by a bite, comes with shapeshifting
    in 0.4.1.)
 
-   One "hardship" dial at world creation (gentle, normal, harsh) sets how
-   much illness and curses there are; old saves and links read as normal.
+9. **Hardship, seen and told.** One "hardship" dial at world creation
+   (gentle, normal, harsh) sets how much illness and curses there are; old
+   saves and links read as normal. The live feed (outbreaks, deaths by
+   illness, curses laid and lifted), the chronicle, life stories, the
+   character card (effects, illness, curses; faith named in words, never as a
+   number) and the Halls take in all of the above.
 
-6. **Seen and told.** The live feed (outbreaks, deaths by illness, curses laid
-   and lifted), the chronicle, life stories, the character card (effects,
-   illness, curses; faith named in words, never as a number) and the Halls.
-
-7. **Balance and release.** Targets: illness about 5–10% of deaths in
-   ordinary times, retired adventurers about 1 in 5 to 1 in 7 dying of it in ordinary
-   times, 2 or 3 plagues a century, populations steady with no death spirals;
-   curses uncommon; effects felt but not everywhere; large worlds no more than
-   about 10% slower. Then release 0.4.0: players' notes, changelog, a 0.3.2
-   save as a fixture, the architecture notes.
+10. **Balance and release.** Targets: illness about 5–10% of deaths in
+    ordinary times, retired adventurers about 1 in 5 to 1 in 7 dying of it,
+    2 or 3 plagues a century, populations steady with no death spirals; curses
+    uncommon; effects felt but not everywhere; large worlds no more than about
+    10% slower. Then release 0.4.0: players' notes, changelog, a 0.3.2 save as
+    a fixture, the architecture notes.
 
 ## 0.4.1 — Body and Soul: beasts and storms
 

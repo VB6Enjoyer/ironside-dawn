@@ -23,7 +23,7 @@ that need no magic; 0.5.0 then puts magic on top.
 
 ## 1. What every system shares
 
-- **One timed-effect system** (0.4.0, step 2) carries most of it: illness,
+- **One timed-effect system** (0.4.0, steps 2–3) carries most of it: illness,
   curses, wounds, rest, blessings and tonics are all effects with a strength,
   an end, and a moment from which they fade.
 - **Aggregate where people aren't simulated.** Townsfolk live in a daily
@@ -39,7 +39,7 @@ that need no magic; 0.5.0 then puts magic on top.
 
 ## 2. The systems
 
-### Lasting effects (0.4.0, step 2)
+### Lasting effects (0.4.0, steps 2–3)
 
 Timed effects any character can carry, good or bad, on health, stamina, a
 stat, attack and defense, fatigue or nerve. Each has a strength, an end, and a
@@ -52,7 +52,7 @@ spirits), lingering wounds after a near death (weakened for days), exhaustion
 after long marches, alchemists' tonics (vigor, calm), shrine blessings (with
 faith), illness and curses.
 
-### Faith (0.4.0, step 3)
+### Faith (0.4.0, step 4)
 
 A hidden attribute, 0 to 1. Grows with prayer at shrines to the gods of one's
 culture, devout traits, age, and hardship survived; falls with crimes (graver
@@ -60,7 +60,7 @@ ones more) and despair. Steadies nerve in danger, strengthens shrine
 blessings, and is what priests' help works through. The base for divine magic
 (0.5.0) and a later "Religion and Cults" update.
 
-### Illness (0.4.0, step 4)
+### Illness (0.4.0, steps 5–7)
 
 A few sicknesses with a course: a fever, an infected wound, a winter cough,
 and a rare plague that sweeps a town. Caught from untreated wounds, foul
@@ -68,7 +68,7 @@ places, the cold season and crowds. They weaken, lay people up and rarely
 kill. Cured by rest, herbalists (a new demand for herbs) and priests, and by
 magic in 0.5.0.
 
-### Curses (0.4.0, step 5)
+### Curses (0.4.0, step 8)
 
 A condition with an effect (ill luck in fights, wasting, weakness, a mark that
 makes people wary) and a way to be lifted. Laid by cursed dungeon loot,
@@ -134,7 +134,11 @@ here. Nothing is left open for 0.4.0.
 **The update as a whole**
 
 - **Name and order:** "Body and Soul" stays the working name; the steps run as
-  in the roadmap (effects, faith, illness, curses).
+  in the roadmap, ten small ones (the audit; effects in two; faith; illness in
+  three: the sick, remedies, plague; curses; hardship with the telling; balance
+  and release), each looked over before the next begins.
+- **One branch, one release pull request:** `main` deploys live, so 0.4.0
+  reaches it whole, as 0.3.0 did.
 - **One "hardship" dial** at world creation (gentle, normal, harsh) covers
   illness and curses. Old saves and links read as normal. Finer options come
   in some later update, not now.
@@ -170,9 +174,10 @@ here. Nothing is left open for 0.4.0.
   children (their parents' level, give or take a little).
 - **The grave, infernal and dread have no faith.** A dark or demonic faith may
   come in a later update.
-- **It falls with crime,** the graver the crime the more, and with despair
-  (the death of a spouse or child, a long run of bad luck) and long years away
-  from shrines.
+- **It falls with crime,** the graver the crime the more; with the death of a
+  loved one (a spouse, a child), of a party companion or a friend; with a long
+  run of bad luck; with long stretches lived in poverty; and with long years
+  away from shrines.
 - **It rises with prayer at shrines, surviving an illness, memorable deeds
   and good fortune,** by how much depending on the person. Only memorable
   deeds count (a strong foe, a dread master, a windfall), each worth less than
@@ -181,9 +186,12 @@ here. Nothing is left open for 0.4.0.
 - **A priest can restore it,** but not for an outlaw still on the run: only
   for the reformed, those who paid restitution, or those who served their
   sentence.
-- **Shown, not counted:** life stories name a person's faith in words
-  ("devout", "believer", "skeptic", "corrupted" and others), and deeds and
-  phrases hint at it in the feed; no number is shown.
+- **Shown, not counted:** life stories name a person's faith in words, and
+  deeds and phrases hint at it in the feed; no number is shown. The words,
+  from most to least: _devout_ (very high), _believer_ (solid), _doubter_
+  (wavering), _skeptic_ (little or none, by nature), _faithless_ (lost to
+  despair), _corrupted_ (lost to grave crimes, such as murder). The grave,
+  infernal and dread get no word for now.
 - **What it does before 0.5.0:** a small steadying of nerve in danger, and
   stronger shrine blessings.
 - **Priests** are a town-level count by town size, more where there is a
@@ -216,8 +224,12 @@ here. Nothing is left open for 0.4.0.
   drain herbs from healing draughts. Some healers make better remedies and sell
   them dearer. **Towns with better remedies and more wealth suffer far less**
   from sickness and plague than poor ones.
-- **The sick** rest in town and avoid delves; one taken sick on the road heads
-  for the nearest town.
+- **The sick** are weakened: sickness lowers their attributes for as long as
+  it lasts (a lasting effect). A sick adventurer is less willing to adventure
+  and more willing to rest until cured, if they can afford to; one taken sick
+  on the road heads for the nearest town.
+- **Sick outlaws** are easier to capture, being weaker, and one who fears
+  dying of it is likelier to pay restitution and come in.
 - **A guard against death spirals** (sickness, fewer workers, dearer remedies,
   more sickness) is part of the audit.
 
