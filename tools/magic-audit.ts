@@ -20,6 +20,7 @@ import {
   createSimulation,
   DAY,
   EVENT_IMPORTANCE,
+  YEAR,
   Importance,
   type CharacterId,
   type SimEvent,
@@ -63,7 +64,18 @@ interface WorldReport {
   readonly seenAtSpeed: number;
   /** Arcana of living casters at the end. */
   readonly arcana: readonly number[];
+  /**
+   * The gift by generation, by people: those grown when the world began (0),
+   * those who came into it grown later (-1), and those born in it, by the
+   * span of `ERA_YEARS` they were born in (1, 2, ...).
+   */
+  readonly eras: Record<number, Record<string, { born: number; gifted: number }>>;
+  /** The living at the end, by people: how many, and how many gifted. */
+  readonly livingAtEnd: Record<string, { born: number; gifted: number }>;
 }
+
+/** Years in each generation the gift is counted by. */
+const ERA_YEARS = 25;
 
 function runWorld(
   seed: string,
@@ -123,6 +135,7 @@ function runWorld(
     }
   };
   sim = createSimulation({ seed, characterCount: adventurers, watch: 'none', onEvent });
+  const start = sim.world.time;
   let looks = 0;
   let casterSum = 0;
   let adventurerSum = 0;
@@ -139,10 +152,24 @@ function runWorld(
   let studied = 0;
   const arcana: number[] = [];
   const known: Record<string, number> = {};
+  const eras: WorldReport['eras'] = {};
+  const livingAtEnd: WorldReport['livingAtEnd'] = {};
   for (const c of sim.world.characters.values()) {
     if (c.calling === 'dread') continue;
     for (const spell of c.spells) known[spell] = (known[spell] ?? 0) + 1;
     if (!(PEOPLES as readonly string[]).includes(c.species)) continue;
+    const era =
+      c.parents.length === 0
+        ? c.born < start
+          ? 0
+          : -1
+        : 1 + Math.floor((c.born - start) / (ERA_YEARS * YEAR));
+    for (const into of [((eras[era] ??= {})[c.species] ??= { born: 0, gifted: 0 })].concat(
+      c.death ? [] : [(livingAtEnd[c.species] ??= { born: 0, gifted: 0 })],
+    )) {
+      into.born++;
+      if (c.gifted) into.gifted++;
+    }
     const p = (peoples[c.species] ??= { lived: 0, gifted: 0, casters: 0 });
     p.lived++;
     if (c.gifted) p.gifted++;
@@ -171,6 +198,8 @@ function runWorld(
     magicEvents,
     seenAtSpeed,
     arcana: arcana.sort((a, b) => a - b),
+    eras,
+    livingAtEnd,
   };
 }
 
@@ -294,6 +323,29 @@ function report(
       } / ${o.failure ?? 0} / ${o.backlash ?? 0}   known by ${sum(reports.map((r) => r.known[spell] ?? 0))}`,
     );
   }
+  console.log('\nThe gift by generation (all worlds): gifted % of those born, and how many');
+  const share = (counts: { born: number; gifted: number }[]) => {
+    const born = sum(counts.map((x) => x.born));
+    const gifted = sum(counts.map((x) => x.gifted));
+    return (born ? `${((100 * gifted) / born).toFixed(1)}% of ${born}` : '—').padStart(14);
+  };
+  console.log(`  ${''.padEnd(16)}${PEOPLES.map((p) => p.padStart(14)).join('')}`);
+  const eraIds = [...new Set(reports.flatMap((r) => Object.keys(r.eras).map(Number)))].sort(
+    (a, b) => a - b,
+  );
+  for (const era of eraIds) {
+    const label =
+      era === 0
+        ? 'grown at start'
+        : era === -1
+          ? 'came in later'
+          : `born yr ${(era - 1) * ERA_YEARS}-${era * ERA_YEARS}`;
+    const cells = PEOPLES.map((p) => share(reports.flatMap((r) => r.eras[era]?.[p] ?? [])));
+    console.log(`  ${label.padEnd(16)}${cells.join('')}`);
+  }
+  const living = PEOPLES.map((p) => share(reports.flatMap((r) => r.livingAtEnd[p] ?? [])));
+  console.log(`  ${'living at end'.padEnd(16)}${living.join('')}`);
+
   const arcana = reports.flatMap((r) => r.arcana).sort((a, b) => a - b);
   console.log(
     `\nLiving casters' arcana at the end: ${arcana.length ? `median ${arcana[arcana.length >> 1]}, highest ${arcana.at(-1)}` : 'none'}`,

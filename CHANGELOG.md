@@ -13,7 +13,7 @@ The public notes players see under "What's new" are kept in `src/ui/releases.ts`
 ### Added
 
 - Spell kills get their own line (`src/sim/systems/combat.ts`, `src/text/describe.ts`): the log says when a spell deals the killing blow, and felling a strong creature (a troll, a jotunn, an oni) with one is now _Notable_, so it shows at Day speed and up and reaches the chronicle. Someone killed by a spell is "struck down … with an Ember Bolt" in the log, and their life story names the spell (`src/text/biography.ts`).
-- `npm run audit:magic`, a headless magic audit over several worlds (`tools/magic-audit.ts`): the gifted and casters by people, casters at once, fights with a cast, casts by spell and outcome and who knows each spell, the dread's casts, kills by spell, deaths by backlash, and how much magic shows at Day speed and up. `--blessings human=7.5,elf=20` tries other chances of the gift.
+- `npm run audit:magic`, a headless magic audit over several worlds (`tools/magic-audit.ts`): the gifted and casters by people, casters at once, fights with a cast, casts by spell and outcome and who knows each spell, the dread's casts, kills by spell, deaths by backlash, how much magic shows at Day speed and up, and the gift by generation (the share of the gifted among those born in each 25 years, by people). `--blessings human=7.5,elf=20` tries other chances of the gift.
 
 ### Changed
 
