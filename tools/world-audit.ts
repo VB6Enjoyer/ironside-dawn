@@ -73,14 +73,15 @@ interface WorldReport {
   readonly byStage: Partial<Record<Stage, Tally<Cause>>>;
   /** Age at death as a share of the people's lifespan (the dread aside). */
   readonly lifeShare: readonly number[];
-  /** Monthly looks at living adventurers: how many, and how many hurt, weary, under a spell's cost, laid up. */
+  /** Monthly looks at living adventurers: how many, and how many hurt, weary, laid up. */
   readonly looks: {
     adventurers: number;
     hurt: number;
     weary: number;
-    spent: number;
     laidUp: number;
   };
+  /** At the same looks, how many carried each kind of lasting effect (0.4.0). */
+  readonly carrying: Tally<string>;
   /** Fights adventurers were in, how they ended, and how many died in them. */
   readonly fights: { started: number; won: number; escaped: number; deaths: number };
   /** Delves begun, fled, and deaths in dungeons. */
@@ -189,7 +190,8 @@ function runWorld(seed: string, adventurers: number, years: number): WorldReport
   const began = performance.now();
   sim = createSimulation({ seed, characterCount: adventurers, watch: 'none', onEvent });
   const start = sim.world.time;
-  const looks = { adventurers: 0, hurt: 0, weary: 0, spent: 0, laidUp: 0 };
+  const looks = { adventurers: 0, hurt: 0, weary: 0, laidUp: 0 };
+  const carrying: Tally<string> = {};
   const eras: WorldReport['eras'][number][] = [];
 
   const lookAtEra = () => {
@@ -230,13 +232,28 @@ function runWorld(seed: string, adventurers: number, years: number): WorldReport
       looks.adventurers++;
       if (c.hp < c.maxHp / 2) looks.hurt++;
       if (c.stamina < c.maxStamina * 0.3) looks.weary++;
-      if (c.statuses.some((s) => s.until > now)) looks.spent++;
+      for (const kind of new Set(c.effects.filter((e) => e.until > now).map((e) => e.kind))) {
+        add(carrying, kind);
+      }
       if (c.activity.kind === 'convalescing') looks.laidUp++;
     }
     if (month % (LOOK_YEARS * 12) === 0) lookAtEra();
   }
   const ms = Math.round(performance.now() - began);
-  return { seed, years, ms, deaths, departed, byStage, lifeShare, looks, fights, delves, eras };
+  return {
+    seed,
+    years,
+    ms,
+    deaths,
+    departed,
+    byStage,
+    lifeShare,
+    looks,
+    carrying,
+    fights,
+    delves,
+    eras,
+  };
 }
 
 /** Runs one world in a child process of this same script, for its report. */
@@ -357,9 +374,14 @@ function report(reports: readonly WorldReport[], adventurers: number, years: num
   console.log(
     `  hurt (under half health) ${pct(sum(looks.map((l) => l.hurt)) / seen)}, weary (under 30% stamina) ${pct(
       sum(looks.map((l) => l.weary)) / seen,
-    )}, under a spell's cost ${pct(sum(looks.map((l) => l.spent)) / seen)}, laid up ${pct(
-      sum(looks.map((l) => l.laidUp)) / seen,
-    )}`,
+    )}, laid up ${pct(sum(looks.map((l) => l.laidUp)) / seen)}`,
+  );
+  const carrying = merge(reports.map((r) => r.carrying));
+  const kinds = Object.entries(carrying).sort((a, b) => (b[1] as number) - (a[1] as number));
+  console.log(
+    `  carrying a lasting effect: ${
+      kinds.length ? kinds.map(([k, n]) => `${k} ${pct((n as number) / seen)}`).join(', ') : 'none'
+    }`,
   );
 
   const f = reports.map((r) => r.fights);
