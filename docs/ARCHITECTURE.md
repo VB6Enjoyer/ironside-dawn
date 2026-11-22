@@ -714,6 +714,64 @@ Built for 0.3.0 (`src/sim/systems/crime.ts`, `notoriety.ts`, `outlaws.ts`).
   hands; one nobody knows of may stop. Restitution needs a year on the road and
   180 days quiet, at 1% a day times honor.
 
+### 4.15 Body and soul: effects, faith, illness, curses (0.4.0)
+
+_As built (0.4.0, ROADMAP.md "0.4.0 — Body and Soul: the body"; working notes
+and the 0.3.2 baseline in `BODY-AND-SOUL-0.4.md`):_
+
+- **Lasting effects** (`systems/effects.ts`, `effects-core.ts`, kinds in
+  `content/effects.ts`). `Character.effects` holds timed `Effect`s, each with
+  `mods` on aspects (max health and stamina as shares, attack, defense and
+  attributes as points, recovery as a share, nerve), a `fadeFrom` from which
+  its strength falls evenly to nothing at `until`, and, for a curse that comes
+  with a worn thing, the `itemId`. A kind is a cost (spell and trap costs:
+  dizziness, drains; they stack to a cap per aspect) or not (only one carried;
+  a new one replaces it only if stronger now). Nothing ticks: `aspectOf`
+  reads them where they matter (stats, the fighter, recovery, maxima), and
+  `expireEffects` drops them at each decision. `courageOf` is bravery plus
+  nerve plus a little faith, used wherever someone flees, presses on, delves,
+  hunts or weighs a spell's risk. `grant` gives the world's effects (fine
+  beds, a night at home, feasts and meals, luck, tonics, shrine blessings, a
+  near death, a long march) at their kind's strength and length, told as a
+  trivial `character.effect`.
+- **Faith** (`systems/faith-core.ts`, `faith.ts`). `Character.faith` 0–1,
+  `faithPeak`, `sins` (what a priest can give back) and `lastPrayer`. It starts
+  by culture, the town's piety (hashed from the world seed: never stored),
+  traits and chance, or from the parents; the grave, infernal and dread have
+  none. It moves with prayer, memorable deeds (diminishing), narrow escapes,
+  crime, grief, poverty and absence, and drifts daily toward each person's
+  nature (`natureOf`, also hashed). Priests are a count by town size and
+  piety, never stored. Life stories put it in words (`faithWord`).
+- **Illness** (`systems/illness.ts`, sicknesses in `content/illness.ts`).
+  `Character.illness` holds the sickness and its course; a `sick` effect
+  carries what it does. `lifecycleDay` works out each town's sickness level
+  once a day (season, the sick there, the town's care, any plague) and runs
+  `illnessDay` for everyone: catching (by `frailty`: hardiness, toughness,
+  age, effects) or the course (death by `mortality`, recovery). Deaths come
+  only to those at rest somewhere, as with old age. The sick buy remedies
+  (a good) where they can; a town's `careIn` (remedies in stock, its healers'
+  skill, hashed, and its wealth) lowers its sickness and tends its townsfolk.
+- **Plague** (`systems/plague.ts`). `World.plagues` keeps the last thirty,
+  raging and past. `plagueDay` (in `lifecycleDay`) may start one, takes its
+  daily toll of the town's counts, spreads it by road within four days, and
+  ends it; a town is spared fifteen years after.
+- **Curses** (`systems/curses.ts`). Curses are effects; `cursesDay` puts on
+  the curse of a worn cursed thing (`Item.curse`) and takes it off with it,
+  throws such a thing away once its curse is noticed, and now and then takes
+  the cursed to the wise folk. Priests lift them at prayer. The mark cools
+  every meeting and most courtships.
+- **Hardship** (`systems/hardship.ts`): `WorldSettings.hardship`, optional so
+  older worlds read as normal, scales catching sickness, festering, plague
+  outbreaks and curses.
+- **Saves**: version 8 (`toLastingEffects`): statuses become effects; every
+  character gains faith from their nature, a hardiness, no illness and no
+  draughts; every market believes in the new goods; no plagues yet. A 0.3.2
+  save is kept as a fixture.
+- **Caches and identity.** Gear totals are cached per `Equipment` object, so
+  anything that changes what someone wears must replace the object (as
+  `takeGear` and lifting a cursed thing do), or a world run straight on and
+  one saved and loaded would part ways.
+
 ---
 
 ## 5. UI ↔ simulation boundary

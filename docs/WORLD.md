@@ -111,6 +111,29 @@ Species shift the odds; individuals decide.
 
 ---
 
+## 3b. Body and soul (0.4.0)
+
+What happens to a person, beyond wounds:
+
+- **Lasting effects.** A good night in the best room, a night at home, a feast,
+  a fine meal, a lucky find, an alchemist's tonic, a shrine's blessing: good
+  effects that come from what is rare, costly or lucky, and fade. A near
+  death leaves someone weakened for days, a long march worn out.
+- **Faith.** Everyone but the dead and the damned has some: skeptic, doubter,
+  believer, devout; or faithless and corrupted, for those who lost it. It runs
+  in families and towns, grows with prayer and narrow escapes, wears down
+  with crime and grief, steadies the nerve, and lets priests help.
+- **Sickness.** Fever, winter cough, a festering wound, and now and then the
+  plague. Winter and crowded, poor towns breed it; remedies, good healers and
+  wealth keep it down. Most get over it; the very old often don't.
+- **Curses.** Ill luck, a wasting, a weakness, or the mark that makes people
+  shy away: from cursed things in the deeps, haunted places, the undead, the
+  dread, or a murdered soul's last breath. Priests and wise folk can lift
+  them, time eases the lesser ones.
+
+Allies, beast shapes and local weather come in 0.4.1; souls and kidnapping
+in 0.4.2; magic acts through all of it in 0.5.0.
+
 ## 4. Magic
 
 **Magic is a high-risk, high-reward tool.** It can turn a fight, and it can
