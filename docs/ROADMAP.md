@@ -1379,23 +1379,24 @@ Ten steps, each small enough to be looked over before the next begins.
    Tonics and calming draughts settle near the price floor (6 and 4.5 gold),
    since alchemists make more than the few who buy them use.
 
-4. **Faith.** Everyone has a faith level, from skeptic to devout, set at the
-   start by culture, people and traits, and in some towns more than others;
-   children take their parents' faith, give or take a little. The grave,
-   infernal and dread have none. It grows with prayer at shrines (an existing
-   pastime) to the gods of their culture (already in the content), surviving
-   an illness, memorable deeds (each worth less than the last; barely
-   surviving one can raise it a great deal) and good fortune, by how much
-   depending on the person. It falls with crimes (graver ones more), the death
-   of a loved one, a companion or a friend, long runs of bad luck, long
-   stretches in poverty, and years away from shrines. Now it steadies nerve in
-   danger and makes a shrine's blessing (a small lasting effect) stronger.
-   Priests are a town-level count (as the trades are) who, for a fee, tend the
-   sick, lift curses and restore faith (never for an outlaw still on the run).
-   Faith is never shown as a number: life stories name it (devout, believer,
-   doubter, skeptic, faithless, corrupted), and deeds hint at it. It is the
-   foundation for divine magic (0.5.0) and a later "Religion and Cults"
-   update.
+4. **Faith.** _Done_ (`src/sim/systems/faith-core.ts`, `faith.ts`). Everyone
+   has a faith level, 0 to 1, set at the start by culture, people, traits and
+   their town's piety (some towns more religious than others); children take
+   their parents', give or take a little. The grave, infernal and dread have
+   none. It rises with prayer at shrines (where the faithful go more often,
+   skeptics seldom), memorable deeds and great finds (each worth less than
+   the last), and barely surviving (a great deal the first time). It falls
+   with crimes (murder most; what a priest can give back is kept apart, only
+   half for a murder), grief (kin most, friends and companions by how dear),
+   fleeing a fight, poverty, and years away from shrines; over the years it
+   drifts back toward what each person's nature leans to. It steadies nerve
+   a little, and prayer leaves a blessing as strong as their faith (+nerve,
+   +recovery), as often as their faith. Priests, a count by town size and
+   piety, give back what crimes took for a fee, never to an outlaw still on
+   the run. Life stories name it: devout, believer, doubter, skeptic,
+   faithless (lost to despair), corrupted (lost to murder). Measured: the
+   living end a century devout 18%, believers 43%, doubters 30%, faithless
+   8%, skeptics 1%; blessed 10% of the time.
 
 5. **Illness: the sick.** A few sicknesses, each a condition with a course: a
    fever, an infected wound (from fighting hurt and untreated), a winter
