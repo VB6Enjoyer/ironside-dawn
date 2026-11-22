@@ -1452,12 +1452,15 @@ Ten steps, each small enough to be looked over before the next begins.
    priests; ill luck carried 0.1% of the time. (Lycanthropy comes with
    shapeshifting in 0.4.1.)
 
-9. **Hardship, seen and told.** One "hardship" dial at world creation
-   (gentle, normal, harsh) sets how much illness and curses there are; old
-   saves and links read as normal. The live feed (outbreaks, deaths by
-   illness, curses laid and lifted), the chronicle, life stories, the
-   character card (effects, illness, curses; faith named in words, never as a
-   number) and the Halls take in all of the above.
+9. **Hardship, seen and told.** _Done:_ a "hardship" setting at world
+   creation and in links (`?hardship=gentle|harsh`): gentle halves sickness,
+   plague and curses, harsh brings sickness and plague 1.6 times as often
+   (curses as at normal). Worlds and links from before read as normal. The
+   live feed tells of sickness and recovery (at close watch), curses laid and
+   lifted, deaths by sickness, and plague breaking out, spreading and ending
+   (in the chronicle); life stories name faith, sickness and curses carried
+   now, and deaths by sickness; the card shows sickness and curses with the
+   other lasting effects; the Halls gain the Plagues.
 
 10. **Balance and release.** Targets: illness about 5–10% of deaths in
     ordinary times, retired adventurers about 1 in 5 to 1 in 7 dying of it,
