@@ -331,3 +331,44 @@ in settling the first twenty.
 42. **Telling it.** Proposal: plainly, without dwelling: "X takes a traveler
     from the road and holds them for ransom", "Y's family pays 200 gold, and
     Y comes home".
+
+## 5. The 0.3.2 baseline
+
+Measured with `npm run audit:world` before any of 0.4 was built: four worlds
+of 20 adventurers for 100 years, and four of 100 for 50 years.
+
+|                                               | 4 × 20, 100 years | 4 × 100, 50 years |
+| --------------------------------------------- | ----------------- | ----------------- |
+| Deaths (and left for distant lands)           | 297 (179)         | 1,209 (312)       |
+| Of old age                                    | 52.5%             | 19.7%             |
+| Killed by creatures                           | 29.6%             | 26.9%             |
+| Killed in fights with people                  | 13.8%             | 35.2%             |
+| Murdered                                      | 2.0%              | 10.4%             |
+| Executed or died in prison                    | 1.6%              | 7.8%              |
+| Children who died                             | 0                 | 0                 |
+| The retired who died of old age               | 100%              | 98%               |
+| Adventurers hurt (under half health), monthly | 1.0%              | 7.6%              |
+| Adventurers laid up (convalescing), monthly   | 0.3%              | 0.1%              |
+| Fights won / escaped                          | 98.1% / 2.1%      | 96.4% / 5.4%      |
+| A death in a fight                            | 1 in 2,856        | 1 in 378          |
+| Town counts, start to end                     | 23,870 → 31,960   | 49,633 → 64,762   |
+| Healing draught / herbs, once settled         | ~5 / ~1.2 gold    | ~5 / ~1.0 gold    |
+| Time a world-year (4 worlds at once, 4 cores) | 1.6 s             | 7.2 s             |
+
+What it means for 0.4.0:
+
+- **Nobody dies young except by violence, and no child ever dies.** Illness
+  will be the first thing to kill children and the old outside a fight, so it
+  must stay gentle with them.
+- **The retired die of old age, almost all of them.** The target, 1 in 5 to 1
+  in 7 of them dying of illness, means about 15–20% of retired deaths.
+- **Illness at 5–10% of deaths** is about 15–30 deaths in the small worlds'
+  century, and 60–120 in the large worlds' half-century, before plague.
+- **Hurt is rare at any moment, and being laid up rarer:** adventurers heal
+  fast, so lasting effects (weakened after a near death) will be felt.
+- **The towns' counts grow about a third in a century,** with nothing to
+  check them: plague can, without being the only check.
+- **Large worlds are violent:** people kill more of each other than creatures
+  do, so crime, faith and the dying curse will matter more there.
+- **The speed budget** (no more than about 10% slower) is measured against
+  these times, on the same machine with the same runs.

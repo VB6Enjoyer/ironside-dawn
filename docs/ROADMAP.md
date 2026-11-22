@@ -1324,10 +1324,14 @@ Ten steps, each small enough to be looked over before the next begins.
 
 ### Steps
 
-1. **Measure first.** A world audit (`tools/world-audit.ts`, `npm run
-audit:world`) for what 0.4 touches: deaths by cause and age, time spent
-   hurt or weary, survival in delves and fights, population by people, prices
-   of healing goods. It records the 0.3.2 baseline, and grows with each step
+1. **Measure first.** _Done:_ `npm run audit:world` (`tools/world-audit.ts`)
+   runs several worlds side by side (default four 20-adventurer worlds for a
+   century; `--seeds`, `--adventurers`, `--years`, `--json`) and reports
+   deaths by cause, by calling (the retired apart) and by stage of life; how
+   often living adventurers are hurt, weary or laid up; how fights and delves
+   go; the named living by people and calling and the towns' counts every ten
+   years; healing draught and herb prices; and how long each world took. The
+   0.3.2 baseline is in `BODY-AND-SOUL-0.4.md` §5. It grows with each step
    (effects carried, faith, illness, plague, curses).
 
 2. **Lasting effects: the system.** One system of timed effects any character
