@@ -344,9 +344,12 @@ Dark casters are judged through the same standing towns already keep
 #### Blessings
 
 - **The blessing rate rises instead,** by people: humans 7.5%, elves 20%,
-  centaurs 5%, dwarves 3%. These replace the earlier "1 in 100", and are to be
-  tested with the magic audit before they are confirmed as final.
-- A child of a blessed character still has a 50% chance of the same blessing.
+  centaurs 4%, dwarves 3%. These replace the earlier "1 in 100". _Confirmed
+  after the 0.3.2 trials below,_ with centaurs lowered from the 5% first
+  proposed, since inheritance carried them above humans.
+- A child of a blessed character still has a 50% chance of the same blessing:
+  a family trait, passed down like any other. _Confirmed_ by the century
+  trial below.
 
 **Trial in 0.3.2** (`npm run audit:magic -- --blessings ...`, today's gift
 chances against the new ones, same seeds):

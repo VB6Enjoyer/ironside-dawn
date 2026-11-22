@@ -1261,7 +1261,8 @@ so 0.5.0 starts from a baseline.
    who knows each spell, the dread's casts, mastery (arcana) at the end, kills
    by spell, backlash deaths, and how much magic shows at Day speed and up.
    `--blessings` tries other chances of the gift; 0.5.0's rates (humans 7.5%,
-   elves 20%, centaurs 5%, dwarves 3%) were tried, results in
+   elves 20%, centaurs 5%, dwarves 3%; centaurs since lowered to 4%) were
+   tried, with 50% inheritance over a century, results in
    `MAGIC-0.5.0.md` §4, "Second round".
 2. **Magic seen.** _Done:_ learning a spell, felling a strong creature (level 4
    and up) by spell, and a death by spell (a killing blow, or a caster's own
@@ -1431,7 +1432,7 @@ the magic audit.
    working notes) make its people likelier to take up and be blessed in
    certain kinds; any people may learn any kind, except that the grave and
    infernal can never learn divine. Blessings at birth by people (humans 7.5%,
-   elves 20%, centaurs 5%, dwarves 3%, to be confirmed by the audit), half of
+   elves 20%, centaurs 4%, dwarves 3%, confirmed by the 0.3.2 audit), half of
    them passed on to children, of a kind drawn by culture. Faith (from 0.4.0)
    for divine magic. Nobody may hold both holy and dark. The world's magic
    setting stays one dial. The eight spells keep their names, catalogued under
