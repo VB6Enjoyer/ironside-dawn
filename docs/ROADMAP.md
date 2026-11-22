@@ -1412,11 +1412,15 @@ Ten steps, each small enough to be looked over before the next begins.
    faith. Measured over four worlds and a century: illness 10.7% of deaths,
    1 in 7 of the retired, 4 children.
 
-6. **Illness: remedies and healers.** Remedies, a new good made from herbs by
-   its own recipe (so healing draughts keep their herbs); some healers make
-   better remedies and sell them dearer. Remedies cure faster and lower a
-   town's sickness level; wealthy towns with good remedies suffer far less
-   than poor ones. In 0.5.0, magic cures too.
+6. **Illness: remedies and healers.** _Done:_ remedies, a new good alchemists
+   make from herbs by their own recipe. Each town's healers are better or
+   worse (decided once by the world): the sick who can afford it buy a
+   remedy, dearer where healers are better, which cuts their sickness short
+   and makes it far less likely to kill; townsfolk are tended as well as
+   their town cares. A town's care (remedies in stock, its healers, its
+   wealth) also keeps its sickness level down, so wealthy towns with good
+   remedies suffer far less than poor ones. Measured: illness fell to 4% of
+   deaths before plague; herbs a little dearer.
 
 7. **Illness: plague.** Plague comes 2 or 3 times a century, of different size
    and severity. It starts in one town, likelier a poor and crowded one in
