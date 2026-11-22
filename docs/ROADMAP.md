@@ -1279,29 +1279,49 @@ so 0.5.0 starts from a baseline.
 4. **Release 0.3.2:** players' notes, changelog; `SAME_HISTORY_SINCE` moves to
    0.3.2.
 
-## 0.4.0 — Body and Soul
+## 0.4 — Body and Soul, in three releases
 
 (A working name.) The groundwork magic will stand on, built first as parts
-of the world in their own right, each with sources that need no magic.
+of the world in their own right, each with sources that need no magic:
+characters carry lasting effects good and bad, keep a faith, fall ill, are
+cursed, fight beside allied beasts, may change shape, see the weather turn
+over one place, leave souls that linger or pass, and can be taken and held
+for ransom. Each is useful now and is what 0.5.0's magic acts through: buffs
+and debuffs on others, divine magic, cures and curses, summoned beasts, beast
+forms, weather magic, souls for dark magic, kidnapping for sacrifice.
 
-**Goal:** Characters fall ill, are cursed, carry lasting effects good and bad,
-fight beside allied beasts, may change shape, see the weather turn over one
-place, leave souls that linger or pass, can be taken and held for ransom, and
-keep a faith. Each is useful now and is what 0.5.0's magic acts through:
-cures and curses, buffs and debuffs on others, summoned beasts, beast forms,
-weather magic, souls for dark magic, kidnapping for sacrifice, faith for
-divine magic.
+Nine systems are too many for one release, so they ship in three, each
+playable on its own and balanced before the next begins:
 
-Each step is its own pull request, keeps saves loading, and is measured by a
-world audit.
+- **0.4.0, the body:** lasting effects, faith, illness and curses: what
+  happens to a character.
+- **0.4.1, beasts and storms:** allies in battle, shapeshifting and local
+  weather: what fights and travels beside them.
+- **0.4.2, the dead and the taken:** souls and the restless dead, and
+  kidnapping: what death and crime leave behind.
+
+Each step is its own pull request and keeps saves loading. Each release adds
+to one world audit (`tools/world-audit.ts`), keeps a save from the release
+before as a fixture, and holds large worlds to no more than about 10% slower
+than 0.3.2.
+
+**Working notes and open questions:** `BODY-AND-SOUL-0.4.md` holds the design
+of each system, what is decided, and the open questions, grouped by release,
+each with a proposal. A release's questions are settled before its work
+begins.
+
+## 0.4.0 — Body and Soul: the body
+
+**Goal:** Characters carry lasting effects, good and bad, keep a faith, fall
+ill and are cursed, and all of it is seen.
 
 ### Steps
 
-1. **Measure first.** A world audit (`tools/world-audit.ts`) for what 0.4.0
+1. **Measure first.** A world audit (`tools/world-audit.ts`) for what 0.4
    touches: deaths by cause and age, time spent hurt or weary, survival in
-   delves and fights, population by people, prices of healing goods; later,
-   illness, curses, effects carried, allies, kidnappings and ransoms. It
-   records the 0.3.2 baseline.
+   delves and fights, population by people, prices of healing goods. It
+   records the 0.3.2 baseline, and grows with each step (effects carried,
+   illness, curses).
 
 2. **Lasting effects on anyone.** One system of timed effects any character
    can carry, good or bad: on health, stamina, a stat, attack and defense,
@@ -1332,8 +1352,7 @@ world audit.
    (rarely; the old and the young more). They are cured by rest, by healers
    (the herbalists' remedies, a new demand for herbs; priests at shrines), and
    in 0.5.0 by magic. A plague is a town event, felt by the townsfolk counts as
-   well as by named characters. Life stories tell of it; the live feed of
-   outbreaks and deaths.
+   well as by named characters.
 
 5. **Curses.** A curse is a condition with an effect (ill luck in fights, a
    wasting, a weakness, a mark that makes people wary) and a way to be lifted.
@@ -1343,59 +1362,95 @@ world audit.
    by priests at shrines (stronger with faith), by wise folk in town (rarely,
    cheaply, unreliably), by destroying a cursed item, and in 0.5.0 by magic.
    Cursed items are worth less, and a fee to lift a curse is a new trade.
+   (Lycanthropy, a curse passed by a bite, comes with shapeshifting in 0.4.1.)
 
-6. **Allies in battle.** Creatures that fight on a character's side: war
+6. **Seen and told.** The live feed (outbreaks, deaths by illness, curses laid
+   and lifted), the chronicle, life stories, the character card (effects,
+   illness, curses; faith hinted at by deeds rather than shown) and the Halls.
+
+7. **Balance and release.** Targets: illness a real but small share of
+   deaths, populations steady; curses uncommon; effects felt but not
+   everywhere; large worlds no more than about 10% slower. Then release 0.4.0:
+   players' notes, changelog, a 0.3.2 save as a fixture, the architecture
+   notes.
+
+## 0.4.1 — Body and Soul: beasts and storms
+
+**Goal:** Characters fight beside allied beasts, may change shape, and see
+the weather turn over one place.
+
+### Steps
+
+1. **Measure.** The world audit adds allies (bought, tamed, lost), fights won
+   and lost with and without them, the afflicted and their kills, and time
+   under local weather.
+
+2. **Allies in battle.** Creatures that fight on a character's side: war
    hounds and hawks bought in town, beasts tamed by those with the skill, and
    lords' soldiers riding with a band against a threat. Allies follow their
    owner, fight as ordinary fighters (fights already allow creatures on either
    side), can be hurt and die, and grow more useful as they last. The same
    mechanism carries 0.5.0's summoned beasts.
 
-7. **Shapeshifting.** A form: for a while a character fights with another set
+3. **Shapeshifting.** A form: for a while a character fights with another set
    of numbers, as a beast. The first source is lycanthropy: werewolves as
-   creatures, whose bite can pass the curse (step 5); the afflicted turn under
-   the full moon (a moon cycle on the calendar), lose control, may kill (a
-   killing the towns may blame them for, or may not know of), and can be cured
-   by priests or wise folk, with luck. The same mechanism carries 0.5.0's
-   druid beast forms.
+   creatures, whose bite can pass the curse (a curse, from 0.4.0); the
+   afflicted turn under the full moon (a moon cycle on the calendar), lose
+   control, may kill (a killing the towns may blame them for, or may not know
+   of), and can be cured by priests or wise folk, with luck. The same
+   mechanism carries 0.5.0's druid beast forms.
 
-8. **Local weather.** Weather at one place overriding its region's for a
+4. **Local weather.** Weather at one place overriding its region's for a
    while: a storm, a fog, a calm, a downpour. Sources now: the dread drawing
    gloom over their lairs and the towns they raid, and rare natural squalls. It
    slows travel, hides ambushes and escapes (fog), spoils or saves a harvest.
    The mechanism carries 0.5.0's weather magic, which will be local and
    costly.
 
-9. **Souls and the restless dead.** When a sapient being dies, their soul
+5. **Seen and told.** Allies on the card and in life stories (and mourned when
+   they fall), the afflicted's nights and kills, the moon on the calendar,
+   weather on the map and in the feed.
+
+6. **Balance and release.** Targets: allies helping without making bands
+   unbeatable; lycanthropy rare, a few afflicted a century; local weather felt
+   where the dread are without slowing the world. Release 0.4.1 with a 0.4.0
+   save as a fixture.
+
+## 0.4.2 — Body and Soul: the dead and the taken
+
+**Goal:** The dead leave souls that linger or pass, and the living can be
+taken and held for ransom.
+
+### Steps
+
+1. **Measure.** The world audit adds lingering souls by place, ghosts raised
+   and laid to rest, what the dread gain from souls, and kidnappings by how
+   they end.
+
+2. **Souls and the restless dead.** When a sapient being dies, their soul
    passes on or lingers: it lingers where many die and lie unburied
    (battlefields, murder sites, hidden bodies, dungeons). Lingering souls
    haunt (ghosts as creatures; myths grow there), and can be laid to rest at
    shrines by priests. The dread feed on them: a lich grows stronger from the
    souls of those its horde slays. Souls are what 0.5.0's dark magic absorbs.
 
-10. **Kidnapping.** Outlaws take people for ransom: mostly the unnamed (a
-    traveler off the road, a townsperson from their house), a crime in the
-    0.3.0 system; rarely a named character, beaten in a fight and taken, like
-    a capture but riskier for the kidnapper. Captives are held at a hideout;
-    ransom is asked of their family or town; paid, they are let go; hunters
-    may rescue them, and a rescue has a good chance of an immediate bounty on
-    the kidnapper. A captive may escape, or die. Much harder than murder, and
-    rarer. Life stories tell it. 0.5.0 turns it to dark magic's sacrifices.
+3. **Kidnapping.** Outlaws take people for ransom: mostly the unnamed (a
+   traveler off the road, a townsperson from their house), a crime in the
+   0.3.0 system; rarely a named character, beaten in a fight and taken, like
+   a capture but riskier for the kidnapper. Captives are held at a hideout;
+   ransom is asked of their family or town; paid, they are let go; hunters
+   may rescue them, and a rescue has a good chance of an immediate bounty on
+   the kidnapper. A captive may escape, or die. Much harder than murder, and
+   rarer. 0.5.0 turns it to dark magic's sacrifices.
 
-11. **Seen and told.** The live feed, the chronicle, life stories, the
-    character card (effects, illness, curses, allies, faith hinted at by deeds
-    rather than shown) and the Halls take in all of the above.
+4. **Seen and told.** Haunted places on the map and in place pages, souls laid
+   to rest, the dread growing; kidnappings, ransoms, rescues and escapes in
+   the feed, life stories, justice records and the Halls.
 
-12. **Balance and release.** Targets: illness a real but small share of
-    deaths, populations steady; curses uncommon; kidnappings rarer than
-    murders, most ending in ransom or rescue; allies helping without making
-    bands unbeatable; effects felt but not everywhere; large worlds no more
-    than about 10% slower. Then release 0.4.0: players' notes, changelog, a
-    0.3.2 save as a fixture, the architecture notes.
-
-**Working notes and open questions:** `BODY-AND-SOUL-0.4.0.md` holds the
-design of each system, what is decided, and the open questions (42 of them,
-each with a proposal), to settle after 0.3.2 ships and before 0.4.0 begins.
+5. **Balance and release.** Targets: kidnappings rarer than murders, most
+   ending in ransom or rescue; haunted places a handful per world, not
+   everywhere; liches stronger but beatable. Release 0.4.2 with a 0.4.1 save
+   as a fixture, and the architecture notes for all of 0.4.
 
 ## 0.5.0 — The Magic Update
 
@@ -1410,8 +1465,8 @@ and only for oneself, by a handful of mages, and hidden at most speeds. The
 working notes (`MAGIC-0.5.0.md`) record how it works now, what was measured,
 the nine limits and issues, the design in full, every decision taken, and
 what it needs of the world. It is built on 0.3.2 (magic seen and measured) and
-0.4.0 (lasting effects, illness, curses, allies, shapeshifting, local weather,
-souls, kidnapping and faith).
+the three 0.4 releases: 0.4.0 (lasting effects, faith, illness, curses), 0.4.1
+(allies, shapeshifting, local weather) and 0.4.2 (souls, kidnapping).
 
 Each step is its own pull request, keeps saves loading, and is checked with
 the magic audit.
@@ -1423,7 +1478,7 @@ the magic audit.
    people and culture; spells learned, cast and mastered, by kind and effect;
    casts in and out of combat and on whom; effects carried, faded and
    backfired; costs felt; dark casters, sacrifices and corruption. It records
-   the 0.4.0 baseline.
+   the 0.4.2 baseline.
 
 2. **Five kinds of magic, and who holds them.** High, divine, druidic, dark
    and low magic as content, each with how it is obtained and how hard it is
@@ -1449,7 +1504,7 @@ the magic audit.
    it; the rest only comes from casting it; years of disuse wear it down. A
    mage who gives their life to it, an elf above all, becomes formidable.
 
-4. **Spells, effects and costs.** On top of 0.4.0's lasting effects, allies,
+4. **Spells, effects and costs.** On top of 0.4's lasting effects, allies,
    forms and local weather: healing and buffing others and the whole party,
    debuffs, area spells, illusions, curses and their lifting, cures, easing
    fatigue, summoned beasts, beast forms, weather. One effect of each type at a
@@ -1489,10 +1544,10 @@ the magic audit.
    known of the caster: some command of dark magic makes them suspected, a
    known dark mage is unwelcome in most places, only one known to have killed
    or sacrificed for power is barred, and heroic deeds can win some
-   neutrality. Dark magic grows by absorbing souls (0.4.0) of the dead
+   neutrality. Dark magic grows by absorbing souls (0.4.2) of the dead
    (humans, dwarves, elves, centaurs, high-level demons) and through rituals,
    sacrifice and murder, so a dark caster who prizes their power may turn
-   outlaw. Sacrifices come through 0.4.0's kidnapping: mostly unnamed people,
+   outlaw. Sacrifices come through 0.4.2's kidnapping: mostly unnamed people,
    much harder than murder, a rescue likely to raise a bounty at once; very
    rarely an adventurer beaten and taken (more dangerous for the dark mage
    than a hunter's capture). An adventurer's soul is worth far more than a
@@ -1518,7 +1573,7 @@ the magic audit.
    bite (backfires, fading and lingering weakness felt, deaths rare but real);
    a lifelong mage outclassing a young one; the world's magic setting meaning
    more than gift odds; no power creep in deaths, delves or the healing trade.
-   Then release 0.5.0: players' notes, changelog, a 0.4.0 save kept as a
+   Then release 0.5.0: players' notes, changelog, a 0.4.2 save kept as a
    fixture, the architecture notes, `WORLD.md` §4 rewritten, and the working
    notes retired.
 
