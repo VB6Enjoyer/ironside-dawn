@@ -141,6 +141,15 @@ export interface Character {
 
   /** Healing draughts carried, drunk when a fight goes badly. */
   potions: number;
+  /**
+   * Faith (0.4.0), 0 to 1: hidden, told in words. `faithPeak` is the most
+   * they ever had; `sins` what a priest could give back of what crimes took;
+   * `lastPrayer` when they last prayed at a shrine.
+   */
+  faith: number;
+  faithPeak: number;
+  sins: number;
+  lastPrayer: number;
   /** Alchemists' tonics of vigor and calming draughts carried, drunk going into a delve (0.4.0). */
   draughts: { vigor: number; calm: number };
   /** Merchants: goods carried to sell, in units. */

@@ -27,6 +27,7 @@ import { adventurerFighter } from './condition';
 import { die } from './death';
 import { dreadFell, dreadKilled } from './dread';
 import { grant } from './effects';
+import { blessing, shiftFaith } from './faith-core';
 import { exitDelve, resumeDelve } from './delve';
 import { weaponSkillOf } from './items';
 import { mint } from './ledger';
@@ -869,7 +870,12 @@ function rememberFight(
     nudgeTrait(character, 'bravery', -0.03);
     // And the body remembers too: weak and slow to mend for days (0.4.0).
     grant(ctx, character, 'weakened', 'near-death', locationId);
+    // Barely surviving can make a believer of anyone, the first time most of all.
+    const escapes = character.memories.filter((m) => m.kind === 'near-death').length;
+    blessing(character, 0.15, escapes - 1);
   }
+  // A run of bad luck wears faith down.
+  if (outcome === 'fled') shiftFaith(character, -0.01);
   // Being set upon by people is remembered as a wrong: by travelers ambushed,
   // and by outlaws run to ground. A hunter who comes away empty-handed
   // is less keen to try again.

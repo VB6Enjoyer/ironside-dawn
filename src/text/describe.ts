@@ -407,6 +407,11 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
           return [c, ' has a particularly fine meal, and is the better for it.'];
         case 'luck':
           return [c, ' feels that fortune is with them.'];
+        case 'shrine':
+          // The devout come away with more than the doubter.
+          return (e.data.scale ?? 1) >= 1
+            ? [c, ' rises from prayer at the shrine, their faith renewed.']
+            : [c, ' leaves the shrine feeling blessed.'];
         case 'tonic':
           return e.data.effect === 'calm'
             ? [c, ' drinks a calming draught, and their hands steady.']

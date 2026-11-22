@@ -10,6 +10,7 @@ import {
 import type { SimContext } from '../context';
 import type { Character, Deed, LocationId } from '../model';
 import { aspectOf } from './effects-core';
+import { blessing } from './faith-core';
 import { gearTotals } from './items';
 import { remember, satisfy } from './mind';
 
@@ -146,6 +147,11 @@ export function roleOf(character: Character): Role {
 }
 
 export function addDeed(character: Character, deed: Deed): void {
+  // A memorable deed raises faith, each less than the last (0.4.0).
+  if (deed.kind === 'slay' || deed.kind === 'legend' || deed.kind === 'vanquish') {
+    const before = character.deeds.filter((d) => d.kind === deed.kind).length;
+    blessing(character, deed.kind === 'slay' ? 0.03 : 0.08, before);
+  }
   character.deeds.push(deed);
   if (character.deeds.length > MAX_DEEDS)
     character.deeds.splice(0, character.deeds.length - MAX_DEEDS);

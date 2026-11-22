@@ -90,14 +90,20 @@ export function grant(
   kind: EffectId,
   source: EffectSource,
   locationId: LocationId,
+  /** Stronger or weaker than the kind's own: a blessing by faith. */
+  scale = 1,
 ): boolean {
   const def: EffectDef = EFFECTS[kind];
   if (!def.mods || !def.hours) throw new Error(`${kind} is not an effect that can be granted`);
   const now = ctx.world.time;
   const [full, fade] = def.hours;
+  const mods =
+    scale === 1
+      ? def.mods
+      : Object.fromEntries(Object.entries(def.mods).map(([a, n]) => [a, (n ?? 0) * scale]));
   const effect: Effect = {
     kind,
-    mods: def.mods,
+    mods,
     since: now,
     fadeFrom: now + Math.round(full * HOUR),
     until: now + Math.round((full + fade) * HOUR),
@@ -106,7 +112,13 @@ export function grant(
   ctx.emit(
     {
       type: 'character.effect',
-      data: { characterId: character.id, locationId, effect: kind, source },
+      data: {
+        characterId: character.id,
+        locationId,
+        effect: kind,
+        source,
+        ...(scale === 1 ? {} : { scale }),
+      },
     },
     [character.id],
     locationId,

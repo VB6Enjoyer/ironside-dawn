@@ -109,6 +109,7 @@ describe('lasting effects', () => {
   it('steady or shake nerve, within bravery’s bounds', () => {
     const { c, now } = someone();
     c.traits = { ...c.traits, bravery: 0.5 };
+    c.faith = 0; // faith steadies nerve too (tested in faith.test.ts)
     const plain = fleeThreshold(c, now);
     addEffect(c, effect('rested', { nerve: 0.3 }, now, 8), now);
     expect(courageOf(c, now)).toBeCloseTo(0.8);

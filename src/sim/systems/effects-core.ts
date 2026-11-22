@@ -1,5 +1,6 @@
 import { EFFECTS, type Aspect, type EffectDef } from '../../content';
 import type { Character, Effect } from '../model';
+import { FAITH_NERVE } from './faith-core';
 
 /**
  * Reading lasting effects (0.4.0): how strong one is at a moment, and what
@@ -47,7 +48,16 @@ export function carries(character: Character, kind: Effect['kind'], now: number)
   return character.effects.some((e) => e.kind === kind && e.until > now);
 }
 
-/** Bravery as it stands now: the trait, steadied or shaken by nerve, 0 to 1. */
+/**
+ * Bravery as it stands now, 0 to 1: the trait, steadied or shaken by nerve,
+ * and a little steadier for the faithful (0.4.0).
+ */
 export function courageOf(character: Character, now?: number): number {
-  return Math.max(0, Math.min(1, character.traits.bravery + aspectOf(character, 'nerve', now)));
+  return Math.max(
+    0,
+    Math.min(
+      1,
+      character.traits.bravery + aspectOf(character, 'nerve', now) + FAITH_NERVE * character.faith,
+    ),
+  );
 }

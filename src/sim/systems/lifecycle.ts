@@ -4,6 +4,7 @@ import type { SimContext } from '../context';
 import { createCharacter, priceBookOfAllTowns, townPopulation } from '../gen/people';
 import { merchantsFor } from '../gen/world';
 import type { Character, Location, LocationId, Occupation, World } from '../model';
+import { driftFaith, shiftFaith } from './faith-core';
 import { isAlive } from './condition';
 import { die, LEGENDARY_RENOWN, renownOf } from './death';
 import { remember } from './mind';
@@ -22,6 +23,13 @@ import { cancelWake, wakeAt } from './wake';
  */
 
 /** Share of a lifespan at which the years begin to tell. */
+/** Gold below which an adventurer or merchant is living in poverty (0.4.0)... */
+const POOR_BELOW = 10;
+/** ...losing this much faith a day of it. */
+const POVERTY_DOUBT = 0.001;
+/** After this long without praying at a shrine, faith slowly fades, this much a day. */
+const SHRINE_LONGING = 2 * YEAR;
+const ABSENCE_DOUBT = 0.0001;
 const ELDER_AT = 0.6;
 /** Share of a lifespan from which death of old age becomes likely. */
 const OLD_AT = 0.75;
@@ -64,6 +72,7 @@ export function lifecycleDay(ctx: SimContext, targetPopulation: number): void {
       if (ageOf(c, world.time) >= def.adultAge) comeOfAge(ctx, c, targetPopulation);
       continue;
     }
+    keepFaith(world, c, world.time);
     if (c.calling === 'adventurer') considerRetiring(ctx, c, merchantRoom);
     if (c.calling === 'townsfolk') {
       eveningOut(ctx, c);
@@ -72,6 +81,24 @@ export function lifecycleDay(ctx: SimContext, targetPopulation: number): void {
     }
     if (roomForChildren) considerChildren(ctx, c, fullness.young);
   }
+}
+
+// ---------------------------------------------------------------------------
+// Faith
+
+/**
+ * Faith wears down in long poverty, and in long years away from any shrine
+ * (0.4.0). Townsfolk keep up their prayers as part of town life.
+ */
+function keepFaith(world: World, c: Character, now: number): void {
+  driftFaith(world, c);
+  const travels = c.calling === 'adventurer' || c.calling === 'merchant';
+  if (!travels) {
+    c.lastPrayer = now;
+    return;
+  }
+  if (c.gold < POOR_BELOW) shiftFaith(c, -POVERTY_DOUBT);
+  if (now - c.lastPrayer > SHRINE_LONGING) shiftFaith(c, -ABSENCE_DOUBT);
 }
 
 // ---------------------------------------------------------------------------

@@ -83,7 +83,12 @@ export type EventBody =
   /** A lasting effect taken on, and where from (0.4.0). */
   | Body<
       'character.effect',
-      CharacterAt & { readonly effect: EffectId; readonly source: EffectSource }
+      CharacterAt & {
+        readonly effect: EffectId;
+        readonly source: EffectSource;
+        /** Stronger or weaker than usual: a blessing by faith. */
+        readonly scale?: number;
+      }
     >
   | Body<'character.convalesce', CharacterAt & Decided>
   | Body<'character.levelup', CharacterAt & { readonly level: number }>

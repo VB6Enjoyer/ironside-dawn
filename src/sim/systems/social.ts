@@ -17,6 +17,7 @@ import type {
   Party,
   PartyId,
 } from '../model';
+import { shiftFaith } from './faith-core';
 import { isAlive, isFitToDelve, needsRecovery } from './condition';
 import { remember, satisfy } from './mind';
 import { cancelWake, wakeAt } from './wake';
@@ -552,7 +553,14 @@ export function mournDeath(
   for (const other of ctx.world.characters.values()) {
     if (other.id === deceased.id || !isAlive(other)) continue;
     const opinion = other.opinions[deceased.id];
+    // Losing a spouse, a parent or a child shakes faith hard; a friend or companion less (0.4.0).
+    const kin =
+      other.spouseId === deceased.id ||
+      deceased.parents.includes(other.id) ||
+      other.parents.includes(deceased.id);
+    if (kin) shiftFaith(other, -0.08);
     if (!opinion || opinion.affinity < 0.35) continue;
+    if (!kin) shiftFaith(other, -0.04 * opinion.affinity);
     remember(other, now, { kind: 'grief', characterId: deceased.id }, 0.6 + 0.4 * opinion.affinity);
     other.drives.companionship = Math.min(1, other.drives.companionship + 0.2);
     satisfy(other, 'purpose', 0.2);

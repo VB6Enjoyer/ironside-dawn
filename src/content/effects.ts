@@ -49,6 +49,8 @@ export const EFFECTS = {
   vigor: { name: 'full of vigor', cost: false, mods: { stamina: 0.2, recovery: 0.25 }, hours: [4, 2] },
   /** An alchemist's calming draught: steady hands in the dark. */
   calm: { name: 'calm', cost: false, mods: { nerve: 0.2 }, hours: [4, 2] },
+  /** A shrine's blessing, stronger for the faithful (`grant` scales it). */
+  blessed: { name: 'blessed', cost: false, mods: { nerve: 0.1, recovery: 0.15 }, hours: [8, 8] },
   /** Slow to mend after a brush with death: less health, and slower to heal, for days. */
   weakened: { name: 'weakened', cost: false, mods: { health: -0.15, recovery: -0.25 }, hours: [72, 48] },
   /** Worn out by a long march: slower in a fight, and slow to recover. */
@@ -62,4 +64,4 @@ export const DIZZY_PENALTY = 2;
 
 /** Where a lasting effect came from (0.4.0), as the log tells it. */
 export type EffectSource =
-  'inn' | 'home' | 'feast' | 'meal' | 'luck' | 'tonic' | 'near-death' | 'march';
+  'inn' | 'home' | 'feast' | 'meal' | 'luck' | 'shrine' | 'tonic' | 'near-death' | 'march';

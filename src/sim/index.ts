@@ -30,3 +30,5 @@ export { goingPrice, houseQuote, priceIndex, understanding } from './systems/mar
 export { renownOf } from './systems/death';
 export { standingIn } from './systems/notoriety';
 export { ageOf } from './systems/lifecycle';
+export { faithWord, hasFaith } from './systems/faith-core';
+export type { FaithWord } from './systems/faith-core';

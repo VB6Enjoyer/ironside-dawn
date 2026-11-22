@@ -7,6 +7,7 @@ import { isDizzy, modifier, retreatThreshold } from './condition';
 import { die } from './death';
 import { addEffect, dizziness, grant } from './effects';
 import { carries, courageOf } from './effects-core';
+import { shiftFaith } from './faith-core';
 import { escortOf, masterAt } from './dread';
 import { claimLegend, generateItem, takeGear } from './items';
 import { mint } from './ledger';
@@ -418,6 +419,7 @@ function treasureChamber(
   // A great find feels like fortune smiling (0.4.0).
   if (gold >= LUCKY_FIND || gear.some((item) => item.rarity === 'legendary')) {
     grant(ctx, character, 'lucky', 'luck', location.id);
+    shiftFaith(character, 0.02 * (1 - character.faith));
   }
   gainXp(ctx, character, XP_PER_TREASURE + (lock === 'picked' ? 3 : 0), location.id);
   continueDelve(ctx, character, {

@@ -15,6 +15,7 @@ import { GIFT_BORN, type Segment } from './describe';
 
 /** The gift, for one born to it in the world (0.3.2). */
 const GIFT_FAMILY: Segment = { text: 'family gift for magic', mark: 'magic' };
+import { faithWord, type FaithWord } from '../sim';
 import { spellName } from './items';
 import { chargesPhrase, EXECUTED, SENTENCED_TO, withMeans } from './justice';
 import { personalitySummary } from './mind';
@@ -100,6 +101,21 @@ export function deathLine(
   return [{ text: capitalize(first!.text) }, ...rest, { text: ' in ' }, place(locationId, names)];
 }
 
+/** A life's faith, as its story tells it (0.4.0). */
+const FAITH_PHRASES: Record<FaithWord, (alive: boolean) => string> = {
+  devout: (alive) => (alive ? 'They are devout.' : 'They were devout to the end.'),
+  believer: (alive) => (alive ? 'They are a believer.' : 'They were a believer.'),
+  doubter: (alive) =>
+    alive ? 'In matters of faith, they doubt.' : 'In matters of faith, they doubted.',
+  skeptic: (alive) => (alive ? 'They are a skeptic.' : 'They were a skeptic.'),
+  faithless: (alive) =>
+    alive ? 'They have lost the faith they once had.' : 'They lost the faith they once had.',
+  corrupted: (alive) =>
+    alive
+      ? 'What faith they had is gone, corrupted by what they have done.'
+      : 'What faith they had was gone, corrupted by what they had done.',
+};
+
 export function biography(
   c: Character,
   events: readonly SimEvent[],
@@ -117,7 +133,10 @@ export function biography(
 
   // Origins.
   const character = listOf(personalitySummary(c.traits).split(', ').filter(Boolean).slice(0, 3));
-  const calledThem = character ? ` Those who knew them called them ${character}.` : '';
+  // Faith, in a word (0.4.0): never a number.
+  const faith = faithWord(c);
+  const believed = faith ? ` ${FAITH_PHRASES[faith](alive)}` : '';
+  const calledThem = `${character ? ` Those who knew them called them ${character}.` : ''}${believed}`;
   if (c.parents.length > 0) {
     const legendary = c.parents.filter((p) => heroes.has(p));
     paragraphs.push([

@@ -130,7 +130,8 @@ function toCrimesThatTravel(save: SaveData): Record<string, unknown> {
 /**
  * 0.4.0: timed statuses (dizziness and drained attributes) become lasting
  * effects, which carry what they do to each aspect and when they fade. Those
- * from before hold at full strength to their end, as they did. Alchemists
+ * from before hold at full strength to their end, as they did. Everyone gets
+ * a faith from their nature (none for the dread). Alchemists
  * now make tonics of vigor and calming draughts: nobody carries any yet, and
  * every market starts out believing them worth what the goods list says.
  */
@@ -151,6 +152,19 @@ function toLastingEffects(save: SaveData): Record<string, unknown> {
     }));
     delete c.statuses;
     c.draughts = { vigor: 0, calm: 0 };
+    // Faith by nature: the honorable and compassionate lean to belief; the dread have none.
+    const traits = c.traits as { honor: number; compassion: number };
+    const faithless = c.calling === 'dread' || c.culture === 'grave' || c.culture === 'infernal';
+    const faith = faithless
+      ? 0
+      : Math.max(
+          0,
+          Math.min(1, 0.45 + 0.25 * (traits.honor - 0.5) + 0.2 * (traits.compassion - 0.5)),
+        );
+    c.faith = faith;
+    c.faithPeak = faith;
+    c.sins = 0;
+    c.lastPrayer = world.time;
   }
   const markets = (world.markets as { $map: [unknown, Encoded][] }).$map;
   for (const [, market] of markets) {

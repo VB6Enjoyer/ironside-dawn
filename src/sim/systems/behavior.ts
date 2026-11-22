@@ -7,6 +7,7 @@ import { decideAt, type Action } from './decide';
 import { DAILY_AT } from './ecology';
 import { delveStep, enterDelve } from './delve';
 import { expireEffects, grant } from './effects';
+import { pray } from './faith';
 import { weaponSkillOf } from './items';
 import { townsfolkAt } from './lifecycle';
 import { learnSpells } from './magic';
@@ -474,6 +475,12 @@ function learnFromPastime(
       const rate = STUDY_PER_HOUR * (character.gifted ? 2 : 1);
       practice(ctx, character, 'arcana', rate * hours, locationId);
       learnSpells(ctx, character, locationId);
+      return;
+    }
+    case 'shrine': {
+      // Prayer to the gods of their culture: faith, and a blessing (0.4.0).
+      const here = ctx.world.locations.get(locationId);
+      if (here?.kind === 'town') pray(ctx, character, here);
       return;
     }
     case 'lurk': {

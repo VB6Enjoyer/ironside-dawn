@@ -624,7 +624,11 @@ function addPastimeTerms(terms: Term[], character: Character, pastime: PastimeId
       return;
     case 'shrine': {
       const shaken = character.memories.some((m) => m.kind === 'near-death');
-      terms.push({ value: 0.06 + 0.08 * traits.compassion + (shaken ? 0.1 : 0), motive: null });
+      // The faithful go to pray; skeptics seldom do (0.4.0).
+      terms.push({
+        value: 0.02 + 0.06 * traits.compassion + 0.1 * character.faith + (shaken ? 0.1 : 0),
+        motive: null,
+      });
       return;
     }
     case 'study': {
