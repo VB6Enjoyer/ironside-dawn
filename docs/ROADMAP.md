@@ -1333,7 +1333,8 @@ ill and are cursed, and all of it is seen.
    on when someone flees a fight and how much risk they take in choosing to
    delve, fight or cast. Good effects come from what is rare, costly or lucky:
    a good inn (dearer than the common one), a feast, a night in a home of
-   one's own, a particularly good meal, a stroke of luck, and alchemists'
+   one's own (for now, a married or retired character's home in their home
+   town), a particularly good meal, a stroke of luck, and alchemists'
    draughts beyond healing (a tonic of vigor, a calming draught); bad ones
    from a near death (weakened for days) and long marches (exhausted). The
    character card shows them in words, with the time left. Saves move to a new
@@ -1344,9 +1345,11 @@ ill and are cursed, and all of it is seen.
    children take their parents' faith, give or take a little. The grave,
    infernal and dread have none. It grows with prayer at shrines (an existing
    pastime) to the gods of their culture (already in the content), surviving
-   an illness, memorable victories and good fortune, by how much depending on
-   the person; it falls with crimes (graver ones more), despair and years away
-   from shrines; a priest can restore it. Now it steadies nerve in danger and
+   an illness, memorable deeds (each worth less than the last; barely
+   surviving one can raise it a great deal) and good fortune, by how much
+   depending on the person; it falls with crimes (graver ones more), despair
+   and years away from shrines; a priest can restore it, though not for an
+   outlaw still on the run. Now it steadies nerve in danger and
    makes a shrine's blessing (a small lasting effect, from step 2) stronger.
    Priests are a town-level count (as the trades are) who, for a fee, tend the
    sick, lift curses and restore faith. Faith is never shown as a number: life
@@ -1359,14 +1362,15 @@ ill and are cursed, and all of it is seen.
    plague. Sickness is commoner in winter. Each town keeps a sickness level
    (raised by the sick, the season and plague, lowered by good remedies and
    wealth); a character rolls to catch it for each day in such a town or in a
-   party with someone sick. Some are born hardier than others; the old and
-   children resist least. Illness weakens (a lasting effect), lays people up,
-   and can kill; about 1 in 5 to 1 in 7 retired adventurers die of it in
-   ordinary times. It is cured by rest, by remedies (a new good, made from
+   party with someone sick. Some are born hardier than others (a hidden
+   hardiness, passed on a little in families), and toughness, age and the
+   effects someone carries count too; the old and children resist least. Illness weakens (a lasting effect), lays people up,
+   and can kill: about 5–10% of all deaths in ordinary times, and about 1 in
+   5 to 1 in 7 retired adventurers. It is cured by rest, by remedies (a new good, made from
    herbs by its own recipe; some healers make better ones and sell them
    dearer), by priests, and in 0.5.0 by magic. Plague comes 2 or 3 times a
    century, of different size and severity: it starts in one town, likelier a
-   poor and crowded one, travels the roads, thins the townsfolk counts as well
+   poor and crowded one, travels the trade roads to nearby towns over weeks, thins the townsfolk counts as well
    as killing named characters, and leaves a town or a region hurt for some
    years. Wealthy towns with good remedies suffer far less than poor ones.
 
@@ -1391,8 +1395,8 @@ ill and are cursed, and all of it is seen.
    and lifted), the chronicle, life stories, the character card (effects,
    illness, curses; faith named in words, never as a number) and the Halls.
 
-7. **Balance and release.** Targets: illness a real but modest share of
-   deaths, retired adventurers about 1 in 5 to 1 in 7 dying of it in ordinary
+7. **Balance and release.** Targets: illness about 5–10% of deaths in
+   ordinary times, retired adventurers about 1 in 5 to 1 in 7 dying of it in ordinary
    times, 2 or 3 plagues a century, populations steady with no death spirals;
    curses uncommon; effects felt but not everywhere; large worlds no more than
    about 10% slower. Then release 0.4.0: players' notes, changelog, a 0.3.2
@@ -1611,6 +1615,9 @@ Not planned or committed. Ideas stay here until they earn a phase.
 - Religion and cults, possibly with real divine intervention (see
   `WORLD.md` §7).
 - Magic research, forbidden arts, and artifacts that change the world.
+- Houses to buy, keep and lose: homes in town bought with gold, kept up,
+  inherited, sold, robbed or burned. Until then (from 0.4.0), a married or
+  retired character simply has a home in their home town.
 - Rumors and misinformation: characters act on what they've _heard_, which
   may be wrong.
 - More peoples: orcs, goblins, halflings, giants, merfolk.

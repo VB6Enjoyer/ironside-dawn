@@ -128,8 +128,8 @@ than murder. 0.5.0 turns it to sacrifice.
 
 ### For 0.4.0 (settled 2026-11-22)
 
-Open questions 1–20 are answered here; what is still open for 0.4.0 is at the
-start of §4.
+Open questions 1–20, and 43–48 that came up in answering them, are settled
+here. Nothing is left open for 0.4.0.
 
 **The update as a whole**
 
@@ -152,7 +152,10 @@ start of §4.
   Every effect on nerve acts through these.
 - **Good effects come from what is rare, costly or lucky:** a good inn (dearer
   than the common one), a feast, a home of one's own, a particularly good meal,
-  a stroke of luck. Never from every night's rest or every tavern visit, so
+  a stroke of luck. A home of one's own, for now: a married or retired
+  character has one in their home town, without buying or selling it (houses
+  to buy and keep wait for a later update). Never from every night's rest or
+  every tavern visit, so
   that most adventurers carry an effect some of the time, not all of it.
   "Weakened" follows only a near death.
 - **The card** shows effects in words with the time left, numbers on hover.
@@ -170,9 +173,14 @@ start of §4.
 - **It falls with crime,** the graver the crime the more, and with despair
   (the death of a spouse or child, a long run of bad luck) and long years away
   from shrines.
-- **It rises with prayer at shrines, surviving an illness, defeating enemies,
-  and good fortune,** by how much depending on the person.
-- **A priest can restore it.**
+- **It rises with prayer at shrines, surviving an illness, memorable deeds
+  and good fortune,** by how much depending on the person. Only memorable
+  deeds count (a strong foe, a dread master, a windfall), each worth less than
+  the last; everyday kills don't. Barely surviving such a deed (a near death)
+  can raise it a great deal.
+- **A priest can restore it,** but not for an outlaw still on the run: only
+  for the reformed, those who paid restitution, or those who served their
+  sentence.
 - **Shown, not counted:** life stories name a person's faith in words
   ("devout", "believer", "skeptic", "corrupted" and others), and deeds and
   phrases hint at it in the feed; no number is shown.
@@ -186,17 +194,24 @@ start of §4.
 
 - **Sicknesses:** fever, infected wound, winter cough and plague; more later.
 - **Sickness is commoner in winter.**
-- **Some are more prone to illness, others more resistant;** the old and
-  children least resistant.
+- **Some are more prone to illness, others more resistant:** a hidden
+  hardiness each person is born with, passed on a little from their parents
+  (like the gift), plus toughness, age (the old and children resist least)
+  and the effects they carry (weakened, exhausted, a wasting curse).
 - **Catching it:** a roll for each day spent in a town where sickness is about,
   or in a party with someone sick. Towns keep a sickness level (raised by the
   sick, the season and plague) that characters roll against, never one
   character against another, so it stays cheap.
-- **How deadly:** illness a small share of deaths over a century (under 5% was
-  the first target; see question 44).
+- **How deadly:** illness about 5–10% of all deaths in ordinary times, more in
+  a plague decade.
 - **Plague is rare: about 2 or 3 a century,** of different size and severity.
   Not a Black Death, but enough to hurt a town or a region for some years. It
-  thins the town's population counts as well as killing named characters.
+  starts in one town, likelier a poor and crowded one in winter, and travels
+  the trade roads with merchants and travelers to nearby towns over weeks. A
+  large one can touch a region, never the whole world. It thins the towns'
+  population counts as well as killing named characters, and towns recover
+  over a few years (population, then trade). Rich towns weather it far better
+  than poor ones.
 - **Remedies are a new good,** made from herbs by its own recipe, so it does not
   drain herbs from healing draughts. Some healers make better remedies and sell
   them dearer. **Towns with better remedies and more wealth suffer far less**
@@ -225,37 +240,10 @@ Grouped by release, each settled before its release's work begins. Each has a
 proposal to react to. 0.4.0's first twenty are settled (§3); numbers 21–42
 stay as they were.
 
-### Still open for 0.4.0
+### 0.4.0
 
-Questions 1–20 are settled (§3). These came up in settling them.
-
-43. **A home of one's own.** Nobody owns a house yet: townsfolk live in town,
-    adventurers at inns. Proposal: in 0.4.0, a married or retired character
-    counts as having a home in their home town (no buying or selling), and a
-    night at home gives the comfort. Buying and keeping houses waits for a
-    later update.
-44. **Illness's share of deaths.** About 1 in 5 to 1 in 7 retirees dying of
-    illness already makes up a few percent of all deaths, so the first target
-    (under 5% overall) would leave almost nothing for anyone else. Proposal:
-    illness about 5–10% of all deaths in ordinary times, more in a plague
-    decade.
-45. **Faith from fighting.** Adventurers kill something most days, so faith
-    rising with every win would make them all devout. Proposal: only
-    memorable deeds count (a strong foe, a dread master, surviving a near
-    death, a windfall), each less than the last.
-46. **Can outlaws buy back faith?** Proposal: a priest restores faith only to
-    those not outlaws now (the reformed, those who served their sentence),
-    and never past what they had before their crimes; a murderer's faith
-    comes back only partly.
-47. **How a plague spreads.** Proposal: it starts in one town (likelier in
-    poor, crowded, wintry ones), travels the trade roads with merchants and
-    travelers to nearby towns over weeks, and towns recover over a few years
-    (population, then trade). A large one can touch a region; none reaches
-    the whole world.
-48. **Who is more prone to illness.** Proposal: a hidden hardiness each
-    person is born with (inherited a little, like the gift), plus toughness,
-    age, and the effects they carry (weakened, exhausted, cursed with
-    wasting).
+All of 0.4.0's questions are settled (§3), including 43–48, which came up
+in settling the first twenty.
 
 ### For 0.4.1: allies
 
