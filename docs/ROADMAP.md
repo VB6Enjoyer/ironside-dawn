@@ -1356,14 +1356,28 @@ Ten steps, each small enough to be looked over before the next begins.
    moment two worlds part ways; over eight worlds and a century the totals
    agree (1,054 and 1,064 deaths).
 
-3. **Lasting effects: where they come from.** Good effects come from what is
-   rare, costly or lucky: a good inn (dearer than the common one), a feast, a
-   night in a home of one's own (for now, a married or retired character's
-   home in their home town), a particularly good meal, a stroke of luck, and
-   alchemists' draughts beyond healing (a tonic of vigor, a calming draught,
-   new goods). Bad ones come from a near death (weakened for days) and long
-   marches (exhausted). The character card shows what someone carries, in
-   words with the time left.
+3. **Lasting effects: where they come from.** _Done:_ good effects come from
+   what is rare, costly or lucky. The well-off sometimes take the best room at
+   the finest inn, four times the price (well rested: +40% recovery, +10%
+   stamina, a day). The married sleep at home in their own town, for nothing
+   (at ease: +30% recovery, +10% nerve). At the tavern, those with gold to
+   spare now and then stand a feast (in good spirits: +15% nerve), and anyone
+   may be served a particularly fine meal (well fed). A great find, 150 gold
+   in one hoard or a legendary piece, feels like luck (+20% nerve, three
+   days). Alchemists brew tonics of vigor and calming draughts, two new goods
+   (herbs, or herbs and reagents for more tonic); the well-off carry one of
+   each and drink the tonic going into a delve (+20% stamina, +25% recovery,
+   hours), the draught when a master waits within or their nerve is low.
+   Bad ones: a near death leaves them weakened for days (−15% health, −25%
+   recovery, five days), a journey of a day and a half or more worn out (−1
+   attack and defense, −20% recovery). Each is told in the log (a trivial
+   line), and the character card shows what someone carries, in words with
+   the time left, the numbers on hover. Checked: at a monthly look,
+   adventurers carry "at ease" 13.5% of the time, good spirits 5%, well
+   rested 4%, worn out 2.6%, well fed 1.3%, weakened and lucky 0.1% each;
+   deaths and draught prices are as before; worlds about 5% slower.
+   Tonics and calming draughts settle near the price floor (6 and 4.5 gold),
+   since alchemists make more than the few who buy them use.
 
 4. **Faith.** Everyone has a faith level, from skeptic to devout, set at the
    start by culture, people and traits, and in some towns more than others;
