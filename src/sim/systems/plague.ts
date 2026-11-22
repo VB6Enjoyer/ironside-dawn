@@ -98,7 +98,9 @@ export function plagueDay(ctx: SimContext): void {
     const toll = DAILY_TOLL * plague.severity * (1.3 - careIn(ctx, town.id));
     for (const [species, n] of Object.entries(town.population)) {
       if (!n) continue;
-      const lost = Math.min(n - 1, Math.round(n * toll));
+      // Rounded by chance, so a small people loses some too, as often as it should.
+      const expected = n * toll;
+      const lost = Math.min(n - 1, Math.floor(expected) + (rng.chance(expected % 1) ? 1 : 0));
       if (lost <= 0) continue;
       town.population[species as keyof typeof town.population] = n - lost;
       plague.dead += lost;
