@@ -1,6 +1,8 @@
 import { SPECIES, type SpeciesDef } from '../../content';
 import type { SimContext } from '../context';
+import { HOUR } from '../core/time';
 import type { Character, EventOfType, LocationId, Motive } from '../model';
+import { grant } from './effects';
 import { ambush } from './outlaws';
 import { findPath, roadsFrom } from './roads';
 import { followersOf } from './social';
@@ -16,6 +18,8 @@ export type TravelReason = EventOfType<'travel.depart'>['data']['reason'];
 const LEG_DURATION_SD = 0.12;
 const LEG_DURATION_MIN = 0.75;
 const LEG_DURATION_MAX = 1.4;
+/** A journey this long or longer leaves those on it worn out (0.4.0). */
+const LONG_MARCH = 36 * HOUR;
 
 /** Sets out for `destinationId`. Returns false if there is no way there. */
 export function startJourney(
@@ -49,7 +53,7 @@ export function startJourney(
     [character.id, ...companions.map((c) => c.id)],
     fromId,
   );
-  beginLeg(ctx, character, fromId, firstStop, destinationId, remaining);
+  beginLeg(ctx, character, fromId, firstStop, destinationId, remaining, ctx.world.time);
   return true;
 }
 
@@ -83,6 +87,11 @@ export function finishLeg(
       [character.id, ...companions.map((c) => c.id)],
       here,
     );
+    // A long march wears out everyone on it (0.4.0).
+    const setOutAt = activity.setOutAt ?? activity.leg.departedAt;
+    if (ctx.world.time - setOutAt >= LONG_MARCH) {
+      for (const c of [character, ...companions]) grant(ctx, c, 'worn', 'march', here);
+    }
     return 'arrived';
   }
 
@@ -98,7 +107,15 @@ export function finishLeg(
     [character.id],
     here,
   );
-  beginLeg(ctx, character, here, nextStop, activity.destinationId, remaining);
+  beginLeg(
+    ctx,
+    character,
+    here,
+    nextStop,
+    activity.destinationId,
+    remaining,
+    activity.setOutAt ?? activity.leg.departedAt,
+  );
   return 'passing';
 }
 
@@ -118,6 +135,7 @@ function beginLeg(
   to: LocationId,
   destinationId: LocationId,
   remaining: readonly LocationId[],
+  setOutAt: number,
 ): void {
   // A road blocked since the journey was planned is braved all the same.
   const link = roadsFrom(ctx.world, from, true).find((road) => road.to === to);
@@ -143,6 +161,7 @@ function beginLeg(
     destinationId,
     leg: { from, to, departedAt, arrivesAt },
     remaining,
+    setOutAt,
   };
   wakeAt(ctx, character, arrivesAt);
 }

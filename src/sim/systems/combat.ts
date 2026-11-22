@@ -26,6 +26,7 @@ import { fightRound, fightWinner, type FightAction } from './combat-core';
 import { adventurerFighter } from './condition';
 import { die } from './death';
 import { dreadFell, dreadKilled } from './dread';
+import { grant } from './effects';
 import { exitDelve, resumeDelve } from './delve';
 import { weaponSkillOf } from './items';
 import { mint } from './ledger';
@@ -866,6 +867,8 @@ function rememberFight(
     const creature = enemies.creatures[0]?.ref ?? null;
     remember(character, now, { kind: 'near-death', locationId, creature }, 0.9);
     nudgeTrait(character, 'bravery', -0.03);
+    // And the body remembers too: weak and slow to mend for days (0.4.0).
+    grant(ctx, character, 'weakened', 'near-death', locationId);
   }
   // Being set upon by people is remembered as a wrong: by travelers ambushed,
   // and by outlaws run to ground. A hunter who comes away empty-handed

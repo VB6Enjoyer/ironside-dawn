@@ -25,6 +25,8 @@ export const GOODS = [
   { id: 'tools', name: 'tools', plural: 'crates of tools', value: 12 },
   { id: 'clothes', name: 'clothes', plural: 'bales of clothes', value: 8 },
   { id: 'potions', name: 'healing draughts', plural: 'healing draughts', value: 15 },
+  { id: 'vigor', name: 'tonics of vigor', plural: 'tonics of vigor', value: 20 },
+  { id: 'calm', name: 'calming draughts', plural: 'calming draughts', value: 14 },
   { id: 'arms', name: 'arms', plural: 'weapons', value: 40 },
   { id: 'armor', name: 'armor', plural: 'suits of armor', value: 50 },
 ] as const satisfies readonly GoodDef[];
@@ -73,6 +75,10 @@ export const PROFESSIONS = [
     recipes: [
       { inputs: { herbs: 2, reagents: 0.25 }, outputs: { potions: 1.5 } },
       { inputs: { herbs: 3 }, outputs: { potions: 1 } },
+      // 0.4.0: draughts beyond healing, for those who can afford them.
+      { inputs: { herbs: 2, reagents: 0.5 }, outputs: { vigor: 1.5 } },
+      { inputs: { herbs: 3 }, outputs: { vigor: 1 } },
+      { inputs: { herbs: 3 }, outputs: { calm: 1 } },
     ],
   },
   {

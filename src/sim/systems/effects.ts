@@ -1,6 +1,14 @@
-import { DIZZY_PENALTY, EFFECTS, type StatId } from '../../content';
+import {
+  DIZZY_PENALTY,
+  EFFECTS,
+  type EffectDef,
+  type EffectId,
+  type EffectSource,
+  type StatId,
+} from '../../content';
+import type { SimContext } from '../context';
 import { HOUR, MINUTE } from '../core/time';
-import type { Character, Effect } from '../model';
+import type { Character, Effect, LocationId } from '../model';
 import { strengthAt } from './effects-core';
 import { refreshMaxima } from './progress';
 
@@ -68,4 +76,40 @@ export function dizziness(now: number, minutes: number): Effect {
 export function drain(stat: StatId, amount: number, now: number, hours: number): Effect {
   const until = now + Math.round(hours * HOUR);
   return { kind: 'drained', mods: { [stat]: -amount }, since: now, fadeFrom: until, until };
+}
+
+/**
+ * Gives a character one of the lasting effects that come from the world
+ * (0.4.0): a good night, a feast, a tonic, a brush with death. Its strength
+ * and length are the kind's own; telling of it is a trivial event. Says
+ * whether it was taken (a stronger one of the kind may already be carried).
+ */
+export function grant(
+  ctx: SimContext,
+  character: Character,
+  kind: EffectId,
+  source: EffectSource,
+  locationId: LocationId,
+): boolean {
+  const def: EffectDef = EFFECTS[kind];
+  if (!def.mods || !def.hours) throw new Error(`${kind} is not an effect that can be granted`);
+  const now = ctx.world.time;
+  const [full, fade] = def.hours;
+  const effect: Effect = {
+    kind,
+    mods: def.mods,
+    since: now,
+    fadeFrom: now + Math.round(full * HOUR),
+    until: now + Math.round((full + fade) * HOUR),
+  };
+  if (!addEffect(character, effect, now)) return false;
+  ctx.emit(
+    {
+      type: 'character.effect',
+      data: { characterId: character.id, locationId, effect: kind, source },
+    },
+    [character.id],
+    locationId,
+  );
+  return true;
 }

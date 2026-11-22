@@ -393,12 +393,41 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
       );
     },
   ],
+  'character.effect': [
+    (e, h) => {
+      const c = h.c(e.data.characterId);
+      switch (e.data.source) {
+        case 'inn':
+          return [c, ' wakes well rested after a night in a fine bed.'];
+        case 'home':
+          return [c, ' wakes at home, at ease among family.'];
+        case 'feast':
+          return [c, ' stands a feast at the tavern, and the hall drinks to them.'];
+        case 'meal':
+          return [c, ' has a particularly fine meal, and is the better for it.'];
+        case 'luck':
+          return [c, ' feels that fortune is with them.'];
+        case 'tonic':
+          return e.data.effect === 'calm'
+            ? [c, ' drinks a calming draught, and their hands steady.']
+            : [c, ' drinks a tonic of vigor.'];
+        case 'near-death':
+          return [c, ' came too close to death, and will be weak for days.'];
+        case 'march':
+          return [c, ' arrives worn out from the long road.'];
+      }
+    },
+  ],
   'character.rest': [
     (e, h) => {
       const c = h.c(e.data.characterId);
       const l = h.l(e.data.locationId);
       switch (h.kindOf(e.data.locationId)) {
         case 'town':
+          if (e.data.comfort === 'home') return [c, ' spends the night at home in ', l, '.'];
+          if (e.data.comfort === 'inn') {
+            return [c, ' takes the best room at the finest inn in ', l, '.'];
+          }
           if (!e.data.paid) return [c, " can't afford an inn and sleeps in a stable in ", l, '.'];
           return h.pick<Part[]>([
             [c, ' takes a room for the night in ', l, '.'],
@@ -1324,6 +1353,8 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
                 : `${countWord(e.data.potions)} healing draughts`,
             ]
           : []),
+        ...(e.data.draughts?.vigor ? ['a tonic of vigor'] : []),
+        ...(e.data.draughts?.calm ? ['a calming draught'] : []),
         ...(e.data.item ? [anItem(e.data.item)] : []),
       ];
       return [

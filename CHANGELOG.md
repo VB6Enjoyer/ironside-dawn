@@ -11,6 +11,9 @@ The public notes players see under "What's new" are kept in `src/ui/releases.ts`
 ### Added
 
 - `npm run audit:world`, a headless world audit over several worlds (`tools/world-audit.ts`): deaths by cause, by calling (the retired apart) and by stage of life; how often adventurers are hurt, weary or laid up; how fights and delves go; the living by people and calling and the towns' counts every ten years; healing draught and herb prices; and how long each world took. It measures what the Body and Soul releases change.
+- Lasting effects from the world (`src/content/effects.ts`, `src/sim/systems/behavior.ts`, `shopping.ts`, `delve.ts`, `combat.ts`, `travel.ts`): the best room at the finest inn leaves someone well rested; the married sleep at home in their own town, at ease and for free; a feast stood at the tavern puts them in good spirits, and a particularly fine meal leaves them well fed; a great find feels like luck; a near death leaves them weakened for days, and a long march worn out. Each is told in the live log when watching closely.
+- Tonics of vigor and calming draughts, two new goods brewed by alchemists (`src/content/economy.ts`): the well-off carry one of each, drinking the tonic going into a delve and the draught when a master waits within or their nerve is low.
+- The character card shows the lasting effects someone carries, good in green and bad in red, with the time left and what each does on hover (`src/ui/components/CharacterCard.tsx`, `src/text/effects.ts`).
 
 ### Changed
 

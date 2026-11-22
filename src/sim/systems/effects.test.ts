@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { HOUR } from '../core/time';
+import { DAY, HOUR } from '../core/time';
 import type { Effect } from '../model';
 import { testCharacter, testContext } from '../test-support';
 import { adventurerFighter, fleeThreshold, recover, statValue } from './condition';
-import { addEffect, dizziness, drain, expireEffects } from './effects';
+import { createSimulation } from '../simulation';
+import { addEffect, dizziness, drain, expireEffects, grant } from './effects';
 import { aspectOf, carries, courageOf, strengthAt } from './effects-core';
 
 function someone() {
@@ -116,4 +117,44 @@ describe('lasting effects', () => {
     c.effects = [effect('weakened', { nerve: -0.9 }, now, 8)];
     expect(courageOf(c, now)).toBe(0);
   });
+});
+
+describe('where lasting effects come from', () => {
+  it('grants a kind at its own strength and length, and tells of it', () => {
+    const { ctx, c, now } = someone();
+    expect(grant(ctx, c, 'rested', 'inn', c.homeId)).toBe(true);
+    const [effect] = c.effects;
+    expect(effect!.mods).toEqual({ recovery: 0.4, stamina: 0.1 });
+    expect(effect!.fadeFrom - now).toBe(10 * HOUR);
+    expect(effect!.until - now).toBe(24 * HOUR);
+    const told = ctx.events.at(-1)!;
+    expect(told.type).toBe('character.effect');
+    expect(told.data).toMatchObject({ effect: 'rested', source: 'inn' });
+    // Another as strong, later, renews it rather than stacking.
+    ctx.world.time = now + 12 * HOUR;
+    expect(grant(ctx, c, 'rested', 'inn', c.homeId)).toBe(true);
+    expect(c.effects).toHaveLength(1);
+    expect(c.effects[0]!.until).toBe(now + 36 * HOUR);
+  });
+
+  it('come from the world as it runs: fine beds, feasts, meals, marches and tonics', () => {
+    const sources = new Map<string, number>();
+    const kinds = new Set<string>();
+    const sim = createSimulation({
+      seed: 'comforts',
+      characterCount: 30,
+      onEvent: (e) => {
+        if (e.type !== 'character.effect') return;
+        sources.set(e.data.source, (sources.get(e.data.source) ?? 0) + 1);
+        kinds.add(e.data.effect);
+      },
+    });
+    sim.advance(sim.world.time + 2 * 360 * DAY);
+    for (const source of ['inn', 'feast', 'meal', 'march', 'tonic'] as const) {
+      expect(sources.get(source) ?? 0, source).toBeGreaterThan(0);
+    }
+    // Only effects the world gives out are granted, never a cost.
+    for (const kind of kinds) expect(['dizzy', 'drained']).not.toContain(kind);
+    // Two years of a world, every event told: slower than most tests.
+  }, 60_000);
 });

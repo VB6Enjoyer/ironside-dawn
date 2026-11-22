@@ -13,7 +13,7 @@ export type {
   RouteDef,
 } from './locations';
 export { DIZZY_PENALTY, EFFECTS } from './effects';
-export type { Aspect, EffectDef, EffectId } from './effects';
+export type { Aspect, EffectDef, EffectId, EffectSource } from './effects';
 export { LOOT, lootDef } from './loot';
 export type { LootDef, LootId } from './loot';
 export { PASTIMES } from './pastimes';

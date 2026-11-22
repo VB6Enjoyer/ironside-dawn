@@ -212,6 +212,7 @@ export function createCharacter(ctx: SimContext, home: Location, arrival: Arriva
     death: null,
     history: [],
     potions: 0,
+    draughts: { vigor: 0, calm: 0 },
     cargo: {},
     cargoPaid: 0,
     // Merchants start out knowing what things cost in every town.

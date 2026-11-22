@@ -141,6 +141,8 @@ export interface Character {
 
   /** Healing draughts carried, drunk when a fight goes badly. */
   potions: number;
+  /** Alchemists' tonics of vigor and calming draughts carried, drunk going into a delve (0.4.0). */
+  draughts: { vigor: number; calm: number };
   /** Merchants: goods carried to sell, in units. */
   cargo: Goods;
   /** Merchants: what the cargo cost, to reckon the profit. */
@@ -262,6 +264,8 @@ export type Activity =
       readonly since: number;
       readonly until: number;
       readonly paid: boolean;
+      /** The best room at the inn, or a night at home (0.4.0): wakes them refreshed. */
+      readonly comfort?: 'inn' | 'home';
     }
   /** Resting in town by day to heal wounds. */
   | { readonly kind: 'convalescing'; readonly since: number; readonly until: number }
@@ -269,6 +273,8 @@ export type Activity =
       readonly kind: 'traveling';
       readonly destinationId: LocationId;
       readonly leg: TravelLeg;
+      /** When the journey began, for how long the road has been (0.4.0). */
+      readonly setOutAt?: number;
       /** Stops still to come after the current leg, ending at the destination. */
       readonly remaining: readonly LocationId[];
     }

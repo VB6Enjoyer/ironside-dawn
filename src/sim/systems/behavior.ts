@@ -6,7 +6,7 @@ import { convalescenceHours, needsRecovery, recover, type RecoveryPlace } from '
 import { decideAt, type Action } from './decide';
 import { DAILY_AT } from './ecology';
 import { delveStep, enterDelve } from './delve';
-import { expireEffects } from './effects';
+import { expireEffects, grant } from './effects';
 import { weaponSkillOf } from './items';
 import { townsfolkAt } from './lifecycle';
 import { learnSpells } from './magic';
@@ -37,6 +37,10 @@ const MAX_LIE_IN = 2 * HOUR;
 const SELLING_TIME = HOUR;
 /** An inn is only worth it with this many nights' money in the purse. */
 const INN_RESERVE_NIGHTS = 20;
+/** The best room at the finest inn costs this many times a plain one (0.4.0)... */
+const BEST_ROOM_PRICE = 4;
+/** ...and those who can easily afford it take it this often (less if they're greedy). */
+const BEST_ROOM_CHANCE = 0.15;
 const TRAINING_PER_HOUR = 0.25;
 /** Training stops helping at this proficiency. */
 const TRAINING_CAP = 45;
@@ -104,7 +108,16 @@ export function wakeCharacter(ctx: SimContext, character: Character): void {
       delveStep(ctx, character);
       return;
     case 'resting':
-      recover(character, restPlace(ctx, character, activity.paid), activity.until - activity.since);
+      recover(
+        character,
+        restPlace(ctx, character, activity.paid || activity.comfort !== undefined),
+        activity.until - activity.since,
+      );
+      // A fine bed or their own wakes them refreshed for the day (0.4.0).
+      if (activity.comfort && character.locationId) {
+        const kind = activity.comfort === 'home' ? 'home' : 'rested';
+        grant(ctx, character, kind, activity.comfort, character.locationId);
+      }
       break;
     case 'convalescing':
       recover(character, 'convalescing', activity.until - activity.since);
@@ -328,23 +341,44 @@ function rest(ctx: SimContext, character: Character, location: Location): void {
   // Those a town has shut its doors to find every inn door shut.
   const market = ctx.world.markets.get(location.id);
   const price = lodging(ctx, location);
+  // At home in their own town, the married sleep under their own roof, for nothing (0.4.0).
+  const home = location.kind === 'town' && atHome(ctx, character, location);
   // Nobody spends their last coins on a bed: they sleep rough instead.
   const paid =
+    !home &&
     location.kind === 'town' &&
     character.gold >= price * INN_RESERVE_NIGHTS &&
     !isShunned(character, location.id);
+  // The well-off sometimes take the best room at the finest inn (0.4.0).
+  const best =
+    paid &&
+    character.gold >= price * BEST_ROOM_PRICE * INN_RESERVE_NIGHTS &&
+    ctx.rng.behavior.chance(BEST_ROOM_CHANCE * (1 - 0.5 * character.traits.greed));
   if (paid) {
-    if (market) payHouse(market, character, price);
-    else character.gold -= price;
+    const bill = best ? price * BEST_ROOM_PRICE : price;
+    if (market) payHouse(market, character, bill);
+    else character.gold -= bill;
   }
+  const comfort = home ? ('home' as const) : best ? ('inn' as const) : undefined;
   const now = ctx.world.time;
   const until = nextTimeOfDay(now, MORNING) + ctx.rng.behavior.int(0, MAX_LIE_IN);
-  character.activity = { kind: 'resting', since: now, until, paid };
+  character.activity = {
+    kind: 'resting',
+    since: now,
+    until,
+    paid,
+    ...(comfort ? { comfort } : {}),
+  };
   character.goal = { kind: 'rest', locationId: location.id, why: [] };
   ctx.emit(
     {
       type: 'character.rest',
-      data: { characterId: character.id, locationId: location.id, paid },
+      data: {
+        characterId: character.id,
+        locationId: location.id,
+        paid,
+        ...(comfort ? { comfort } : {}),
+      },
     },
     [character.id],
     location.id,
@@ -450,6 +484,13 @@ function learnFromPastime(
     default:
       return;
   }
+}
+
+/** Whether a character sleeps under their own roof here: married, in their home town (0.4.0). */
+function atHome(ctx: SimContext, character: Character, town: Location): boolean {
+  if (character.homeId !== town.id || character.spouseId === null) return false;
+  const spouse = ctx.world.characters.get(character.spouseId);
+  return spouse !== undefined && spouse.death === null;
 }
 
 function restPlace(ctx: SimContext, character: Character, paid: boolean): RecoveryPlace {

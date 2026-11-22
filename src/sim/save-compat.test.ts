@@ -89,6 +89,14 @@ describe('save files from earlier releases', () => {
     expect(dizzy.mods).toEqual({ attack: -2, defense: -2 });
     expect(dizzy.fadeFrom).toBe(dizzy.until);
     expect(dizzy.until).toBeGreaterThan(sim.world.time);
+    // Nobody carries the alchemists' new draughts yet, and every market knows their worth.
+    for (const c of everyone) expect(c.draughts).toEqual({ vigor: 0, calm: 0 });
+    for (const market of sim.world.markets.values()) {
+      for (const agent of [...market.agents, market.house]) {
+        expect(agent.beliefs.vigor).toBeDefined();
+        expect(agent.beliefs.calm).toBeDefined();
+      }
+    }
   });
 
   it('refuse, saying why, what this version cannot load', () => {

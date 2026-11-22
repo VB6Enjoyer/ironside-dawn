@@ -5,8 +5,8 @@ import type { Character, DelveProgress, Dungeon, Item, Location, LootItem, Motiv
 import { startDelveFight } from './combat';
 import { isDizzy, modifier, retreatThreshold } from './condition';
 import { die } from './death';
-import { addEffect, dizziness } from './effects';
-import { courageOf } from './effects-core';
+import { addEffect, dizziness, grant } from './effects';
+import { carries, courageOf } from './effects-core';
 import { escortOf, masterAt } from './dread';
 import { claimLegend, generateItem, takeGear } from './items';
 import { mint } from './ledger';
@@ -24,6 +24,8 @@ import { moveTo } from './whereabouts';
  */
 
 const CHAMBER_MINUTES: readonly [number, number] = [8, 25];
+/** Gold in one hoard that makes a delver feel lucky (0.4.0). */
+const LUCKY_FIND = 150;
 const STAMINA_PER_CHAMBER = 0.5;
 /** Chance of calling it a day after any chamber, even when all is well. */
 const BASE_LEAVE_CHANCE = 0.08;
@@ -62,6 +64,7 @@ export function enterDelve(
   companions: readonly Character[] = [],
 ): void {
   if (!location.dungeon) throw new Error(`${location.id} is not a dungeon`);
+  drinkDraughts(ctx, character, location);
   character.activity = {
     kind: 'delving',
     locationId: location.id,
@@ -85,6 +88,23 @@ export function enterDelve(
     location.id,
   );
   nextChamber(ctx, character);
+}
+
+/**
+ * Going in, a delver drinks the tonic they carry, and a calming draught if
+ * the place frightens them or a master waits within (0.4.0).
+ */
+function drinkDraughts(ctx: SimContext, character: Character, location: Location): void {
+  const now = ctx.world.time;
+  if (character.draughts.vigor > 0 && !carries(character, 'vigor', now)) {
+    character.draughts.vigor--;
+    grant(ctx, character, 'vigor', 'tonic', location.id);
+  }
+  const daunting = location.dungeon?.masterId !== null || courageOf(character, now) < 0.4;
+  if (character.draughts.calm > 0 && daunting && !carries(character, 'calm', now)) {
+    character.draughts.calm--;
+    grant(ctx, character, 'calm', 'tonic', location.id);
+  }
 }
 
 /** Back to exploring after a won fight. */
@@ -394,6 +414,10 @@ function treasureChamber(
   for (const item of gear) {
     if (item.rarity === 'legendary') claimLegend(ctx, character, item, location.id);
     takeGear(ctx, character, item, location.id);
+  }
+  // A great find feels like fortune smiling (0.4.0).
+  if (gold >= LUCKY_FIND || gear.some((item) => item.rarity === 'legendary')) {
+    grant(ctx, character, 'lucky', 'luck', location.id);
   }
   gainXp(ctx, character, XP_PER_TREASURE + (lock === 'picked' ? 3 : 0), location.id);
   continueDelve(ctx, character, {

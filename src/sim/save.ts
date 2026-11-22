@@ -1,5 +1,5 @@
 import type { RngState } from './core/rng';
-import type { ContentPack } from '../content';
+import { GOODS, type ContentPack } from '../content';
 import type { World, WorldSettings } from './model';
 
 /**
@@ -130,7 +130,9 @@ function toCrimesThatTravel(save: SaveData): Record<string, unknown> {
 /**
  * 0.4.0: timed statuses (dizziness and drained attributes) become lasting
  * effects, which carry what they do to each aspect and when they fade. Those
- * from before hold at full strength to their end, as they did.
+ * from before hold at full strength to their end, as they did. Alchemists
+ * now make tonics of vigor and calming draughts: nobody carries any yet, and
+ * every market starts out believing them worth what the goods list says.
  */
 function toLastingEffects(save: SaveData): Record<string, unknown> {
   const world = save.world as Encoded;
@@ -148,6 +150,16 @@ function toLastingEffects(save: SaveData): Record<string, unknown> {
       until: s.until,
     }));
     delete c.statuses;
+    c.draughts = { vigor: 0, calm: 0 };
+  }
+  const markets = (world.markets as { $map: [unknown, Encoded][] }).$map;
+  for (const [, market] of markets) {
+    for (const agent of [...(market.agents as Encoded[]), market.house as Encoded]) {
+      const beliefs = agent.beliefs as Record<string, { low: number; high: number }>;
+      for (const good of GOODS) {
+        beliefs[good.id] ??= { low: good.value * 0.85, high: good.value * 1.15 };
+      }
+    }
   }
   return save;
 }
