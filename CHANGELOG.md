@@ -8,6 +8,8 @@ The public notes players see under "What's new" are kept in `src/ui/releases.ts`
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-11-22
+
 ### Added
 
 - Spell kills get their own line (`src/sim/systems/combat.ts`, `src/text/describe.ts`): the log says when a spell deals the killing blow, and felling a strong creature (a troll, a jotunn, an oni) with one is now _Notable_, so it shows at Day speed and up and reaches the chronicle. Someone killed by a spell is "struck down … with an Ember Bolt" in the log, and their life story names the spell (`src/text/biography.ts`).
@@ -129,7 +131,8 @@ The public notes players see under "What's new" are kept in `src/ui/releases.ts`
 
 - The first release: procedural worlds with their people, markets, generations, cultures and myths; the observatory to watch them; world settings, content packs, saves and links; and the desktop app. How it was built is told phase by phase in `docs/ROADMAP.md`.
 
-[Unreleased]: https://github.com/VB6Enjoyer/ironside-dawn/compare/v0.3.1...HEAD
+[Unreleased]: https://github.com/VB6Enjoyer/ironside-dawn/compare/v0.3.2...HEAD
+[0.3.2]: https://github.com/VB6Enjoyer/ironside-dawn/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/VB6Enjoyer/ironside-dawn/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/VB6Enjoyer/ironside-dawn/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/VB6Enjoyer/ironside-dawn/compare/v0.1.1...v0.2.0

@@ -28,7 +28,8 @@ town's market, or watch a dungeon's population change over time.
 
 ## Status
 
-The current version is **0.3.1**, fixes on **0.3.0, the Outlaws Update**: crime as a living part of
+The current version is **0.3.2**, which brings the world's magic into view,
+on top of **0.3.0, the Outlaws Update**, which made crime a living part of
 every world. Outlaws rob caravans, shops and houses as well as travelers; word
 of their crimes travels town to town; and their careers end in restitution, a
 head carried in for the bounty, or capture, trial, prison or execution, all told
