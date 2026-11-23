@@ -405,6 +405,10 @@ export function hallsView(sim: Simulation): HallsView {
     dread: dreadOf(sim),
     prisoners,
     hanged,
+    plagues: [...sim.world.plagues]
+      .sort((a, b) => b.startedAt - a.startedAt)
+      .slice(0, HALL_SIZE)
+      .map((p) => ({ ...p, raging: p.until > sim.world.time })),
   };
 }
 

@@ -26,6 +26,10 @@ import { fightRound, fightWinner, type FightAction } from './combat-core';
 import { adventurerFighter } from './condition';
 import { die } from './death';
 import { dreadFell, dreadKilled } from './dread';
+import { anyCurse, layCurse } from './curses';
+import { grant } from './effects';
+import { blessing, shiftFaith } from './faith-core';
+import { woundMayFester } from './illness';
 import { exitDelve, resumeDelve } from './delve';
 import { weaponSkillOf } from './items';
 import { mint } from './ledger';
@@ -60,6 +64,9 @@ const WEAPON_PRACTICE = 0.1;
 const MEMORABLE_LEVEL = 4;
 /** Below this fraction of hit points, surviving a fight is remembered as a near-death. */
 const NEAR_DEATH = 0.2;
+/** Chance a fight with one of the dread, or a hard one with the undead, leaves a curse (0.4.0). */
+const DREAD_CURSE = 0.05;
+const UNDEAD_CURSE = 0.03;
 const GLORY_PER_KILL_LEVEL = 0.02;
 /** Each chamber deeper raises the chance of an affix by this fraction. */
 const AFFIX_DEPTH_BONUS = 0.15;
@@ -866,6 +873,26 @@ function rememberFight(
     const creature = enemies.creatures[0]?.ref ?? null;
     remember(character, now, { kind: 'near-death', locationId, creature }, 0.9);
     nudgeTrait(character, 'bravery', -0.03);
+    // And the body remembers too: weak and slow to mend for days (0.4.0).
+    grant(ctx, character, 'weakened', 'near-death', locationId);
+    // Barely surviving can make a believer of anyone, the first time most of all.
+    const escapes = character.memories.filter((m) => m.kind === 'near-death').length;
+    blessing(character, 0.15, escapes - 1);
+    // A wound taken out in the wilds may fester (0.4.0).
+    const place = ctx.world.locations.get(locationId);
+    if (place) woundMayFester(ctx, character, place);
+  }
+  // A run of bad luck wears faith down.
+  if (outcome === 'fled') shiftFaith(character, -0.01);
+  // The touch of the undead, or a dread master's malice, may leave a curse (0.4.0).
+  const rng = ctx.rng.people;
+  const dread = enemies.characters.some((id) => ctx.world.characters.get(id)?.calling === 'dread');
+  const undead = enemies.creatures.some((c) => creatureDef(c.ref.species).family === 'undead');
+  const hurt = character.hp < character.maxHp * 0.5;
+  if (dread && rng.chance(DREAD_CURSE)) {
+    layCurse(ctx, character, anyCurse(ctx), 'dread', locationId);
+  } else if (undead && hurt && rng.chance(UNDEAD_CURSE)) {
+    layCurse(ctx, character, rng.chance(0.5) ? 'wasting' : 'weakness', 'undead', locationId);
   }
   // Being set upon by people is remembered as a wrong: by travelers ambushed,
   // and by outlaws run to ground. A hunter who comes away empty-handed

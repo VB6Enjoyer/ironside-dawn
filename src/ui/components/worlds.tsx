@@ -79,6 +79,9 @@ export function NewWorldForm({
   const [size, setSize] = useState<WorldSettings['size'] | 'auto'>(start.size ?? 'auto');
   const [danger, setDanger] = useState<WorldSettings['danger']>(start.danger ?? 'normal');
   const [magic, setMagic] = useState<WorldSettings['magic']>(start.magic ?? 'normal');
+  const [hardship, setHardship] = useState<NonNullable<WorldSettings['hardship']>>(
+    start.hardship ?? 'normal',
+  );
   const [peoples, setPeoples] = useState<readonly PeopleId[]>(start.peoples ?? PEOPLES);
   const [cap, setCap] = useState<string>(start.populationCap ? String(start.populationCap) : '');
   const [packs, setPacks] = useState<readonly string[]>(initial?.packs ?? []);
@@ -87,6 +90,7 @@ export function NewWorldForm({
     ...(size !== 'auto' ? { size } : {}),
     danger,
     magic,
+    hardship,
     peoples: withHumans(peoples),
     populationCap: Number(cap) > 0 ? Math.round(Number(cap)) : null,
   });
@@ -152,6 +156,17 @@ export function NewWorldForm({
                 <option value="rare">rare</option>
                 <option value="normal">normal</option>
                 <option value="common">common</option>
+              </select>
+            </label>
+            <label title="How much sickness, plague and curses there are">
+              Hardship{' '}
+              <select
+                value={hardship}
+                onChange={(e) => setHardship(e.target.value as typeof hardship)}
+              >
+                <option value="gentle">gentle</option>
+                <option value="normal">normal</option>
+                <option value="harsh">harsh</option>
               </select>
             </label>
             <label>

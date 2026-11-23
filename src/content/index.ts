@@ -12,6 +12,10 @@ export type {
   RoomOutcome,
   RouteDef,
 } from './locations';
+export { CURSES, DIZZY_PENALTY, EFFECTS } from './effects';
+export { SICKNESSES } from './illness';
+export type { SicknessDef, SicknessId } from './illness';
+export type { Aspect, CurseId, CurseSource, EffectDef, EffectId, EffectSource } from './effects';
 export { LOOT, lootDef } from './loot';
 export type { LootDef, LootId } from './loot';
 export { PASTIMES } from './pastimes';

@@ -28,12 +28,14 @@ town's market, or watch a dungeon's population change over time.
 
 ## Status
 
-The current version is **0.3.2**, which brings the world's magic into view,
-on top of **0.3.0, the Outlaws Update**, which made crime a living part of
-every world. Outlaws rob caravans, shops and houses as well as travelers; word
-of their crimes travels town to town; and their careers end in restitution, a
-head carried in for the bounty, or capture, trial, prison or execution, all told
-in their life stories. What changed in each version is in [`CHANGELOG.md`](CHANGELOG.md),
+The current version is **0.4.0, Body and Soul: the body**. People carry
+lasting effects, good and bad: a night in a fine bed, a feast, a tonic, or a
+brush with death. Everyone keeps a faith that prayer, deeds, crime and grief
+move. Sickness comes with winter and crowded towns, remedies and good healers
+keep it down, and two or three times a century a plague sweeps along the
+roads. Curses fall on the unlucky, and priests and wise folk lift them. A new
+hardship setting makes all of it gentler or harsher. Before it, **0.3.0, the
+Outlaws Update** made crime a living part of every world. What changed in each version is in [`CHANGELOG.md`](CHANGELOG.md),
 and players see it under "What's new" in the app.
 
 Phase 11 (Scale & Ship), the last of the plan, is built; the final name is

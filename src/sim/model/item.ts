@@ -1,4 +1,4 @@
-import type { ItemAffixId, ItemBaseId, MaterialId, Rarity } from '../../content';
+import type { CurseId, ItemAffixId, ItemBaseId, MaterialId, Rarity } from '../../content';
 import type { CharacterId, ItemId, LocationId } from './ids';
 
 /** A piece of equipment (ROADMAP.md Phase 3). Plain data; effects come from content. */
@@ -12,6 +12,8 @@ export interface Item {
   readonly uniqueName: string | null;
   /** What a merchant pays for it. */
   readonly value: number;
+  /** A curse that comes with wearing it (0.4.0), until it is lifted or the item thrown away. */
+  readonly curse?: CurseId;
 }
 
 export interface Equipment {

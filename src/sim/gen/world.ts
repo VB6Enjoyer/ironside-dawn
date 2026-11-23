@@ -30,6 +30,7 @@ export function defaultSettings(adventurers = 20): WorldSettings {
     size: sizeFor(adventurers),
     danger: 'normal',
     magic: 'normal',
+    hardship: 'normal',
     peoples: PEOPLES,
     populationCap: null,
   };
@@ -124,6 +125,7 @@ export function createWorldState(
     bounties: new Map(),
     news: [],
     unsolved: [],
+    plagues: [],
     scheduler: createScheduler(),
     takenNames: new Set(),
     nextCharacterNumber: 1,

@@ -39,6 +39,7 @@ import {
   describeActivity,
   describeDeed,
   describeEvent,
+  effectLines,
   formatTimestamp,
   goodsList,
   lootList,
@@ -669,14 +670,29 @@ function Bar({
   );
 }
 
+/**
+ * How they are: wounded or spent, and the lasting effects they carry (0.4.0),
+ * each with the time left and, on hover, what it does.
+ */
 function Conditions({ character, now }: { character: Character; now: number }) {
-  const conditions = conditionsOf(character, now);
-  if (conditions.length === 0) return null;
+  // Dizziness and drains are lasting effects now, shown with the rest.
+  const conditions = conditionsOf(character, now).filter((c) => c !== 'dizzy' && c !== 'drained');
+  const effects = effectLines(character, now);
+  if (conditions.length === 0 && effects.length === 0) return null;
   return (
-    <ul className="chips" aria-label="Conditions">
+    <ul className="chips" aria-label="Conditions and lasting effects">
       {conditions.map((c) => (
         <li key={c} className="chip">
           {c}
+        </li>
+      ))}
+      {effects.map((e) => (
+        <li
+          key={e.kind}
+          className={`chip ${e.good ? 'chip-good' : 'chip-bad'}`}
+          title={`${e.detail} · ${e.left}`}
+        >
+          {e.name} <span className="chip-note">· {e.left.replace(/^about /, '')}</span>
         </li>
       ))}
     </ul>

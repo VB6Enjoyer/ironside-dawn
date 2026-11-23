@@ -1,10 +1,14 @@
-import { creatureDef, TRAPS, type CreatureId, type RoomOutcome } from '../../content';
+import { creatureDef, itemBase, TRAPS, type CreatureId, type RoomOutcome } from '../../content';
 import { MINUTE } from '../core/time';
 import type { SimContext } from '../context';
 import type { Character, DelveProgress, Dungeon, Item, Location, LootItem, Motive } from '../model';
 import { startDelveFight } from './combat';
 import { isDizzy, modifier, retreatThreshold } from './condition';
 import { die } from './death';
+import { anyCurse, CURSED_FIND, layCurse } from './curses';
+import { addEffect, dizziness, grant } from './effects';
+import { carries, courageOf } from './effects-core';
+import { shiftFaith } from './faith-core';
 import { escortOf, masterAt } from './dread';
 import { claimLegend, generateItem, takeGear } from './items';
 import { mint } from './ledger';
@@ -22,6 +26,10 @@ import { moveTo } from './whereabouts';
  */
 
 const CHAMBER_MINUTES: readonly [number, number] = [8, 25];
+/** Gold in one hoard that makes a delver feel lucky (0.4.0). */
+const LUCKY_FIND = 150;
+/** Chance a delve into a place with dark tales told of it leaves a curse of ill luck (0.4.0). */
+const HAUNTED = 0.002;
 const STAMINA_PER_CHAMBER = 0.5;
 /** Chance of calling it a day after any chamber, even when all is well. */
 const BASE_LEAVE_CHANCE = 0.08;
@@ -60,6 +68,11 @@ export function enterDelve(
   companions: readonly Character[] = [],
 ): void {
   if (!location.dungeon) throw new Error(`${location.id} is not a dungeon`);
+  drinkDraughts(ctx, character, location);
+  // A place with dark tales told of it may leave its mark (0.4.0).
+  if (ctx.world.myths.some((m) => m.locationId === location.id) && ctx.rng.people.chance(HAUNTED)) {
+    layCurse(ctx, character, 'ill-luck', 'haunt', location.id);
+  }
   character.activity = {
     kind: 'delving',
     locationId: location.id,
@@ -83,6 +96,23 @@ export function enterDelve(
     location.id,
   );
   nextChamber(ctx, character);
+}
+
+/**
+ * Going in, a delver drinks the tonic they carry, and a calming draught if
+ * the place frightens them or a master waits within (0.4.0).
+ */
+function drinkDraughts(ctx: SimContext, character: Character, location: Location): void {
+  const now = ctx.world.time;
+  if (character.draughts.vigor > 0 && !carries(character, 'vigor', now)) {
+    character.draughts.vigor--;
+    grant(ctx, character, 'vigor', 'tonic', location.id);
+  }
+  const daunting = location.dungeon?.masterId !== null || courageOf(character, now) < 0.4;
+  if (character.draughts.calm > 0 && daunting && !carries(character, 'calm', now)) {
+    character.draughts.calm--;
+    grant(ctx, character, 'calm', 'tonic', location.id);
+  }
 }
 
 /** Back to exploring after a won fight. */
@@ -220,7 +250,7 @@ function shouldLeave(
     const master = ctx.world.characters.get(dungeon.masterId)!;
     if (!master.death && !dareLair(ctx, character, master)) return true;
   }
-  if (character.hp < character.maxHp * retreatThreshold(character)) return true;
+  if (character.hp < character.maxHp * retreatThreshold(character, ctx.world.time)) return true;
   if (character.stamina < character.maxStamina * 0.25) return true;
   if (isDizzy(character, ctx.world.time)) return true;
   // Out to destroy the master, they press on to the lair while they can.
@@ -251,7 +281,7 @@ function onCrusade(ctx: SimContext, character: Character, masterId: Character['i
 function dareLair(ctx: SimContext, character: Character, master: Character): boolean {
   const party = 1 + followersOf(ctx, character).length;
   const odds = lairOdds(character.level, party, master.level);
-  const nerve = 0.3 + 0.5 * character.traits.bravery + 0.2 * character.drives.glory;
+  const nerve = 0.3 + 0.5 * courageOf(character, ctx.world.time) + 0.2 * character.drives.glory;
   return odds * nerve > 0.4 && ctx.rng.delve.chance(0.5 + 0.5 * odds);
 }
 
@@ -277,7 +307,7 @@ function avoidFight(
   const level = creatureDef(species).level;
   if (level * count < AVOID_THREAT) return false;
   const rng = ctx.rng.delve;
-  if (!rng.chance(1 - 0.7 * character.traits.bravery)) return false;
+  if (!rng.chance(1 - 0.7 * courageOf(character, ctx.world.time))) return false;
 
   const success =
     rng.int(1, 20) + modifier(character, 'agility') + skillBonus(character, 'stealth') >=
@@ -364,8 +394,18 @@ function treasureChamber(
     if (lost && rng.chance(LOST_LEGEND_CHANCE)) {
       gear.push(dungeon.lostItems.shift()!);
     } else if (rng.chance(GEAR_IN_TREASURE_CHANCE * (1 + 0.05 * progress.room))) {
+      const found = generateItem(ctx, ctx.rng.items, {
+        culture: location.culture,
+        depth: progress.room,
+      });
+      // Now and then a piece of armor or a trinket carries a curse, and is worth half (0.4.0).
+      const slot = itemBase(found.base).slot;
+      const cursed =
+        found.rarity !== 'legendary' &&
+        (slot === 'armor' || slot === 'trinket') &&
+        rng.chance(CURSED_FIND);
       gear.push(
-        generateItem(ctx, ctx.rng.items, { culture: location.culture, depth: progress.room }),
+        cursed ? { ...found, curse: anyCurse(ctx), value: Math.ceil(found.value / 2) } : found,
       );
     }
   }
@@ -392,6 +432,11 @@ function treasureChamber(
   for (const item of gear) {
     if (item.rarity === 'legendary') claimLegend(ctx, character, item, location.id);
     takeGear(ctx, character, item, location.id);
+  }
+  // A great find feels like fortune smiling (0.4.0).
+  if (gold >= LUCKY_FIND || gear.some((item) => item.rarity === 'legendary')) {
+    grant(ctx, character, 'lucky', 'luck', location.id);
+    shiftFaith(character, 0.02 * (1 - character.faith));
   }
   gainXp(ctx, character, XP_PER_TREASURE + (lock === 'picked' ? 3 : 0), location.id);
   continueDelve(ctx, character, {
@@ -426,7 +471,7 @@ function trapChamber(
 
   character.hp = Math.max(0, character.hp - damage);
   if (dizzy) {
-    character.statuses.push({ kind: 'dizzy', until: ctx.world.time + trap.dizzyMinutes * MINUTE });
+    addEffect(character, dizziness(ctx.world.time, trap.dizzyMinutes), ctx.world.time);
   }
   ctx.emit(
     {

@@ -250,6 +250,8 @@ function worldReport(
           return 'other people';
         case 'age':
           return 'old age';
+        case 'illness':
+          return 'sickness';
         case 'executed':
           return 'the hangman';
         case 'prison':

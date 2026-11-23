@@ -658,6 +658,19 @@ button.ref-dead {
   border-radius: 10px;
 }
 
+/* Lasting effects (0.4.0): good ones in the living colour, bad ones in the deaths'. */
+.chip-good {
+  background: var(--mark-living, var(--accent));
+}
+
+.chip-bad {
+  background: var(--mark-death);
+}
+
+.chip-note {
+  opacity: 0.8;
+}
+
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

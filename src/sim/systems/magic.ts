@@ -1,10 +1,11 @@
 import { SPELLS, spellDef, type SpellDef, type SpellId } from '../../content';
-import { HOUR, MINUTE } from '../core/time';
+import { addEffect, dizziness, drain } from './effects';
 import type { SimContext } from '../context';
 import type { Character, Combatant, EventOfType, LocationId } from '../model';
 import { WOUNDED_BELOW } from './combat-core';
 import { isDizzy, isDrained, modifier } from './condition';
 import { die } from './death';
+import { courageOf } from './effects-core';
 import { averageRoll } from './items';
 import { remember } from './mind';
 import { addDeed, effectiveSkill, gainXp, practice } from './progress';
@@ -102,17 +103,16 @@ export function cast(
   character.stamina -= stamina;
   character.hp = Math.max(0, character.hp - health);
   if (costs.drain) {
-    character.statuses.push({
-      kind: 'drained',
-      stat: costs.drain.stat,
-      amount: costs.drain.amount * multiplier,
-      until: now + Math.round(costs.drain.hours * HOUR),
-    });
+    addEffect(
+      character,
+      drain(costs.drain.stat, costs.drain.amount * multiplier, now, costs.drain.hours),
+      now,
+    );
   }
   const dizzy = costs.dizzyMinutes > 0 || outcome === 'backlash';
   if (dizzy) {
     const minutes = Math.max(costs.dizzyMinutes, 10) * multiplier;
-    character.statuses.push({ kind: 'dizzy', until: now + minutes * MINUTE });
+    addEffect(character, dizziness(now, minutes), now);
   }
 
   let amount = 0;
@@ -218,7 +218,7 @@ export function chooseSpell(
   const hpFraction = character.hp / character.maxHp;
   const threat = fight.enemies.reduce((sum, e) => sum + e.level, 0);
   const weakest = fight.enemies.reduce((a, b) => (b.hp < a.hp ? b : a));
-  const riskWeight = 1.5 - character.traits.bravery;
+  const riskWeight = 1.5 - courageOf(character, now);
   const backlashOdds =
     (1 + (isDizzy(character, now) ? 2 : 0) + (isDrained(character, now) ? 2 : 0)) / 20;
   const early = fight.round === 0;

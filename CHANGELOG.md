@@ -8,6 +8,27 @@ The public notes players see under "What's new" are kept in `src/ui/releases.ts`
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-22
+
+### Added
+
+- `npm run audit:world`, a headless world audit over several worlds (`tools/world-audit.ts`): deaths by cause, by calling (the retired apart) and by stage of life; how often adventurers are hurt, weary or laid up; how fights and delves go; the living by people and calling and the towns' counts every ten years; healing draught and herb prices; and how long each world took. It measures what the Body and Soul releases change.
+- Lasting effects from the world (`src/content/effects.ts`, `src/sim/systems/behavior.ts`, `shopping.ts`, `delve.ts`, `combat.ts`, `travel.ts`): the best room at the finest inn leaves someone well rested; the married sleep at home in their own town, at ease and for free; a feast stood at the tavern puts them in good spirits, and a particularly fine meal leaves them well fed; a great find feels like luck; a near death leaves them weakened for days, and a long march worn out. Each is told in the live log when watching closely.
+- Tonics of vigor and calming draughts, two new goods brewed by alchemists (`src/content/economy.ts`): the well-off carry one of each, drinking the tonic going into a delve and the draught when a master waits within or their nerve is low. Townsfolk buy them too, so they keep a price.
+- Faith (`src/sim/systems/faith-core.ts`, `faith.ts`): everyone has a faith, set by their culture, their town and their nature, and handed down to children; the grave, infernal and dread have none. Prayer at shrines, memorable deeds, great finds and narrow escapes strengthen it; crimes, grief, poverty and long years away from shrines wear it down. It steadies nerve a little, prayer leaves a blessing as strong as one's faith, and priests can give back what crimes took, though never to an outlaw on the run. Life stories name it: devout, believer, doubter, skeptic, faithless or corrupted (`src/text/biography.ts`).
+- Illness (`src/content/illness.ts`, `src/sim/systems/illness.ts`): fever, winter cough and infected wounds. Sickness is commoner in winter and in towns where many are sick; some are born hardier than others, and the old and children are frailer. The sick are weakened, stay out of dungeons and rest until well if they can afford it; sick outlaws are easier to capture and readier to pay restitution. Most get over it, but it can kill, the very old above all: about one death in fifteen, and one in six of the retired. Life stories and the log tell of deaths by sickness.
+- Remedies, a new good made by alchemists (`src/content/economy.ts`, `src/sim/systems/illness.ts`): the sick buy them where they can afford them, and they shorten a sickness and make it far less deadly. Some towns' healers are better, and charge more; wealthy towns with good remedies suffer far less sickness than poor ones.
+- Plague (`src/sim/systems/plague.ts`): two or three times a century a plague breaks out, likelier in a poor, crowded town in winter. For months it takes the townsfolk and sickens the named folk there, and it travels the roads to nearby towns; a town it has passed through is spared for years, and its trade recovers as its people do. Rich towns that care well for their sick weather it best. Outbreaks, their spread and their end are told in the chronicle.
+- Curses (`src/sim/systems/curses.ts`): ill luck, a wasting, a weakness, or the mark that makes people wary (harder to befriend, far harder to love). They come from cursed armor and trinkets found in dungeons, from places with dark tales told of them, from the touch of the undead, from the dread, and from a murder victim's dying breath. The cursed notice after a while and seek a priest, likelier to help the faithful, or the town's wise folk; a cursed thing is thrown away once noticed. Lesser curses pass with time.
+- A hardship setting at world creation and in links (`src/ui/components/worlds.tsx`, `src/ui/seed.ts`, `?hardship=gentle|harsh`): gentle halves sickness, plague and curses; harsh brings more sickness and plague. Worlds made before read as normal.
+- The Halls list the Plagues: where each struck, whence it came, how long it lasted and how many townsfolk it took (`src/ui/pages/HallsPage.tsx`). Life stories say when someone is sick or cursed (`src/text/biography.ts`).
+- The character card shows the lasting effects someone carries, good in green and bad in red, with the time left and what each does on hover (`src/ui/components/CharacterCard.tsx`, `src/text/effects.ts`).
+
+### Changed
+
+- Dizziness and drained attributes are now lasting effects (`src/sim/systems/effects.ts`, `src/content/effects.ts`), the groundwork for the good and bad effects to come: each acts on health, stamina, attack, defense, an attribute, recovery or nerve, holds for a while and may fade. Nerve now steadies or shakes a character's bravery when they decide to flee, press on, delve, hunt or cast. Saves move to version 8; saves from every earlier release still load, and a 0.3.2 save is kept as a test fixture (`src/sim/fixtures/save-0.3.2.json.gz`).
+- Worlds turn out differently from their seed than in 0.3.2 (`src/host/version.ts`), so links from 0.3.2 open with a note that history differs.
+
 ## [0.3.2] - 2026-11-22
 
 ### Added
@@ -133,7 +154,8 @@ The public notes players see under "What's new" are kept in `src/ui/releases.ts`
 
 - The first release: procedural worlds with their people, markets, generations, cultures and myths; the observatory to watch them; world settings, content packs, saves and links; and the desktop app. How it was built is told phase by phase in `docs/ROADMAP.md`.
 
-[Unreleased]: https://github.com/VB6Enjoyer/ironside-dawn/compare/v0.3.2...HEAD
+[Unreleased]: https://github.com/VB6Enjoyer/ironside-dawn/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/VB6Enjoyer/ironside-dawn/compare/v0.3.2...v0.4.0
 [0.3.2]: https://github.com/VB6Enjoyer/ironside-dawn/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/VB6Enjoyer/ironside-dawn/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/VB6Enjoyer/ironside-dawn/compare/v0.2.0...v0.3.0

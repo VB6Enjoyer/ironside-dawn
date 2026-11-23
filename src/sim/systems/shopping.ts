@@ -13,6 +13,7 @@ import { mint } from './ledger';
 import { townsfolkAt } from './lifecycle';
 import { buyFromHouse, goingPrice, payHouse, priceToBuy, sellToHouse, terms } from './market';
 import { fence } from './crime';
+import { grant } from './effects';
 import { isShunned } from './notoriety';
 
 /**
@@ -23,6 +24,8 @@ import { isShunned } from './notoriety';
 
 /** Healing draughts an adventurer likes to carry. */
 export const POTIONS_WANTED = 2;
+/** An adventurer buys a tonic or a calming draught only with this many times its price in hand (0.4.0). */
+const DRAUGHT_WEALTH = 15;
 /** Gold an adventurer keeps back when buying gear. */
 const GEAR_RESERVE = 50;
 /** Share of their gold an adventurer will spend on one piece of gear. */
@@ -34,15 +37,36 @@ const SCRAP_GOLD_PER_ORE = 50;
 /** On a night out, an adventurer spends this share of their purse beyond what they keep by. */
 const CAROUSING = 0.01;
 const PURSE_KEPT = 50;
+/** A feast takes this share of what they have to spare, and is worth standing from so much (0.4.0). */
+const FEAST_SHARE = 0.05;
+const FEAST_LEAST = 15;
+/** How often one who can afford it stands a feast, the more so the more they like company. */
+const FEAST_CHANCE = 0.1;
+/** How often a night at the tavern brings a particularly fine meal. */
+const FINE_MEAL_CHANCE = 0.05;
 /** A merchant keeps a stake to trade with. */
 const MERCHANT_STAKE_KEPT = 500;
 
-/** A night at the tavern: drink, dice and rounds for the house. The gold goes to the town. */
+/**
+ * A night at the tavern: drink, dice and rounds for the house. The gold goes
+ * to the town. Now and then the well-off stand a feast, and anyone may be
+ * served a particularly fine meal (0.4.0): both lift them for a day.
+ */
 export function carouse(ctx: SimContext, character: Character, town: Location): void {
   const market = ctx.world.markets.get(town.id);
   const kept = character.calling === 'merchant' ? MERCHANT_STAKE_KEPT : PURSE_KEPT;
-  const spend = Math.floor(Math.max(0, character.gold - kept) * CAROUSING);
+  const spare = Math.max(0, character.gold - kept);
+  const spend = Math.floor(spare * CAROUSING);
   if (market && spend > 0) payHouse(market, character, spend);
+  if (!market) return;
+  const rng = ctx.rng.behavior;
+  const feast = Math.floor(spare * FEAST_SHARE);
+  if (feast >= FEAST_LEAST && rng.chance(FEAST_CHANCE * (0.5 + character.drives.companionship))) {
+    payHouse(market, character, feast);
+    grant(ctx, character, 'spirits', 'feast', town.id);
+  } else if (rng.chance(FINE_MEAL_CHANCE)) {
+    grant(ctx, character, 'fed', 'meal', town.id);
+  }
 }
 
 /** What a piece of loot is on the market: so much of a good, or treasure assayed for coin. */
@@ -152,9 +176,21 @@ function shop(ctx: SimContext, market: Market, character: Character, town: Locat
     potions = bought.units;
     spent += bought.gold;
   }
+  // The well-off carry an alchemist's tonic and a calming draught for the dark (0.4.0).
+  const draughts = { vigor: 0, calm: 0 };
+  for (const good of ['vigor', 'calm'] as const) {
+    if (character.draughts[good] >= 1) continue;
+    const price = priceToBuy(market, character, town, good, 1);
+    if (price === null || character.gold < price * DRAUGHT_WEALTH) continue;
+    if ((market.house.stock[good] ?? 0) < 1) continue;
+    const bought = buyFromHouse(market, character, town, good, 1);
+    character.draughts[good] += bought.units;
+    draughts[good] = bought.units;
+    spent += bought.gold;
+  }
   const item = buyGear(ctx, market, character, town);
   if (item) spent += item.price;
-  if (potions === 0 && !item) return;
+  if (potions === 0 && !item && draughts.vigor + draughts.calm === 0) return;
   if (item) takeGear(ctx, character, item.item, town.id);
   ctx.emit(
     {
@@ -165,6 +201,7 @@ function shop(ctx: SimContext, market: Market, character: Character, town: Locat
         potions,
         item: item?.item ?? null,
         gold: spent,
+        ...(draughts.vigor + draughts.calm > 0 ? { draughts } : {}),
       },
     },
     [character.id],

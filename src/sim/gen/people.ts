@@ -23,6 +23,7 @@ import type { Calling, Character, CharacterId, Location, PriceNote, World } from
 import { mint } from '../systems/ledger';
 import { GOOD_IDS, houseQuote } from '../systems/market';
 import { generateItem, starterWeapon } from '../systems/items';
+import { startingFaith } from '../systems/faith-core';
 import { learnSpells } from '../systems/magic';
 import { initialDrives, rollTraits } from '../systems/mind';
 import { refreshMaxima } from '../systems/progress';
@@ -177,7 +178,7 @@ export function createCharacter(ctx: SimContext, home: Location, arrival: Arriva
     maxHp: 0,
     stamina: 0,
     maxStamina: 0,
-    statuses: [],
+    effects: [],
     gold:
       calling === 'merchant'
         ? stake(rng.roll('2d6'))
@@ -212,11 +213,30 @@ export function createCharacter(ctx: SimContext, home: Location, arrival: Arriva
     death: null,
     history: [],
     potions: 0,
+    faith: 0,
+    faithPeak: 0,
+    // Hardiness is born with, and runs a little in families (0.4.0).
+    hardiness: parents
+      ? Math.max(
+          0,
+          Math.min(
+            1,
+            parents.reduce((s, p) => s + p.hardiness, 0) / parents.length + rng.gaussian(0, 0.2),
+          ),
+        )
+      : rng.next(),
+    illness: null,
+    sins: 0,
+    lastPrayer: world.time,
+    draughts: { vigor: 0, calm: 0 },
     cargo: {},
     cargoPaid: 0,
     // Merchants start out knowing what things cost in every town.
     priceBook: calling === 'merchant' ? priceBookOfAllTowns(world) : {},
   };
+  // Faith by culture, town and nature, or a child's from their parents (0.4.0).
+  character.faith = startingFaith(rng, world, character, parents);
+  character.faithPeak = character.faith;
   mint(world, 'newcomers', character.gold);
   refreshMaxima(character);
   character.hp = character.maxHp;

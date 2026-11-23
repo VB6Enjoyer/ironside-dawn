@@ -1,5 +1,5 @@
 import type { RngState } from './core/rng';
-import type { ContentPack } from '../content';
+import { GOODS, type ContentPack } from '../content';
 import type { World, WorldSettings } from './model';
 
 /**
@@ -10,7 +10,7 @@ import type { World, WorldSettings } from './model';
 
 export const SAVE_FORMAT = 'ironside-dawn/world';
 /** Bump when the world's shape changes in a way old saves can't be read as. */
-export const SAVE_VERSION = 7;
+export const SAVE_VERSION = 8;
 
 export interface WorldSave {
   readonly format: typeof SAVE_FORMAT;
@@ -88,6 +88,7 @@ type SaveData = Record<string, unknown> & { version: number };
  */
 const MIGRATIONS: Readonly<Record<number, (save: SaveData) => Record<string, unknown>>> = {
   6: toCrimesThatTravel,
+  7: toLastingEffects,
 };
 
 type Encoded = Record<string, unknown>;
@@ -124,6 +125,63 @@ function toCrimesThatTravel(save: SaveData): Record<string, unknown> {
     c.justice = [];
   }
   return { ...save, world: { ...world, news: [], unsolved: [] } };
+}
+
+/**
+ * 0.4.0: timed statuses (dizziness and drained attributes) become lasting
+ * effects, which carry what they do to each aspect and when they fade. Those
+ * from before hold at full strength to their end, as they did. Everyone gets
+ * a faith from their nature (none for the dread). Alchemists
+ * now make tonics of vigor and calming draughts: nobody carries any yet, and
+ * every market starts out believing them worth what the goods list says.
+ */
+function toLastingEffects(save: SaveData): Record<string, unknown> {
+  const world = save.world as Encoded;
+  const characters = (world.characters as { $map: [unknown, Encoded][] }).$map;
+  for (const [, c] of characters) {
+    const statuses = (c.statuses ?? []) as (
+      | { kind: 'dizzy'; until: number }
+      | { kind: 'drained'; stat: string; amount: number; until: number }
+    )[];
+    c.effects = statuses.map((s) => ({
+      kind: s.kind,
+      mods: s.kind === 'dizzy' ? { attack: -2, defense: -2 } : { [s.stat]: -s.amount },
+      since: world.time,
+      fadeFrom: s.until,
+      until: s.until,
+    }));
+    delete c.statuses;
+    c.draughts = { vigor: 0, calm: 0 };
+    // Faith by nature: the honorable and compassionate lean to belief; the dread have none.
+    const traits = c.traits as { honor: number; compassion: number };
+    const faithless = c.calling === 'dread' || c.culture === 'grave' || c.culture === 'infernal';
+    const faith = faithless
+      ? 0
+      : Math.max(
+          0,
+          Math.min(1, 0.45 + 0.25 * (traits.honor - 0.5) + 0.2 * (traits.compassion - 0.5)),
+        );
+    c.faith = faith;
+    c.faithPeak = faith;
+    c.sins = 0;
+    c.lastPrayer = world.time;
+    // Hardiness from who they are, stable; nobody is sick yet.
+    let h = 2166136261;
+    for (const ch of String(c.id)) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+    c.hardiness = ((h >>> 0) % 1000) / 1000;
+    c.illness = null;
+  }
+  world.plagues = [];
+  const markets = (world.markets as { $map: [unknown, Encoded][] }).$map;
+  for (const [, market] of markets) {
+    for (const agent of [...(market.agents as Encoded[]), market.house as Encoded]) {
+      const beliefs = agent.beliefs as Record<string, { low: number; high: number }>;
+      for (const good of GOODS) {
+        beliefs[good.id] ??= { low: good.value * 0.85, high: good.value * 1.15 };
+      }
+    }
+  }
+  return save;
 }
 
 /**

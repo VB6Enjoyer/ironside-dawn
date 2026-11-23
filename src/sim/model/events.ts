@@ -1,9 +1,14 @@
 import type {
   CreatureId,
+  CurseId,
+  CurseSource,
+  EffectId,
+  EffectSource,
   Goods,
   LanguageId,
   PastimeId,
   ShockId,
+  SicknessId,
   SkillId,
   SpellId,
   StatId,
@@ -70,7 +75,43 @@ export type EventBody =
       }
     >
   | Body<'character.pastime', CharacterAt & Decided & { readonly pastime: PastimeId }>
-  | Body<'character.rest', CharacterAt & { readonly paid: boolean }>
+  | Body<
+      'character.rest',
+      CharacterAt & {
+        readonly paid: boolean;
+        /** Took the best room at the inn, or slept at home (0.4.0). */
+        readonly comfort?: 'inn' | 'home';
+      }
+    >
+  /** Plague breaks out in a town, reaches another along the roads, or burns itself out (0.4.0). */
+  | Body<'plague.outbreak', { readonly locationId: LocationId; readonly severity: number }>
+  | Body<
+      'plague.spread',
+      { readonly locationId: LocationId; readonly fromId: LocationId; readonly severity: number }
+    >
+  | Body<'plague.end', { readonly locationId: LocationId; readonly dead: number }>
+  /** A curse is laid on someone, or lifted (0.4.0). */
+  | Body<
+      'character.cursed',
+      CharacterAt & { readonly curse: CurseId; readonly source: CurseSource }
+    >
+  | Body<
+      'character.uncursed',
+      CharacterAt & { readonly curse: CurseId; readonly by: 'priest' | 'wise' | 'discard' }
+    >
+  /** Someone falls ill (0.4.0); `recovered` when they are well again. */
+  | Body<'character.sick', CharacterAt & { readonly sickness: SicknessId }>
+  | Body<'character.recover', CharacterAt & { readonly sickness: SicknessId }>
+  /** A lasting effect taken on, and where from (0.4.0). */
+  | Body<
+      'character.effect',
+      CharacterAt & {
+        readonly effect: EffectId;
+        readonly source: EffectSource;
+        /** Stronger or weaker than usual: a blessing by faith. */
+        readonly scale?: number;
+      }
+    >
   | Body<'character.convalesce', CharacterAt & Decided>
   | Body<'character.levelup', CharacterAt & { readonly level: number }>
   | Body<'character.skill', CharacterAt & { readonly skill: SkillId; readonly rank: string }>
@@ -404,7 +445,13 @@ export type EventBody =
   /** An adventurer buys from the trading house: healing draughts, a weapon, armor. */
   | Body<
       'trade.shop',
-      CharacterAt & { readonly potions: number; readonly item: Item | null; readonly gold: number }
+      CharacterAt & {
+        readonly potions: number;
+        readonly item: Item | null;
+        readonly gold: number;
+        /** Tonics of vigor and calming draughts bought (0.4.0). */
+        readonly draughts?: { readonly vigor: number; readonly calm: number };
+      }
     >
   /** A merchant loads cargo, bound for another town. */
   | Body<
@@ -600,6 +647,14 @@ export const EVENT_IMPORTANCE: Record<EventType, Importance> = {
   'character.introduced': Importance.Normal,
   'character.pastime': Importance.Trivial,
   'character.rest': Importance.Trivial,
+  'character.effect': Importance.Trivial,
+  'character.sick': Importance.Trivial,
+  'character.cursed': Importance.Normal,
+  'character.uncursed': Importance.Normal,
+  'plague.outbreak': Importance.Notable,
+  'plague.spread': Importance.Notable,
+  'plague.end': Importance.Notable,
+  'character.recover': Importance.Trivial,
   'character.convalesce': Importance.Trivial,
   'character.levelup': Importance.Normal,
   'character.skill': Importance.Normal,

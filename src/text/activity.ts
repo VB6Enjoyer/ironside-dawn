@@ -1,4 +1,4 @@
-import type { PastimeId } from '../content';
+import { SICKNESSES, type PastimeId } from '../content';
 import type { Character, Deed, LocationId, Occupation } from '../sim';
 import { EXECUTED } from './justice';
 import type { NameResolver } from './names';
@@ -109,6 +109,8 @@ export function describeActivity(character: Character, names: NameResolver): Seg
           return [{ text: `Slain by ${aCreature(death.cause.creature)} in ` }, where];
         case 'age':
           return [{ text: `Died of old age, ${death.cause.age} years old, in ` }, where];
+        case 'illness':
+          return [{ text: `Died of ${SICKNESSES[death.cause.sickness].caught} in ` }, where];
         case 'executed':
           return [
             { text: `${capitalize(EXECUTED[death.cause.method ?? 'hanging'])} for murder in ` },

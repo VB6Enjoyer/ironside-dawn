@@ -8,9 +8,10 @@ is retired.
 
 **Scope.** Magic was first planned as 0.4.0. It moved to 0.5.0 so that the
 systems it rests on come first, each useful on its own: 0.3.2 makes today's
-magic visible and measurable, and 0.4.0 builds illness, curses, lasting
-effects on characters, allies in battle, shapeshifting, local weather, souls,
-kidnapping and faith (`ROADMAP.md`). Section 3 below lists what 0.5.0 needs
+magic visible and measurable, and the three 0.4 releases build lasting
+effects on characters, faith, illness and curses (0.4.0); allies in battle,
+shapeshifting and local weather (0.4.1); and souls and kidnapping (0.4.2)
+(`ROADMAP.md`). Section 3 below lists what 0.5.0 needs
 of them.
 
 ---
@@ -217,8 +218,8 @@ casting.
 
 ## 3. What the design needs that the world doesn't have yet
 
-Most of these are now built first, in 0.4.0 (`ROADMAP.md`); 0.5.0 then puts
-magic on top of them.
+Most of these are now built first, in the three 0.4 releases (`ROADMAP.md`);
+0.5.0 then puts magic on top of them.
 
 Found while writing the above down; each is folded into a step of the plan.
 
@@ -499,7 +500,7 @@ newcomers, or a closed-world setting), check this again.
 
 - Built on the combat engine as it is: beasts join the caster's side as
   ordinary fighters, and a beast form swaps the caster's fighting numbers for
-  a while. (The mechanisms are built in 0.4.0.)
+  a while. (The mechanisms are built in 0.4.1.)
 
 ## 5. Open questions
 

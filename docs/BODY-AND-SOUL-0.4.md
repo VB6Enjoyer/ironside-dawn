@@ -1,0 +1,374 @@
+# Body and Soul (0.4): working notes
+
+A temporary working document for Body and Soul (a working name), built in
+three releases: **0.4.0, the body** (lasting effects, faith, illness, curses),
+**0.4.1, beasts and storms** (allies, shapeshifting, local weather) and
+**0.4.2, the dead and the taken** (souls, kidnapping). It holds the design for
+each system, what is already decided, and every question still open, grouped
+by release. The plan in steps is in `ROADMAP.md` (0.4). As each release ships,
+what it built moves into `ARCHITECTURE.md` and `WORLD.md`; when 0.4.2 ships,
+this file is retired.
+
+**Why this comes before magic.** The magic update (0.5.0, `MAGIC-0.5.0.md`)
+needs things the world doesn't have: illness to cure, curses to cast and lift,
+effects that can sit on anyone for hours, creatures fighting on a character's
+side, other shapes, weather over one place, souls, kidnapping and faith. Each
+is built here first, as a part of the world in its own right, with sources
+that need no magic; 0.5.0 then puts magic on top.
+
+**Order.** Each release's open questions are settled before its work starts:
+0.4.0's first, now that 0.3.2 has shipped.
+
+---
+
+## 1. What every system shares
+
+- **One timed-effect system** (0.4.0, steps 2–3) carries most of it: illness,
+  curses, wounds, rest, blessings and tonics are all effects with a strength,
+  an end, and a moment from which they fade.
+- **Aggregate where people aren't simulated.** Townsfolk live in a daily
+  round, not hour by hour, so priests, healers and wise folk are town-level
+  counts, like the trades, and act as the town.
+- **Saves.** Effects, faith, allies, forms and souls are new state: a save
+  version bump in each release that adds state, with a migration and a save
+  from the release before kept as a fixture.
+- **Speed.** Large worlds no more than about 10% slower than 0.3.2; effects
+  checked lazily, never ticked one by one.
+- **Seen and told.** Each system gets live-feed lines, chronicle entries for
+  what matters, life-story sentences and the card.
+
+## 2. The systems
+
+### Lasting effects (0.4.0, steps 2–3)
+
+Timed effects any character can carry, good or bad, on health, stamina, a
+stat, attack and defense, fatigue or nerve. Each has a strength, an end, and a
+moment from which it fades bit by bit. One of each type at a time; the
+stronger replaces the weaker, never stacking. A cost can be bound to an effect
+for as long as it lasts (what 0.5.0's buffs will use).
+
+Sources in 0.4: a night at a good inn (well rested), a tavern feast (good
+spirits), lingering wounds after a near death (weakened for days), exhaustion
+after long marches, alchemists' tonics (vigor, calm), shrine blessings (with
+faith), illness and curses.
+
+### Faith (0.4.0, step 4)
+
+A hidden attribute, 0 to 1. Grows with prayer at shrines to the gods of one's
+culture, devout traits, age, and hardship survived; falls with crimes (graver
+ones more) and despair. Steadies nerve in danger, strengthens shrine
+blessings, and is what priests' help works through. The base for divine magic
+(0.5.0) and a later "Religion and Cults" update.
+
+### Illness (0.4.0, steps 5–7)
+
+A few sicknesses with a course: a fever, an infected wound, a winter cough,
+and a rare plague that sweeps a town. Caught from untreated wounds, foul
+places, the cold season and crowds. They weaken, lay people up and rarely
+kill. Cured by rest, herbalists (a new demand for herbs) and priests, and by
+magic in 0.5.0.
+
+### Curses (0.4.0, step 8)
+
+A condition with an effect (ill luck in fights, wasting, weakness, a mark that
+makes people wary) and a way to be lifted. Laid by cursed dungeon loot,
+haunted places, the touch of some undead, the dread, and sometimes a murder
+victim's dying curse on their killer. Lifted by time, priests, wise folk, or
+destroying the cursed item.
+
+### Allies in battle (0.4.1, step 2)
+
+Creatures fighting on a character's side: war hounds and hawks bought in
+town, beasts tamed by those with the skill, and lords' soldiers riding with a
+band against a threat. They fight as ordinary fighters, can be hurt and die,
+and grow more useful as they last. 0.5.0's summoned beasts reuse this.
+
+### Shapeshifting (0.4.1, step 3)
+
+A form: another set of fighting numbers for a while. First source:
+lycanthropy. Werewolves as creatures, whose bite can pass the curse; the
+afflicted turn under the full moon, lose control, may kill, and can be cured
+with luck. 0.5.0's druid beast forms reuse the mechanism.
+
+### Local weather (0.4.1, step 4)
+
+Weather at one place overriding its region's for a while: storm, fog, calm,
+downpour. Sources: the dread drawing gloom over their lairs and the towns they
+raid, and rare natural squalls. It slows travel, hides ambushes and escapes,
+spoils or saves a harvest. 0.5.0's weather magic reuses it, local and costly.
+
+### Souls and the restless dead (0.4.2, step 2)
+
+A sapient being's soul passes on or lingers when they die: lingering where
+many die unburied (battlefields, murder sites, hidden bodies, dungeons).
+Lingering souls haunt (ghosts; myths grow) and can be laid to rest by priests.
+The dread feed on them. Dark magic absorbs them in 0.5.0.
+
+### Kidnapping (0.4.2, step 3)
+
+Outlaws take people for ransom: mostly the unnamed (a traveler, a
+townsperson), rarely a named character beaten in a fight and taken, riskier
+for the kidnapper than a hunter's capture. Held at a hideout; ransom asked of
+family or town; let go when paid; rescued by hunters, a rescue likely to
+raise an immediate bounty; a captive may escape or die. Much harder and rarer
+than murder. 0.5.0 turns it to sacrifice.
+
+## 3. Decided so far
+
+- **Built first, magic later:** each system has non-magical sources in 0.4.
+- **Effects never stack; one of each type; they fade before they end; a cost
+  can last as long as an effect** (from the magic decisions, built here).
+- **Townsfolk's helpers are aggregate,** as the trades are.
+- **Faith is hidden,** grows by prayer at shrines to the culture's gods, and is
+  the springboard for "Religion and Cults".
+- **Kidnapping is much harder than murder,** and a rescue likely raises an
+  immediate bounty on the kidnapper.
+- **Weather is local,** never a whole region.
+- **Allies and beast forms run on the combat engine as it is.**
+
+### For 0.4.0 (settled 2026-11-22)
+
+Open questions 1–20, and 43–48 that came up in answering them, are settled
+here. Nothing is left open for 0.4.0.
+
+**The update as a whole**
+
+- **Name and order:** "Body and Soul" stays the working name; the steps run as
+  in the roadmap, ten small ones (the audit; effects in two; faith; illness in
+  three: the sick, remedies, plague; curses; hardship with the telling; balance
+  and release), each looked over before the next begins.
+- **One branch, one release pull request:** `main` deploys live, so 0.4.0
+  reaches it whole, as 0.3.0 did.
+- **One "hardship" dial** at world creation (gentle, normal, harsh) covers
+  illness and curses. Old saves and links read as normal. Finer options come
+  in some later update, not now.
+- **Named townsfolk fall ill, gently.** The old and children are more prone
+  to illness and resist it less. In ordinary times (no plague) about 1 in 5
+  to 1 in 7 retired adventurers die of illness; the rest die of old age or as
+  before.
+
+**Lasting effects**
+
+- **Today's dizziness and drains fold into the one system.** Benefits never
+  stack; costs do, up to a cap, so casting again stays as costly as it is now.
+- **Nerve** becomes a modifier on two things: when someone breaks and flees a
+  fight, and how much risk they take in choosing to delve, fight or cast.
+  Every effect on nerve acts through these.
+- **Good effects come from what is rare, costly or lucky:** a good inn (dearer
+  than the common one), a feast, a home of one's own, a particularly good meal,
+  a stroke of luck. A home of one's own, for now: a married or retired
+  character has one in their home town, without buying or selling it (houses
+  to buy and keep wait for a later update). Never from every night's rest or
+  every tavern visit, so
+  that most adventurers carry an effect some of the time, not all of it.
+  "Weakened" follows only a near death.
+- **The card** shows effects in words with the time left, numbers on hover.
+
+**Faith**
+
+- **Everyone has a faith level,** from skeptic to devout. Those made at the
+  world's start, and those who take up adventuring, get theirs by culture,
+  people and traits, varying from person to person. Some towns are more
+  religious than others.
+- **Children inherit their parents' faith:** devout parents raise devout
+  children (their parents' level, give or take a little).
+- **The grave, infernal and dread have no faith.** A dark or demonic faith may
+  come in a later update.
+- **It falls with crime,** the graver the crime the more; with the death of a
+  loved one (a spouse, a child), of a party companion or a friend; with a long
+  run of bad luck; with long stretches lived in poverty; and with long years
+  away from shrines.
+- **It rises with prayer at shrines, surviving an illness, memorable deeds
+  and good fortune,** by how much depending on the person. Only memorable
+  deeds count (a strong foe, a dread master, a windfall), each worth less than
+  the last; everyday kills don't. Barely surviving such a deed (a near death)
+  can raise it a great deal.
+- **A priest can restore it,** but not for an outlaw still on the run: only
+  for the reformed, those who paid restitution, or those who served their
+  sentence.
+- **Shown, not counted:** life stories name a person's faith in words, and
+  deeds and phrases hint at it in the feed; no number is shown. The words,
+  from most to least: _devout_ (very high), _believer_ (solid), _doubter_
+  (wavering), _skeptic_ (little or none, by nature), _faithless_ (lost to
+  despair), _corrupted_ (lost to grave crimes, such as murder). The grave,
+  infernal and dread get no word for now.
+- **What it does before 0.5.0:** a small steadying of nerve in danger, and
+  stronger shrine blessings.
+- **Priests** are a town-level count by town size, more where there is a
+  shrine to the local gods. For a fee they tend the sick, lift curses, restore
+  faith, and in 0.4.2 lay souls to rest.
+
+**Illness**
+
+- **Sicknesses:** fever, infected wound, winter cough and plague; more later.
+- **Sickness is commoner in winter.**
+- **Some are more prone to illness, others more resistant:** a hidden
+  hardiness each person is born with, passed on a little from their parents
+  (like the gift), plus toughness, age (the old and children resist least)
+  and the effects they carry (weakened, exhausted, a wasting curse).
+- **Catching it:** a roll for each day spent in a town where sickness is about,
+  or in a party with someone sick. Towns keep a sickness level (raised by the
+  sick, the season and plague) that characters roll against, never one
+  character against another, so it stays cheap.
+- **How deadly:** illness about 5–10% of all deaths in ordinary times, more in
+  a plague decade.
+- **Plague is rare: about 2 or 3 a century,** of different size and severity.
+  Not a Black Death, but enough to hurt a town or a region for some years. It
+  starts in one town, likelier a poor and crowded one in winter, and travels
+  the trade roads with merchants and travelers to nearby towns over weeks. A
+  large one can touch a region, never the whole world. It thins the towns'
+  population counts as well as killing named characters, and towns recover
+  over a few years (population, then trade). Rich towns weather it far better
+  than poor ones.
+- **Remedies are a new good,** made from herbs by its own recipe, so it does not
+  drain herbs from healing draughts. Some healers make better remedies and sell
+  them dearer. **Towns with better remedies and more wealth suffer far less**
+  from sickness and plague than poor ones.
+- **The sick** are weakened: sickness lowers their attributes for as long as
+  it lasts (a lasting effect). A sick adventurer is less willing to adventure
+  and more willing to rest until cured, if they can afford to; one taken sick
+  on the road heads for the nearest town.
+- **Sick outlaws** are easier to capture, being weaker, and one who fears
+  dying of it is likelier to pay restitution and come in.
+- **A guard against death spirals** (sickness, fewer workers, dearer remedies,
+  more sickness) is part of the audit.
+
+**Curses**
+
+- **Which:** ill luck (worse rolls in fights, weeks), wasting (slowly lower
+  health, until lifted), weakness (lower might, weeks), the mark (months).
+- **The mark works on people, not towns:** friendships, parties and marriages
+  are harder to win. A town's standing stays purely about known crimes.
+- **Characters notice a curse after a while** (a run of bad luck), then seek a
+  priest or wise folk.
+- **Cursed items** are a small share of dungeon finds, worth less when sold.
+  They can be inherited; an heir who notices the curse throws or sells the
+  item, so a curse seldom outlasts a generation.
+- **The dying curse:** about 1 murder in 10, likelier from the faithful.
+
+## 4. Open questions
+
+Grouped by release, each settled before its release's work begins. Each has a
+proposal to react to. 0.4.0's first twenty are settled (§3); numbers 21–42
+stay as they were.
+
+### 0.4.0
+
+All of 0.4.0's questions are settled (§3), including 43–48, which came up
+in settling the first twenty.
+
+### For 0.4.1: allies
+
+21. **Which allies, and where from.** Proposal: war hounds and hawks sold in
+    towns (a new good or a service), tamed beasts for those who track and hunt
+    (awareness), and lords' soldiers joining bands against raids and the
+    dread.
+22. **Upkeep and limits.** Proposal: a small daily cost, at most one or two
+    allies each, and allies are left at home for long delves (or come, with
+    risk).
+23. **Loyalty and loss.** Proposal: allies grow better and more loyal the
+    longer they last; their death is mourned (a memory), told in life stories.
+
+### For 0.4.1: shapeshifting
+
+24. **The moon.** A real lunar cycle on the calendar, or one set night a
+    month? Proposal: a real 30-day cycle, shown on the calendar, with a full
+    moon of three nights.
+25. **Where werewolves live, and how often a bite passes the curse.**
+    Proposal: werewolves in forests and wild hills, a bite passing it about 1
+    time in 5.
+26. **What an afflicted character does when they turn.** Proposal: they leave
+    town if they can, run wild for the night, and may attack whoever they meet;
+    a killing then is the beast's, not a murder, but a town that learns of it
+    treats them with suspicion and may post a bounty on "the beast".
+27. **Cure and control.** Proposal: cured only by a priest with high faith or
+    rare wise folk, and only in the first months; untreated, it lasts for life.
+    No controlled shifting until 0.5.0's druids.
+
+### For 0.4.1: local weather
+
+28. **Which kinds and for how long.** Proposal: storm, fog, calm and downpour,
+    hours to a few days.
+29. **What it does.** Proposal: slower travel (storm, downpour), better odds
+    to ambush and to flee (fog), a harvest helped or hurt (downpour, storm),
+    and fights a little harder in storms.
+30. **How often.** Proposal: the dread's gloom over each lair while it lives,
+    and over a town for the length of a raid; a natural squall now and then.
+
+### For 0.4.2: souls
+
+31. **How souls are kept.** Proposal: counts of lingering souls per place
+    (cheap), plus a named soul for each named character who died unburied, so
+    a murdered hero can haunt the place they died.
+32. **What makes a soul linger.** Proposal: dying away from a town and unburied
+    (in the wilds, in a dungeon, a hidden body), dying by murder; souls of
+    those who died at home with kin pass on.
+33. **What lingering souls do.** Proposal: enough of them raise ghosts (a
+    creature) and grow the place's myth; a named soul may haunt until its
+    killer is brought to justice.
+34. **How the dread feed.** Proposal: souls of those slain by a lich's horde
+    make the lich stronger (levels, horde size).
+35. **Laying souls to rest.** Proposal: priests visiting a haunted place, or a
+    burial in town when a body is brought back.
+
+### For 0.4.2: kidnapping
+
+36. **Who kidnaps.** Proposal: outlaws with low compassion and high greed,
+    when they need gold and know where to hold someone.
+37. **Who is taken.** Proposal: unnamed travelers and townsfolk mostly;
+    rarely a named adventurer or merchant beaten in a fight; never children.
+38. **Where captives are held.** Proposal: a wild place near the outlaw's
+    haunts (the hideout), with the outlaw staying close.
+39. **Ransom.** Proposal: asked of the captive's family, or their town for the
+    unnamed; a sum by the captive's worth; a deadline after which the captive
+    may be let go, sold on, or killed (rarely, a murder).
+40. **Rescue and escape.** Proposal: hunters can go after kidnappers (word
+    travels as for other crimes); a rescue likely posts an immediate bounty; a
+    captive can slip away, more easily for a strong adventurer.
+41. **Justice.** Proposal: kidnapping is a crime with heavy weight (near a
+    murder), years in prison when tried, and a death sentence if the captive
+    died.
+42. **Telling it.** Proposal: plainly, without dwelling: "X takes a traveler
+    from the road and holds them for ransom", "Y's family pays 200 gold, and
+    Y comes home".
+
+## 5. The 0.3.2 baseline
+
+Measured with `npm run audit:world` before any of 0.4 was built: four worlds
+of 20 adventurers for 100 years, and four of 100 for 50 years.
+
+|                                               | 4 × 20, 100 years | 4 × 100, 50 years |
+| --------------------------------------------- | ----------------- | ----------------- |
+| Deaths (and left for distant lands)           | 297 (179)         | 1,209 (312)       |
+| Of old age                                    | 52.5%             | 19.7%             |
+| Killed by creatures                           | 29.6%             | 26.9%             |
+| Killed in fights with people                  | 13.8%             | 35.2%             |
+| Murdered                                      | 2.0%              | 10.4%             |
+| Executed or died in prison                    | 1.6%              | 7.8%              |
+| Children who died                             | 0                 | 0                 |
+| The retired who died of old age               | 100%              | 98%               |
+| Adventurers hurt (under half health), monthly | 1.0%              | 7.6%              |
+| Adventurers laid up (convalescing), monthly   | 0.3%              | 0.1%              |
+| Fights won / escaped                          | 98.1% / 2.1%      | 96.4% / 5.4%      |
+| A death in a fight                            | 1 in 2,856        | 1 in 378          |
+| Town counts, start to end                     | 23,870 → 31,960   | 49,633 → 64,762   |
+| Healing draught / herbs, once settled         | ~5 / ~1.2 gold    | ~5 / ~1.0 gold    |
+| Time a world-year (4 worlds at once, 4 cores) | 1.6 s             | 7.2 s             |
+
+What it means for 0.4.0:
+
+- **Nobody dies young except by violence, and no child ever dies.** Illness
+  will be the first thing to kill children and the old outside a fight, so it
+  must stay gentle with them.
+- **The retired die of old age, almost all of them.** The target, 1 in 5 to 1
+  in 7 of them dying of illness, means about 15–20% of retired deaths.
+- **Illness at 5–10% of deaths** is about 15–30 deaths in the small worlds'
+  century, and 60–120 in the large worlds' half-century, before plague.
+- **Hurt is rare at any moment, and being laid up rarer:** adventurers heal
+  fast, so lasting effects (weakened after a near death) will be felt.
+- **The towns' counts grow about a third in a century,** with nothing to
+  check them: plague can, without being the only check.
+- **Large worlds are violent:** people kill more of each other than creatures
+  do, so crime, faith and the dying curse will matter more there.
+- **The speed budget** (no more than about 10% slower) is measured against
+  these times, on the same machine with the same runs.

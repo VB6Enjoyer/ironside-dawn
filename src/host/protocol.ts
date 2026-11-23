@@ -326,6 +326,19 @@ export interface HallsView {
   readonly prisoners: readonly PrisonerEntry[];
   /** Put to death for murder, the latest first (0.3.0). */
   readonly hanged: readonly FallenEntry[];
+  /** Plagues, raging and past, the latest first (0.4.0). */
+  readonly plagues: readonly PlagueEntry[];
+}
+
+export interface PlagueEntry {
+  readonly townId: LocationId;
+  readonly fromId: LocationId | null;
+  readonly startedAt: number;
+  readonly until: number;
+  readonly severity: number;
+  /** Townsfolk it took (so far, for one still raging). */
+  readonly dead: number;
+  readonly raging: boolean;
 }
 
 export interface DreadEntry extends CharacterSummary {

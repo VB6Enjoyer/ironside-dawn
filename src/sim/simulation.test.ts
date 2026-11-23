@@ -204,6 +204,15 @@ describe('a simulated season', () => {
   });
 });
 
+/** Events about what follows a death, which name the dead. */
+const AFTERMATH: ReadonlySet<string> = new Set([
+  'bounty.head',
+  'bounty.claim',
+  'bounty.lost',
+  'crime.conceal',
+  'crime.pinned',
+]);
+
 describe('a year of danger', () => {
   const { sim, events } = run('danger', 365);
   const characters = [...sim.world.characters.values()];
@@ -243,6 +252,8 @@ describe('a year of danger', () => {
     const deathAt = new Map<string, number>();
     for (const e of events) {
       if (e.type === 'character.death') deathAt.set(e.data.characterId, e.id);
+      // What follows a death may name the dead: a head taken for the bounty, a body hidden.
+      if (AFTERMATH.has(e.type)) continue;
       for (const actor of e.actors) {
         const died = deathAt.get(actor);
         if (died !== undefined) expect(e.id, `${e.type} after death`).toBe(died);

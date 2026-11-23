@@ -11,6 +11,7 @@ import type {
   Notoriety,
   Standing,
 } from '../model';
+import { sin } from './faith-core';
 import { isAlive } from './condition';
 import { nearbyPlaces } from './roads';
 import { charactersAt } from './whereabouts';
@@ -216,6 +217,8 @@ export function recordCrime(
 ): void {
   const record = character.outlaw;
   if (fresh) {
+    // A crime erodes faith, the graver the more (0.4.0).
+    sin(character, crime.kind);
     character.crimes.push(crime);
     if (character.crimes.length > RECORD_CAP) character.crimes.shift();
     if (record) {

@@ -13,6 +13,11 @@ export interface WorldSettings {
   readonly danger: 'gentle' | 'normal' | 'deadly';
   /** How often the gift for magic is born. */
   readonly magic: 'rare' | 'normal' | 'common';
+  /**
+   * How much sickness, plague and curses there are (0.4.0). Worlds made
+   * before it read as normal.
+   */
+  readonly hardship?: 'gentle' | 'normal' | 'harsh';
   /** The peoples living in the world. Humans, at least. */
   readonly peoples: readonly PeopleId[];
   /** The most named characters alive at once: past it, no births and no newcomers. */

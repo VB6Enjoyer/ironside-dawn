@@ -1,8 +1,10 @@
 import {
   creatureDef,
+  type CurseId,
   itemBase,
   LANGUAGES,
   packOf,
+  SICKNESSES,
   spellDef,
   type CreatureId,
   type ItemBaseId,
@@ -71,6 +73,14 @@ export type Segment =
     };
 
 type Part = string | Segment;
+
+/** What each curse leaves someone, in a word or two (0.4.0). */
+const CURSE_WORDS: Record<CurseId, string> = {
+  'ill-luck': 'ill-starred',
+  wasting: 'wasting away',
+  weakness: 'weakened by a curse',
+  marked: 'marked, so that people shy from them',
+};
 
 /** Being born with the gift for magic, marked wherever it is told (0.3.2). */
 export const GIFT_BORN: Segment = { text: 'born with the gift for magic', mark: 'magic' };
@@ -393,12 +403,102 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
       );
     },
   ],
+  'plague.outbreak': [
+    (e, h) => [
+      e.data.severity >= 0.7 ? 'A great plague breaks out in ' : 'Plague breaks out in ',
+      h.l(e.data.locationId),
+      '.',
+    ],
+  ],
+  'plague.spread': [
+    (e, h) => ['The plague spreads from ', h.l(e.data.fromId), ' to ', h.l(e.data.locationId), '.'],
+  ],
+  'plague.end': [
+    (e, h) => [
+      'The plague in ',
+      h.l(e.data.locationId),
+      e.data.dead > 0
+        ? ` burns itself out, having taken ${e.data.dead.toLocaleString('en-US')} of its people.`
+        : ' burns itself out.',
+    ],
+  ],
+  'character.cursed': [
+    (e, h) => {
+      const c = h.c(e.data.characterId);
+      const curse = CURSE_WORDS[e.data.curse];
+      switch (e.data.source) {
+        case 'item':
+          return [c, ` puts on something cursed, and is ${curse}.`];
+        case 'haunt':
+          return [c, ` leaves `, h.l(e.data.locationId), ` ${curse}, as the tales warned.`];
+        case 'undead':
+          return [c, ` is touched by the dead, and left ${curse}.`];
+        case 'dread':
+          return [c, ` bears the curse of the dread, and is ${curse}.`];
+        case 'dying':
+          return [c, ` is cursed with their victim's last breath, and is ${curse}.`];
+      }
+    },
+  ],
+  'character.uncursed': [
+    (e, h) => {
+      const c = h.c(e.data.characterId);
+      switch (e.data.by) {
+        case 'priest':
+          return ['A priest lifts the curse from ', c, '.'];
+        case 'wise':
+          return ['The wise folk of ', h.l(e.data.locationId), ' lift the curse from ', c, '.'];
+        case 'discard':
+          return [c, ' throws away a cursed thing, and the curse goes with it.'];
+      }
+    },
+  ],
+  'character.sick': [
+    (e, h) => [h.c(e.data.characterId), ` falls ill with ${SICKNESSES[e.data.sickness].caught}.`],
+  ],
+  'character.recover': [
+    (e, h) => [h.c(e.data.characterId), ` is over ${SICKNESSES[e.data.sickness].caught}.`],
+  ],
+  'character.effect': [
+    (e, h) => {
+      const c = h.c(e.data.characterId);
+      switch (e.data.source) {
+        case 'inn':
+          return [c, ' wakes well rested after a night in a fine bed.'];
+        case 'home':
+          return [c, ' wakes at home, at ease among family.'];
+        case 'feast':
+          return [c, ' stands a feast at the tavern, and the hall drinks to them.'];
+        case 'meal':
+          return [c, ' has a particularly fine meal, and is the better for it.'];
+        case 'luck':
+          return [c, ' feels that fortune is with them.'];
+        case 'shrine':
+          // The devout come away with more than the doubter.
+          return (e.data.scale ?? 1) >= 1
+            ? [c, ' rises from prayer at the shrine, their faith renewed.']
+            : [c, ' leaves the shrine feeling blessed.'];
+        case 'tonic':
+          return e.data.effect === 'calm'
+            ? [c, ' drinks a calming draught, and their hands steady.']
+            : [c, ' drinks a tonic of vigor.'];
+        case 'near-death':
+          return [c, ' came too close to death, and will be weak for days.'];
+        case 'march':
+          return [c, ' arrives worn out from the long road.'];
+      }
+    },
+  ],
   'character.rest': [
     (e, h) => {
       const c = h.c(e.data.characterId);
       const l = h.l(e.data.locationId);
       switch (h.kindOf(e.data.locationId)) {
         case 'town':
+          if (e.data.comfort === 'home') return [c, ' spends the night at home in ', l, '.'];
+          if (e.data.comfort === 'inn') {
+            return [c, ' takes the best room at the finest inn in ', l, '.'];
+          }
           if (!e.data.paid) return [c, " can't afford an inn and sleeps in a stable in ", l, '.'];
           return h.pick<Part[]>([
             [c, ' takes a room for the night in ', l, '.'],
@@ -490,6 +590,13 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
       }
       if (cause.kind === 'prison') {
         return [c, ' dies in the jail of ', h.place(e.data.locationId), ', their time unserved.'];
+      }
+      if (cause.kind === 'illness') {
+        const sickness = SICKNESSES[cause.sickness].caught;
+        return h.pick<Part[]>([
+          [c, ` dies of ${sickness} in `, l, '.'],
+          [c, ` is carried off by ${sickness} in `, l, '.'],
+        ]);
       }
       if (cause.kind === 'age') {
         return h.pick<Part[]>([
@@ -1324,6 +1431,8 @@ const PHRASINGS: { readonly [T in EventType]: Phrasings<T> } = {
                 : `${countWord(e.data.potions)} healing draughts`,
             ]
           : []),
+        ...(e.data.draughts?.vigor ? ['a tonic of vigor'] : []),
+        ...(e.data.draughts?.calm ? ['a calming draught'] : []),
         ...(e.data.item ? [anItem(e.data.item)] : []),
       ];
       return [

@@ -101,13 +101,16 @@ export function considerRestitution(ctx: SimContext, character: Character): bool
   const towns = Object.keys(character.notoriety) as LocationId[];
   const shunned = towns.filter((id) => isShunned(character, id)).length;
   const bounty = ctx.world.bounties.get(character.id)?.amount ?? 0;
+  // Sick, and afraid of dying of it, an outlaw may want to make their peace (0.4.0).
   const tired =
+    character.illness !== null ||
     now - record.lastCrimeAt > QUIET_DAYS * DAY ||
     (towns.length > 0 && shunned / towns.length >= 0.5) ||
     bounty >= HEAVY_BOUNTY;
   // Only someone with a little honor left would pay back what they could keep, and not at once.
   if (character.traits.honor < MIN_HONOR || now - record.since < FIRST_YEAR * DAY) return false;
-  const chance = REFORM_CHANCE * character.traits.honor * (tired ? 1 : 0.05);
+  const chance =
+    REFORM_CHANCE * character.traits.honor * (tired ? 1 : 0.05) * (character.illness ? 3 : 1);
   const bill = restitutionBill(character);
   if (character.gold < bill.total || !ctx.rng.outlaws.chance(chance)) return false;
 
@@ -438,7 +441,9 @@ export function takedownChance(hunter: Character, outlaw: Character, allies: num
   const edge =
     0.04 * (hunter.level - outlaw.level) +
     0.05 * (modifier(hunter, 'might') - modifier(outlaw, 'agility')) +
-    0.1 * allies;
+    0.1 * allies +
+    // A sick outlaw is easier to take (0.4.0).
+    (outlaw.illness ? 0.15 : 0);
   return Math.min(0.85, Math.max(0.1, 0.45 + edge));
 }
 

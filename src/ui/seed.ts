@@ -4,7 +4,7 @@ import type { WorldSettings } from '../sim';
 
 /**
  * The world seed, size, settings and content packs live in the URL
- * (`?seed=42&n=100&danger=deadly&packs=slavic&v=0.2.0`) so a world can be
+ * (`?seed=42&n=100&danger=deadly&hardship=harsh&packs=slavic&v=0.2.0`) so a world can be
  * shared or reloaded. `v` is the version the world was begun in: a seed gives
  * the same history only in versions that play worlds out the same way.
  */
@@ -29,6 +29,7 @@ export const CHARACTER_COUNTS = [20, 50, 100, 200, 500, 1000] as const;
 const SIZES = ['small', 'medium', 'large'] as const;
 const DANGERS = ['gentle', 'normal', 'deadly'] as const;
 const MAGICS = ['rare', 'normal', 'common'] as const;
+const HARDSHIPS = ['gentle', 'normal', 'harsh'] as const;
 
 /** Reads the settings from URL parameters, ignoring anything it doesn't recognize. */
 export function settingsFrom(params: URLSearchParams): Partial<WorldSettings> {
@@ -39,6 +40,7 @@ export function settingsFrom(params: URLSearchParams): Partial<WorldSettings> {
   const size = pick('size', SIZES);
   const danger = pick('danger', DANGERS);
   const magic = pick('magic', MAGICS);
+  const hardship = pick('hardship', HARDSHIPS);
   const peoples = params
     .get('peoples')
     ?.split(',')
@@ -48,6 +50,7 @@ export function settingsFrom(params: URLSearchParams): Partial<WorldSettings> {
     ...(size ? { size } : {}),
     ...(danger ? { danger } : {}),
     ...(magic ? { magic } : {}),
+    ...(hardship ? { hardship } : {}),
     ...(peoples && peoples.length > 0 ? { peoples: withHumans(peoples) } : {}),
     ...(Number.isSafeInteger(cap) && cap > 0 ? { populationCap: cap } : {}),
   };
@@ -59,10 +62,13 @@ export function withHumans(peoples: readonly PeopleId[]): PeopleId[] {
 }
 
 function writeSettings(params: URLSearchParams, settings: Partial<WorldSettings>): void {
-  for (const key of ['size', 'danger', 'magic', 'peoples', 'cap']) params.delete(key);
+  for (const key of ['size', 'danger', 'magic', 'hardship', 'peoples', 'cap']) params.delete(key);
   if (settings.size) params.set('size', settings.size);
   if (settings.danger && settings.danger !== 'normal') params.set('danger', settings.danger);
   if (settings.magic && settings.magic !== 'normal') params.set('magic', settings.magic);
+  if (settings.hardship && settings.hardship !== 'normal') {
+    params.set('hardship', settings.hardship);
+  }
   if (settings.peoples && settings.peoples.length < PEOPLES.length) {
     params.set('peoples', settings.peoples.join(','));
   }

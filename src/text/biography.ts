@@ -1,4 +1,4 @@
-import { creatureDef, LANGUAGES, type CreatureId, type LanguageId } from '../content';
+import { creatureDef, LANGUAGES, SICKNESSES, type CreatureId, type LanguageId } from '../content';
 import {
   toCalendar,
   type Character,
@@ -15,6 +15,7 @@ import { GIFT_BORN, type Segment } from './describe';
 
 /** The gift, for one born to it in the world (0.3.2). */
 const GIFT_FAMILY: Segment = { text: 'family gift for magic', mark: 'magic' };
+import { faithWord, type FaithWord } from '../sim';
 import { spellName } from './items';
 import { chargesPhrase, EXECUTED, SENTENCED_TO, withMeans } from './justice';
 import { personalitySummary } from './mind';
@@ -81,6 +82,8 @@ export function causeOfDeath(cause: DeathCause, names: NameResolver): Segment[] 
       return [{ text: `killed by their own backfiring ${spellName(cause.spell)}` }];
     case 'age':
       return [{ text: `of old age, ${cause.age} years old` }];
+    case 'illness':
+      return [{ text: `of ${SICKNESSES[cause.sickness].caught}` }];
     case 'executed':
       return [{ text: `${EXECUTED[cause.method ?? 'hanging']} for murder` }];
     case 'prison':
@@ -100,6 +103,29 @@ export function deathLine(
   return [{ text: capitalize(first!.text) }, ...rest, { text: ' in ' }, place(locationId, names)];
 }
 
+/** Curses as a life story names them (0.4.0). */
+const CURSE_NAMES: Partial<Record<string, string>> = {
+  'ill-luck': 'ill luck',
+  wasting: 'a wasting',
+  weakness: 'weakness',
+  marked: 'the mark',
+};
+
+/** A life's faith, as its story tells it (0.4.0). */
+const FAITH_PHRASES: Record<FaithWord, (alive: boolean) => string> = {
+  devout: (alive) => (alive ? 'They are devout.' : 'They were devout to the end.'),
+  believer: (alive) => (alive ? 'They are a believer.' : 'They were a believer.'),
+  doubter: (alive) =>
+    alive ? 'In matters of faith, they doubt.' : 'In matters of faith, they doubted.',
+  skeptic: (alive) => (alive ? 'They are a skeptic.' : 'They were a skeptic.'),
+  faithless: (alive) =>
+    alive ? 'They have lost the faith they once had.' : 'They lost the faith they once had.',
+  corrupted: (alive) =>
+    alive
+      ? 'What faith they had is gone, corrupted by what they have done.'
+      : 'What faith they had was gone, corrupted by what they had done.',
+};
+
 export function biography(
   c: Character,
   events: readonly SimEvent[],
@@ -117,7 +143,19 @@ export function biography(
 
   // Origins.
   const character = listOf(personalitySummary(c.traits).split(', ').filter(Boolean).slice(0, 3));
-  const calledThem = character ? ` Those who knew them called them ${character}.` : '';
+  // Faith, in a word (0.4.0): never a number.
+  const faith = faithWord(c);
+  const believed = faith ? ` ${FAITH_PHRASES[faith](alive)}` : '';
+  // Sick or cursed now, for the living (0.4.0).
+  const ails =
+    alive && c.illness ? ` They are sick with ${SICKNESSES[c.illness.sickness].caught}.` : '';
+  const curses = alive
+    ? c.effects
+        .filter((e) => CURSE_NAMES[e.kind] !== undefined && e.until > (now ?? 0))
+        .map((e) => CURSE_NAMES[e.kind]!)
+    : [];
+  const cursed = curses.length > 0 ? ` They bear a curse: ${listOf(curses)}.` : '';
+  const calledThem = `${character ? ` Those who knew them called them ${character}.` : ''}${believed}${ails}${cursed}`;
   if (c.parents.length > 0) {
     const legendary = c.parents.filter((p) => heroes.has(p));
     paragraphs.push([
